@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+<!--
+
+
+      .----------------.  .----------------.  .----------------. 
+     | .--------------. || .--------------. || .--------------. |
+     | |      __      | || |   ______     | || |      __      | |
+     | |     /  \     | || |  |_   _ \    | || |     /  \     | |
+     | |    / /\ \    | || |    | |_) |   | || |    / /\ \    | |
+     | |   / ____ \   | || |    |  __'.   | || |   / ____ \   | |
+     | | _/ /    \ \_ | || |   _| |__) |  | || | _/ /    \ \_ | |
+     | ||____|  |____|| || |  |_______/   | || ||____|  |____|| |
+     | |              | || |              | || |              | |
+     | '--------------' || '--------------' || '--------------' |
+      '----------------'  '----------------'  '----------------'       	
+  ___       _                       _   _____           _   _   ___  
+ |_ _|_ __ | |_ ___ _ ____   ____ _| | |_   _|__   ___ | | / | / _ \ 
+  | || '_ \| __/ _ \ '__\ \ / / _` | |   | |/ _ \ / _ \| | | || | | |
+  | || | | | ||  __/ |   \ V / (_| | |   | | (_) | (_) | | | || |_| |
+ |___|_| |_|\__\___|_|    \_/ \__,_|_|   |_|\___/ \___/|_| |_(_)___/ 
+                                                                     
+                                                                  
+                                                                                                                                           					
+ABA Interval Tool
+version 1.0
+Copyright (c) Robert Jones III 2020
+Licensed under the Open Software License version 3.0
+
+
+Notes on the source code:
+This html document is the preferred form of the ABA Interval Tool for making 
+modifications. If you received a native/binary application, that application was 
+a wrapper around this document. There are no image files; what may look like 
+icons are done via Unicode characters. There are also no sound files. Any sounds 
+are created via javascript. All style sheets and scripts are embedded into this 
+document. 
+
+Regarding the license: 
+This software is open source and licensed under the OSL 3.0. The license is
+publicly available from the Open Source Institute (OSI). The license and a 
+summary are available on the OSI website:
+https://opensource.org/licenses/OSL-3.0
+
+
+Goal of the ABA Interval Tool:
+Interval Recording can be difficult and very mentally taxing using traditional 
+ABA tools. These issues are in part due to how attention and working memory 
+function in the brain. People often overestimate their ability to multi-task, 
+but humans have a natural limit in their working memory that hinders attempts to 
+multi-task. Psychological research has shown that there is an attention cost for 
+switching between tasks. This cost rises as the complexity of the tasks increase 
+and as the differences between the tasks increase.* These findings explain some 
+of the difficulties in interval recording because multi-tasking is a core part 
+of the method. Using traditional tools, a behavioral therapist would note a 
+client's behavior on their clipboard, watch the time for upcoming intervals, 
+observe the client's behavior, and often perform an additional task with the 
+client related to the tracked behavior. Some computerized interval recording 
+software imposes a greater load on a therapist's attention than the old 
+clipboard and stopwatch method. The goal of this software is to reduce the load 
+on the therapist's attention as much as possible.
+
+The attention cost from task switching in interval recording increases as the 
+length of the interval decreases. In a 2013 study, people used 15 seconds on 
+average to switch between complex tasks.† If therapists takes 15 seconds to task 
+switch, a 30-second interval would result in a state of constant inattention and 
+stress. Studies show that people compensate for task switching by pushing 
+themselves to work beyond their limits at the cost of experiencing increased 
+stress and frustration.‡ This compensation will therefore reduce the quality of 
+the therapy for the client, the quality of the client's data, and the quality of 
+life for the therapist.
+
+There are several strategies to reduce the load on a therapist's attention. The 
+core is that the software should allow the therapist to input data while paying 
+minimal attention to the device. This means that the clickers are always active, 
+even if the timer is not running. It also means that the software saves data as 
+soon as the therapist clicks; there's no separate "save" feature. Attention can 
+be goal-directed, or it can be driven by external stimuli. The software should 
+only use stimuli to attract the therapist's attention if (a) the interval is 
+ending, (b) data needs to be recorded, or (c) both a+b. These are the only 
+circumstances where the tool should use stimuli to attract attention. Beyond 
+that, the software should stay active and full screen to avoid a waking/login 
+procedure on the device designed to be full of attention-grabbing notifications. 
+Finally, the therapist should have the option to deactivate any notifications, 
+in case a specific type of stimuli (visual, auditory, tactile) is attracting 
+their client's attention to the tool. The color changes are a core part of this
+strategy. Because the visual stimulus from the color changes occupies the entire
+background of the screen, the therapist can determine the state of data
+recording for the current interval with a glance at the device. There is no need
+to parse any additional information beyond that glance, thus reducing the load
+on a therapist's working memory and attention and allowing them greater focus
+on the client's therapy and data.
+ 
+
+* Rubinstein, J. S., Meyer, D. E. & Evans, J. E. (2001). Executive Control of 
+   Cognitive Processes in Task Switching. Journal of Experimental Psychology: 
+   Human Perception and Performance, 27, 763-797.
+
+† Gould, S. J. J., Cox, A. L., & Brumby, D. P. (2013). Frequency and duration of
+   self-initiated task-switching in an online investigation of interrupted 
+   performance. Human computation and crowdsourcing: Works in progress and 
+   demonstration abstracts AAAI technical report CR-13-01 (pp. 22–23).
+
+‡ Mark, G, Gudith, D, & Klocke, U. (2008). The cost of interrupted work. 
+   Proceedings of the Twenty-sixth Annual CHI Conference on Human Factors in 
+   Computing Systems – CHI ’08. Retrieved February 19, 2016 
+   from https://ics.uci.edu/~gmark/chi08-mark.pdf.
+
+
+
+-->
+
+
+ 
+ <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js">
+ </script>
+
+<title>Interval Recording</title>
+
+ <meta name="viewport" content="width=device-width"/>
+
+ 
+ 
+<!--
+  ____  _         _           _               _   
+ / ___|| |_ _   _| | ___  ___| |__   ___  ___| |_ 
+ \___ \| __| | | | |/ _ \/ __| '_ \ / _ \/ _ \ __|
+  ___) | |_| |_| | |  __/\__ \ | | |  __/  __/ |_ 
+ |____/ \__|\__, |_|\___||___/_| |_|\___|\___|\__|
+            |___/                                 -->
+<style>
+body
+{
+background-color: #e0e0eb;
+font-family: Arial, Helvetica, sans-serif;
+}
+
+table {
+border: none;
+width: 100%;
+margin-bottom: 25%;
+}
+
+#timerContainer
+{ 
+font-size: 550%;
+text-align: center;
+margin-bottom: 25%;
+}
+
+button
+{
+background-color: white;
+border-radius: 12px;
+  border: none;
+padding: 16px;
+font-size: 200%;
+box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+}
+button:active {
+  box-shadow: 0 4px 12px 0 rgba(0,0,0,0.2), 0 2px 16px 0 rgba(0,0,0,0.19);
+  transform: translateY(4px);
+}
+button.active.focus, button.active:focus,
+button.focus, button:active.focus, 
+button:active:focus, button:focus {
+  outline: none;
+}
+
+
+
+/* Style the navigation menu */
+.topnav {
+  overflow: hidden;
+  position: relative;
+
+  color: white;
+}
+
+/* Hide the links inside the navigation menu (except for logo/home) */
+.topnav #menu {
+  display: none;
+  
+}
+
+/* Style navigation menu links */
+.topnav a {
+  color: white;
+  padding: 14px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+.topnav div.settings 
+{
+  color: white;
+  padding: 14px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+/* Style the hamburger menu */
+.topnav a.icon {
+  display: block;
+  position: absolute;
+  
+  right: 0;
+  top: 0;
+}
+
+/* Add a grey background color on mouse-over */
+.topnav a:hover {
+
+}
+
+.smallButton
+{
+border: 2px solid black; 
+background-color: white; 
+color: black; 
+border-radius: 5px;
+border: none; 
+padding: 2px;
+box-shadow: 0 2px 6px 0 rgba(0,0,0,0.2), 0 2px 8px 0 rgba(0,0,0,0.19);
+}
+
+.smallButton:active
+{
+box-shadow: 0 1px 1px 0 rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.19);
+  transform: translateY(1px);
+  display: inline-block;
+  }
+  
+.hamburgerButtons
+{border: 2px solid white; border-radius: 5px; padding: 2px;}
+.hamburgerButtons:active
+{ background-color: white; color: black;}
+</style>
+</head>
+
+<body id="body">
+
+
+<!--  
+  __  __                  
+ |  \/  | ___ _ __  _   _ 
+ | |\/| |/ _ \ '_ \| | | |
+ | |  | |  __/ | | | |_| |
+ |_|  |_|\___|_| |_|\__,_|
+                          -->
+<div class="topnav">
+ <a id="topLeft" href="#home" style="font-size: 200%;">
+ <!-- 'Method (seconds)' This is generated in js from the user's preferences -->  
+ </a>
+
+  <!-- Menu -->
+  <div id="menu">
+  
+
+    <div class="settings" style="background-color: navy;"> 
+
+	
+	<form>
+  <label for="myNumber">Intervals<br>Length (seconds):</label><br>
+  <input type="number" id="myNumber" value="10">
+  <span class="hamburgerButtons" onclick="intervalSet()">Set</span>
+</form>
+
+<form>
+	<label for="iType">Method:</label><br>
+  <select name="iType" id="iType">
+    <option value="0" >partial interval</option>
+    <option value="1" selected>whole interval</option>
+    <option value="2">momentary</option>
+	<option value="3">timer only</option>
+  </select>
+  <span class="hamburgerButtons" onclick="typeSet()">Set</span>
+</form><br>
+
+<span class="hamburgerButtons" onclick="defaultValue()">Set above as default</span>
+<br>
+<br>
+<br>Interval sound: 
+<span id="boop" class="hamburgerButtons" onclick="boopToggle()">ON</span>
+<br>
+<br>Vibration: 
+<span id="vibrate" class="hamburgerButtons" onclick="vibrateToggle()">ON</span>
+<br>
+<br>
+
+<p>Data</p>
+<p  id="clearLine">
+<span onclick="clearToggle()" class="hamburgerButtons">
+	Clear data</span>
+	</p>
+	<br>
+	<p  id="exportMenu">
+<span onclick="exportLog()" class="hamburgerButtons">
+	Export data</span>
+	</p>
+	
+	</div>
+    
+
+<a href="#help" style="background-color: indigo;" id="help" onclick="helpToggle()">
+Help 	&rarr;	
+</a>
+	
+<a href="#about" style="background-color: violet;" id="about" onclick="aboutToggle()">
+About 	&rarr;	
+</a>
+
+  </div>
+  <!-- Unicode icon to toggle the menu -->
+  <a href="javascript:void(0);" class="icon" onclick="hamburger()">
+    <span class="fa fa-bars" style="font-size: 200%;">&#8942;</span>
+  </a>
+</div>
+
+
+
+<div id="timerContainer">
+<div class="timer" onclick="startTimer()" >Start</div>
+<div class="startTimer reset" onclick="startTimer()" >
+  </div>
+</div>
+
+
+
+<!-- __            _             _     
+  / ___|___  _ __ | |_ _ __ ___ | |___ 
+ | |   / _ \| '_ \| __| '__/ _ \| / __|
+ | |__| (_) | | | | |_| | | (_) | \__ \
+  \____\___/|_| |_|\__|_|  \___/|_|___/
+                                       
+All three buttons in this control panel use Unicode symbols. This:
+1. eliminates the need for separate image files.
+2. communicates without distracting.
+3. is portable to any device that supports unicode.
+-->
+<table>
+	<tbody>
+		<tr>
+		
+			<td style="text-align: center;">
+<button onclick="plus()" style="background-color: #99d6ff; font-weight: 900;"> 
+&#10003; 
+</button>
+<div id="correct" style="font-size: 18pt;">0</div>
+ </td>
+ 
+			<td style="text-align: center;">
+<button class="pauseTimer reset" onclick="pauseTimer()">
+    <span class="fas fa-pause">&#9654;&#10074;&#10074;</span>
+  </button>
+  <br>
+  <br>
+			</td>
+			
+			
+			<td style="text-align: center;"> 
+<button onclick="minus()" style="background-color: #ffcc99; font-weight: 900;"> 
+&#10007; 
+</button>
+<div id="notyet" style="font-size: 18pt;">0</div>
+</td>
+		</tr>
+	</tbody>
+	</table>
+
+
+
+<button class="resetTimer reset" onclick="resetTimer()" style="padding: 6px;"> 
+Reset
+</button>
+
+<button onclick="displayLog()" style="padding: 6px;"> Log </button>
+
+<div id="logbyintervals">
+<!-- The displayLog() function writes the current log here and adds the current 
+interval's percentage thus far. --> 
+</div>
+<br>
+<span onclick="copyLogs('#logbyintervals')" class="smallButton">
+    Copy log
+</span>
+
+
+
+
+<span id="scratch">
+<!-- The copyLogs() function uses this  to load a log into the clipboard. --> 
+</span>
+
+
+<!--  _                                _       _   
+     | | __ ___   ____ _ ___  ___ _ __(_)_ __ | |_ 
+  _  | |/ _` \ \ / / _` / __|/ __| '__| | '_ \| __|
+ | |_| | (_| |\ V / (_| \__ \ (__| |  | | |_) | |_ 
+  \___/ \__,_| \_/ \__,_|___/\___|_|  |_| .__/ \__|
+                                        |_|         -->
+										
+<script type="text/javascript">
+var startTimerButton = document.querySelector('.startTimer');
+var pauseTimerButton = document.querySelector('.pauseTimer');
+var timerDisplay = document.querySelector('.timer');
+var startTime;
+var updatedTime;
+var difference;
+var tInterval;
+var savedTime;
+var paused = 0;
+var running = 0;
+var hit = 0;
+var miss = 0;
+var thisinterval = 1;
+var current = 0; // 0 is no data entered for interval, 1 is data entered for interval, 2 is interval has passed so please enter data
+var timeflag = 0; // this is a check to see if the interval check has been run for this interval
+var type = 1; // 0 is partial interval recording, 1 is whole interval recording, 2 will be momentary time sampling, 3 is a pure interval timer
+var chosentype = 0;
+var intervalPercent=0; 
+var aboutSwitch=0;
+var helpSwitch=0;
+var frequency = 440.0; // "boop" sound
+var pauseTransfer = 0; //this let's the startTime() function know if it's getting information from the pause button or the start button
+//this is important because we don't want the pause button to clear any of the clickers
+var todaysDate = new Date();
+var noteFlag = 0;
+
+
+
+// load defaults from LocalStorage
+ if (localStorage.getItem("savedType") === null) {
+localStorage.setItem('savedType', '1');
+var type = localStorage.getItem('savedType');
+}
+else
+{
+var type = localStorage.getItem('savedType');
+chosentype = type;
+
+}
+ document.getElementById("iType").value = type; 
+ // create header from recording method type
+
+ if (localStorage.getItem("savedVibrate") === null) {
+localStorage.setItem('savedVibrate', '1');
+var vibrate = localStorage.getItem('savedVibrate');
+}
+else
+{
+var vibrate = localStorage.getItem('savedVibrate');
+}
+vibrate = 1 - vibrate;
+vibrateToggle();
+
+
+ if (localStorage.getItem("savedBoop") === null) {
+localStorage.setItem('savedBoop', '1');
+var boop = localStorage.getItem('savedBoop');
+}
+else
+{
+var boop = localStorage.getItem('savedBoop');
+}
+boop = 1 - boop;
+boopToggle();
+ 
+// default interval length from localStorage
+var length;
+ if (localStorage.getItem("savedLength") === null) {
+localStorage.setItem('savedLength', '11');
+length = localStorage.getItem('savedLength');
+}
+else
+{
+length = localStorage.getItem('savedLength');
+
+}
+ document.getElementById("myNumber").value = length;
+ writeHeader();
+ 
+function defaultValue(){
+ localStorage.setItem('savedLength', length);
+ localStorage.setItem('savedType', type);
+}
+
+ 
+ if (localStorage.getItem("savedTotal") === null) {
+localStorage.setItem('savedTotal', '0');
+var total = localStorage.getItem('savedTotal');
+localStorage.setItem('savedTotalCorrect', '0');
+var totalCorrect = localStorage.getItem('savedTotalCorrect');
+}
+else
+{
+var total = localStorage.getItem('savedTotal');
+var totalCorrect = localStorage.getItem('savedTotalCorrect');
+}
+
+
+//load saved log or create a new one
+if (localStorage.getItem("savedLog") === null) 
+{
+localStorage.setItem('savedLog', ' ');
+var log = localStorage.getItem('savedLog');
+totalReset();
+console.log('if');
+}
+else if (localStorage.getItem("savedLog") === ' ') 
+{
+localStorage.setItem('savedLog', ' ');
+var log = localStorage.getItem('savedLog');
+totalReset();
+console.log('else if');
+}
+else
+{
+var log = localStorage.getItem('savedLog');
+if (total > 0);
+{
+	intervalPercent = totalCorrect / total * 100;
+  log = log + "<br>&nbsp;&nbsp;&nbsp;Correct: " + totalCorrect + "/" + total + 
+	"<br>&nbsp;&nbsp;&nbsp;Percent correct: " + intervalPercent + "%<br><br>";
+	}
+
+	totalReset();
+	localStorage.setItem('savedLog', log);
+	console.log('else');
+}
+
+function totalReset()
+{
+total = 0;
+localStorage.setItem('savedTotal', '0');
+totalCorrect = 0;
+localStorage.setItem('savedTotalCorrect', '0');
+}
+
+
+addDate();
+function addDate()
+{log = log + "<br><br><em>" + todaysDate.toUTCString() + "</em><br>";}
+
+
+function startTimer(){
+
+// the code below only runs from a fresh start and not the play/pause button
+if (pauseTransfer == 0) {  
+
+  if (thisinterval > 1)
+{intervalPercent = totalCorrect / total * 100;
+log = log + "<br>&nbsp;&nbsp;&nbsp;Correct: " + totalCorrect + "/" + total + 
+	"<br>&nbsp;&nbsp;&nbsp;Percent correct: " + 
+	intervalPercent + "%" + "<br><br> ";
+ total = 0 ;
+ totalCorrect = 0 ;
+   thisinterval = 1;
+
+// reset the clickers   
+  hit = 0;
+  miss = 0;
+  document.getElementById("notyet").innerHTML = miss;
+  document.getElementById("correct").innerHTML = hit;} 
+
+//this next part is going to update the log and then reset the percentages  
+
+
+   if (type == 0)
+ {
+ log = log +  length + " Second Partial Intervals:<br>&nbsp;&nbsp;&nbsp;";
+ }
+  else if (type == 1)
+ {
+ log = log +  length + " Second Whole Intervals:<br>&nbsp;&nbsp;&nbsp;";
+ }
+  else if (type == 2)
+ {
+ log = log +  length + " Second Interval Time Sampling:<br>&nbsp;&nbsp;&nbsp;";
+ }
+   else if (type == 3)
+ {
+ log = log +  length + " Second Intervals:<br>&nbsp;&nbsp;&nbsp;";
+ }
+ 
+ total = 0 ;
+ totalCorrect = 0 ;
+   thisinterval = 1;
+
+}//end the resetting
+
+  if(!running){
+    startTime = new Date().getTime();
+    tInterval = setInterval(getShowTime, 1);
+// change 1 to 1000 above to run script every second instead of every millisecond. one other change will be needed in the getShowTime() function below for this to work. see comment there.   
+ 
+    paused = 0;
+    running = 1;
+
+  }
+  pauseTransfer = 0; // release the pause button
+  }
+function pauseTimer(){
+  if (!difference){
+    // if timer never started, don't allow pause button to do anything
+  } else if (!paused) {
+    clearInterval(tInterval);
+    savedTime = difference;
+    paused = 1;
+    running = 0;
+
+  } else {
+// if the timer was already paused, when they click pause again, start the timer again
+pauseTransfer = 1;
+startTimer();
+// and let the function know that it's starting from the pause button
+
+  }
+}
+function resetTimer(){
+  clearInterval(tInterval);
+  
+  savedTime = 0;
+  difference = 0;
+  paused = 0;
+  running = 0;
+  timerDisplay.innerHTML = 'Start';
+    if (total > 0) 
+	{
+	intervalPercent = totalCorrect / total * 100;
+  log = log + "<br>&nbsp;&nbsp;&nbsp;Correct: " + totalCorrect + "/" + total + 
+	"<br>&nbsp;&nbsp;&nbsp;Percent correct: " + intervalPercent + "%<br><br>";
+  }
+  current = 0;
+  hit = 0;
+  miss = 0;
+  thisinterval = 1;
+  total = 0;
+  totalCorrect = 0;
+  document.getElementById("notyet").innerHTML = miss;
+  document.getElementById("correct").innerHTML = hit;
+  
+  
+
+}
+function getShowTime(){
+  updatedTime = new Date().getTime();
+  if (savedTime){
+    difference = (updatedTime - startTime) + savedTime;
+  } else {
+    difference =  updatedTime - startTime;
+  }
+  // var days = Math.floor(difference / (1000 * 60 * 60 * 24));
+  var hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  var minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+  var seconds = Math.floor((difference % (1000 * 60)) / 1000);
+  var milliseconds = Math.floor((difference % (1000 * 60)) / 100);
+hours = (hours < 10) ? "" + hours : hours;
+  minutes = (minutes < 10) ? "0" + minutes : minutes;
+  seconds = (seconds < 10) ? "0" + seconds : seconds;
+  milliseconds = (milliseconds < 100) ? (milliseconds < 10) ? "00" + 
+	milliseconds : "0" + milliseconds : milliseconds;
+  timerDisplay.innerHTML = hours + ':' + minutes + ':' + seconds;
+ 
+ 
+/*
+The next section updates the background color with the time as a method to 
+communicate to the user:
+0. This interval is ongoing without data.
+1. This interval already has data.
+2. The interval is over; please enter data.
+
+The diagram below maps what can happen during an interval. For this example, the 
+recording method would be partial interval. This means that if at any time 
+during the interval the behavior occurs, the interval is marked positive. If the 
+behavior was sitting, as soon the child sat down, the therapist would click ✓. 
+This is the bottom path of the diagram. If the child never sits, the tool will 
+prompt the therapist at the end of the interval. This is the top path. Once data 
+has been recorded and the interval is over the screen returns to peach color for 
+the next interval's data.
+
+
+
+	
+	                                        No behavior has occurred.
+                                            Data has not yet been recorded.
+                                            Screen turns orange,
++-----+-----------------------------------> until ✗ clicker logs data.
+      |                                               +
+      |                                               |
+      |                                               v
+      +-----------------------------------> Screen returns to peach.
+
+      Behavior occurs.
+      Data is recorded via clicker.
+      Screen turns blue.
+      This interval is complete.  
+*/
+ if (current == 0)
+	  {
+   body.style.backgroundColor = "#ffddcc";
+	  }
+	  else if (current == 1)
+	  {
+ body.style.backgroundColor = "#e6f2ff";
+	  }
+	  else if (current == 2)
+	  {
+ body.style.backgroundColor = "#ff6600";
+	  }
+
+	  
+ if (timeflag)
+ { }
+else 
+{
+if (seconds % length === 0 && type == 3)
+{current = 2;
+  if (noteFlag == 1)  {
+if (boop == 1)
+{soundNotBoop();}//notification sound plays
+
+if (vibrate == 1)
+{navigator.vibrate([500]);}//notification vibrates
+ noteFlag = 0;}}
+else if (seconds % (length - (length -1)) == 0 && type == 3)
+{current = 0;
+noteFlag=1;}
+else if (seconds % length === 0)  
+{
+
+if (boop == 1)
+{soundNotBoop();}//notification sound plays
+
+if (vibrate == 1)
+{navigator.vibrate([500]);}//notification vibrates
+
+	  if (current  == 0 && thisinterval == 1 && seconds < 1)
+	  {
+		  current = 0;
+	  }
+	  else if (current != 1)
+	  {
+       current = 2;
+	  }
+	  else 
+	  {
+	  current = 0;
+	  }
+	  
+	  timeflag = 1;
+	  setTimeout(flagFlip, 1111);
+  }
+else{
+	
+}
+}
+
+ 
+}
+
+function flagFlip()
+{
+	timeflag=0;
+}
+
+
+function plus() // when the check button is pressed
+{
+log = log + "(" + thisinterval + "+)"; 
+localStorage.setItem('savedLog', log); //save the log immediately
+
+hit = hit + 1;	
+total = total + 1; 
+console.log("fart");
+localStorage.setItem('savedTotal', total);
+totalCorrect = totalCorrect + 1; // increment the total correct for positive clicker only
+localStorage.setItem('savedTotalCorrect', totalCorrect);
+document.getElementById("correct").innerHTML = hit;
+thisinterval = thisinterval + 1; 
+
+if (type == 0){current = 1;} 
+else if (type == 1) {current = 0;}
+else if (type == 2) {current = 0;}
+else if (type == 3) {current = current;}
+}
+
+function minus() // when the cross is pressed
+{
+log = log + "(" + thisinterval + "-)"; 
+localStorage.setItem('savedLog', log); //save the log immediately
+
+miss = miss + 1;
+total = total +1;
+localStorage.setItem('savedTotal', total);
+document.getElementById("notyet").innerHTML = miss;
+thisinterval = thisinterval + 1;
+
+if (type == 0){current = 0;}
+else if (type == 1) {current = 1;}
+else if (type == 2) {current = 0;}
+else if (type == 3) {current = current;}
+}
+
+function displayLog()
+{
+if (total > 0){
+		    intervalPercent = totalCorrect / total * 100;
+	document.getElementById("logbyintervals").innerHTML = log + 
+		"<br>&nbsp;&nbsp;&nbsp;Correct: " + totalCorrect + "/" + total + 
+		"<br>&nbsp;&nbsp;&nbsp;Percent correct: " + intervalPercent + "%";
+}
+else
+{
+document.getElementById("logbyintervals").innerHTML = log;
+}
+}
+
+
+
+
+
+
+
+function hamburger() {
+  var x = document.getElementById("menu");
+  if (x.style.display === "block") {
+    x.style.display = "none";
+  } else {
+    x.style.display = "block";
+  }
+}
+
+function intervalSet(){
+
+ //  pull the interval from the input box
+ var box = document.getElementById("myNumber").value;
+ length = box;
+ 
+
+ writeHeader();
+ resetTimer();
+
+}
+
+function writeHeader()
+{
+ if (chosentype == 0)
+ {
+ document.getElementById("topLeft").innerHTML = "Partial (" + length + ")";
+ type = 0;
+ }
+  else if (chosentype == 1)
+ {
+ document.getElementById("topLeft").innerHTML = "Whole(" + length + ")";
+ type = 1;
+ }
+  else if (chosentype == 2)
+ {
+ document.getElementById("topLeft").innerHTML = "Momentary(" + length + ")";
+ type = 2;
+ }
+   else if (chosentype == 3)
+ {
+ document.getElementById("topLeft").innerHTML = "Timer(" + length + ")";
+ type = 3;
+ }
+ }
+
+function typeSet(){ 
+ // getting the type value of the recording method
+ chosentype = document.getElementById("iType").value;
+ 
+ writeHeader();
+ resetTimer();
+
+}
+
+
+
+
+
+
+function copyLogs(elementId) {
+		   // Create an auxiliary hidden input
+ const myFluffyTextarea = document.createElement('textarea');
+
+
+if (total > 0){
+		    intervalPercent = totalCorrect / total * 100;
+	html = log + "<br>&nbsp;&nbsp;&nbsp;Correct: " + totalCorrect + "/" + 
+		total + "<br>&nbsp;&nbsp;&nbsp;Percent correct: " + 
+		intervalPercent + "%";
+}
+else
+{
+html = log;
+}
+
+
+	html = html.replace(/<style([\s\S]*?)<\/style>/gi, '');
+html = html.replace(/<script([\s\S]*?)<\/script>/gi, '');
+html = html.replace(/<\/div>/ig, '\n');
+html = html.replace(/<\/li>/ig, '\n');
+html = html.replace(/<li>/ig, '  *  ');
+html = html.replace(/<\/ul>/ig, '\n');
+html = html.replace(/<\/p>/ig, '\n');
+html = html.replace(/<br\s*[\/]?>/gi, "\n");
+html = html.replace(/<[^>]+>/ig, '');
+
+myFluffyTextarea.innerHTML = html;
+const parentElement = document.getElementById('scratch');
+    parentElement.appendChild(myFluffyTextarea);
+    myFluffyTextarea.select();
+  document.execCommand("copy");
+    parentElement.removeChild(myFluffyTextarea);
+}
+
+
+function exportLog()
+{
+if (total > 0){
+		    intervalPercent = totalCorrect / total * 100;
+	html = log + "<br>&nbsp;&nbsp;&nbsp;Correct: " + totalCorrect + "/" + 
+		total + "<br>&nbsp;&nbsp;&nbsp;Percent correct: " + 
+		intervalPercent + "%";
+}
+else
+{
+html=log;
+}
+
+
+	html = html.replace(/<style([\s\S]*?)<\/style>/gi, '');
+html = html.replace(/<script([\s\S]*?)<\/script>/gi, '');
+html = html.replace(/<\/div>/ig, '\n');
+html = html.replace(/<\/li>/ig, '\n');
+html = html.replace(/<li>/ig, '  *  ');
+html = html.replace(/<\/ul>/ig, '\n');
+html = html.replace(/<\/p>/ig, '\n');
+html = html.replace(/<br\s*[\/]?>/gi, "\n");
+html = html.replace(/<[^>]+>/ig, '');
+html = html.replace(/&nbsp;/ig, ' ');
+
+
+var data = [];
+data.push('Interval Recording Data: \n ' + html);
+
+
+
+var blob = new Blob([data.toString()], {
+    type: "text/plain;charset=utf-8"
+});
+var url = URL.createObjectURL(blob);
+
+var a = document.createElement('a');
+a.download = "log.txt";
+a.href = url;
+a.textContent = " ";
+a.click();
+//if the click() function dosen't work you can try using onclick() fucntion like this
+//a.onclick();
+}
+
+
+
+function clearToggle() {
+document.getElementById("clearLine").innerHTML = 'Clear data: <br><br>   <span class="hamburgerButtons" onclick="clearLog()">Erase log</span>  <span class="hamburgerButtons" onclick="clearToggleBack()">Cancel</span></form>';
+}
+
+function clearToggleBack()
+{
+document.getElementById("clearLine").innerHTML = 
+	'<span onclick="clearToggle()" class="hamburgerButtons"> 	Clear data</span>';
+}
+function clearLog() {
+localStorage.removeItem('savedLog'); 
+resetTimer();
+log = " ";
+ localStorage.setItem('savedLog', log);
+
+log = localStorage.getItem('savedLog');
+addDate();//We're adding the date after we save to local storage
+// so that if a therapist clears data and exits, the date will be discarded.	
+clearToggleBack();
+}
+
+function boopToggle()
+{
+if (boop == 1)
+{ boop = 0; 
+document.getElementById("boop").innerHTML = "OFF";
+localStorage.setItem('savedBoop', '0');
+}
+else if (boop == 0)
+{ boop = 1; 
+document.getElementById("boop").innerHTML = "ON";
+localStorage.setItem('savedBoop', '1');
+}
+}
+
+function vibrateToggle()
+{
+if (vibrate == 1)
+{ vibrate = 0; 
+document.getElementById("vibrate").innerHTML = "OFF";
+localStorage.setItem('savedVibrate', '0');
+}
+else if (vibrate == 0)
+{ vibrate = 1; 
+document.getElementById("vibrate").innerHTML = "ON";
+localStorage.setItem('savedVibrate', '1');
+}
+}
+
+//popup
+function aboutToggle()
+{if (aboutSwitch == 1)
+{ aboutSwitch = 0; 
+document.getElementById("about").innerHTML = "About &rarr;	";
+}
+else if (aboutSwitch == 0)
+{ aboutSwitch = 1; 
+document.getElementById("about").innerHTML = 
+	"About &darr; <br>ABA Interval Tool<br>version 1.0<br>Copyright \u00A9 Robert Jones III 2020<br>All rights reserved.";
+}
+}
+
+function soundNotBoop()
+{
+var context = new AudioContext();
+var o = context.createOscillator();
+var  g = context.createGain();
+o.frequency.value = frequency;
+o.connect(g);
+g.connect(context.destination);
+o.start(0);
+g.gain.exponentialRampToValueAtTime(
+  0.00001, context.currentTime + 0.3
+);
+ }
+ 
+function helpToggle()
+{if (helpSwitch == 1)
+{ helpSwitch = 0; 
+document.getElementById("help").innerHTML = "Help &rarr;	";
+}
+else if (helpSwitch == 0)
+{ helpSwitch = 1; 
+document.getElementById("help").innerHTML = "<p>Help &darr;</p><p>The ABA Interval Tool is designed for recording interval data during behavioral therapy.</p><p>&nbsp;</p><p><strong> Modes.</strong> The software has 4 modes corresponding to the 3 types of interval recording and a fourth timer only mode.</p><ol style='padding-left: 20px;'><li><em>Momentary time sampling:</em> in this mode data should only be taken on whether the behavior is occurring at the very end of the interval. When the intervals end, an optional notification will sound, and the screen will turn deep orange until data for that interval is entered.</li><li><em>Whole interval recording:</em> in this mode data should be taken on whether the behavior occurs throughout the entire interval. If the behavior stops and a miss (✗) is recorded the screen will turn blue to indicate that data has been recorded for the interval. If no misses are recorded by the end of the interval, the screen will turn bright orange until data is entered for the interval.</li><li><em>Partial interval recording:</em> in this mode data should be taken on whether the behavior occurs at any point during the interval. If the behavior occurs and a positive (✓) is recorded the screen will turn blue to indicate that data has been recorded for the interval. If the behavior hasn't been noted when the interval ends, the screen will turn bright orange until data is entered for the interval.</li><li><em>Timer:</em> during the final second of each interval an optional notification will sound, and the screen will briefly turn orange. In this mode the timer is not connected to the correct (✓) or incorrect (✗) clickers.</li></ol><p>&nbsp;</p><p><strong>Clickers.</strong> Both the correct (✓) and incorrect (✗) buttons function as clickers. To maintain flexibility, they can be pressed at any time and will log the data even if the timer is not running. The clicker data will automatically be added to the interval log and saved every time either button is pressed.</p><p>&nbsp;</p><p><strong>Data.</strong> All data entered into the tool is automatically logged into a single document. The data can be displayed by clicking on the 'Log' button or copied to the clipboard by clicking the 'Copy log' button. Data will persist even after the app is closed.</p><p>To clear data before a new session, tap 'Clear data' and then choose 'erase log' in the menu. To begin a new section in the log: reset the timer, set a new interval length, or set a new recording mode. Interval lengths, recording modes, and dates are added automatically.</p>";
+}
+}
+</script>
+
+<!--
+  _     _                         
+ | |   (_) ___ ___ _ __  ___  ___ 
+ | |   | |/ __/ _ \ '_ \/ __|/ _ \
+ | |___| | (_|  __/ | | \__ \  __/
+ |_____|_|\___\___|_| |_|___/\___|
+                                  
+Open Software License v. 3.0 (OSL-3.0)
+
+This Open Software License (the "License") applies to any original work of 
+authorship (the "Original Work") whose owner (the "Licensor") has placed the 
+following licensing notice adjacent to the copyright notice for the Original Work:
+
+Licensed under the Open Software License version 3.0
+
+1) Grant of Copyright License. Licensor grants You a worldwide, royalty-free, 
+non-exclusive, sublicensable license, for the duration of the copyright, to do 
+the following:
+     
+	 a) to reproduce the Original Work in copies, either alone or as part of a 
+collective work;
+     
+	 b) to translate, adapt, alter, transform, modify, or arrange the Original 
+Work, thereby creating derivative works ("Derivative Works") based upon the 
+Original Work;
+     
+	 c) to distribute or communicate copies of the Original Work and Derivative 
+Works to the public, with the proviso that copies of Original Work or 
+Derivative Works that You distribute or communicate shall be licensed under 
+this Open Software License;
+     
+	 d) to perform the Original Work publicly; and
+     
+	 e) to display the Original Work publicly.
+
+2) Grant of Patent License. Licensor grants You a worldwide, royalty-free, 
+non-exclusive, sublicensable license, under patent claims owned or controlled by 
+the Licensor that are embodied in the Original Work as furnished by the 
+Licensor, for the duration of the patents, to make, use, sell, offer for sale, 
+have made, and import the Original Work and Derivative Works.
+
+3) Grant of Source Code License. The term "Source Code" means the preferred form 
+of the Original Work for making modifications to it and all available 
+documentation describing how to modify the Original Work. Licensor agrees to 
+provide a machine-readable copy of the Source Code of the Original Work along 
+with each copy of the Original Work that Licensor distributes. Licensor reserves 
+the right to satisfy this obligation by placing a machine-readable copy of the 
+Source Code in an information repository reasonably calculated to permit 
+inexpensive and convenient access by You for as long as Licensor continues to 
+distribute the Original Work.
+
+4) Exclusions From License Grant. Neither the names of Licensor, nor the names 
+of any contributors to the Original Work, nor any of their trademarks or service 
+marks, may be used to endorse or promote products derived from this Original 
+Work without express prior permission of the Licensor. Except as expressly 
+stated herein, nothing in this License grants any license to Licensor's 
+trademarks, copyrights, patents, trade secrets or any other intellectual 
+property. No patent license is granted to make, use, sell, offer for sale, have 
+made, or import embodiments of any patent claims other than the licensed claims 
+defined in Section 2. No license is granted to the trademarks of Licensor even 
+if such marks are included in the Original Work. Nothing in this License shall 
+be interpreted to prohibit Licensor from licensing under terms different from 
+this License any Original Work that Licensor otherwise would have a right to 
+license.
+
+5) External Deployment. The term "External Deployment" means the use, 
+distribution, or communication of the Original Work or Derivative Works in any 
+way such that the Original Work or Derivative Works may be used by anyone other 
+than You, whether those works are distributed or communicated to those persons 
+or made available as an application intended for use over a network. As an 
+express condition for the grants of license hereunder, You must treat any 
+External Deployment by You of the Original Work or a Derivative Work as a 
+distribution under section 1(c).
+
+6) Attribution Rights. You must retain, in the Source Code of any Derivative 
+Works that You create, all copyright, patent, or trademark notices from the 
+Source Code of the Original Work, as well as any notices of licensing and any 
+descriptive text identified therein as an "Attribution Notice." You must cause 
+the Source Code for any Derivative Works that You create to carry a prominent 
+Attribution Notice reasonably calculated to inform recipients that You have 
+modified the Original Work.
+
+7) Warranty of Provenance and Disclaimer of Warranty. Licensor warrants that the 
+copyright in and to the Original Work and the patent rights granted herein by 
+Licensor are owned by the Licensor or are sublicensed to You under the terms of 
+this License with the permission of the contributor(s) of those copyrights and 
+patent rights. Except as expressly stated in the immediately preceding sentence, 
+the Original Work is provided under this License on an "AS IS" BASIS and WITHOUT 
+WARRANTY, either express or implied, including, without limitation, the 
+warranties of non-infringement, merchantability or fitness for a particular 
+purpose. THE ENTIRE RISK AS TO THE QUALITY OF THE ORIGINAL WORK IS WITH YOU. 
+This DISCLAIMER OF WARRANTY constitutes an essential part of this License. No 
+license to the Original Work is granted by this License except under this 
+disclaimer.
+
+8) Limitation of Liability. Under no circumstances and under no legal theory, 
+whether in tort (including negligence), contract, or otherwise, shall the 
+Licensor be liable to anyone for any indirect, special, incidental, or 
+consequential damages of any character arising as a result of this License or 
+the use of the Original Work including, without limitation, damages for loss of 
+goodwill, work stoppage, computer failure or malfunction, or any and all other 
+commercial damages or losses. This limitation of liability shall not apply to 
+the extent applicable law prohibits such limitation.
+
+9) Acceptance and Termination. If, at any time, You expressly assented to this 
+License, that assent indicates your clear and irrevocable acceptance of this 
+License and all of its terms and conditions. If You distribute or communicate 
+copies of the Original Work or a Derivative Work, You must make a reasonable 
+effort under the circumstances to obtain the express assent of recipients to the 
+terms of this License. This License conditions your rights to undertake the 
+activities listed in Section 1, including your right to create Derivative Works 
+based upon the Original Work, and doing so without honoring these terms and 
+conditions is prohibited by copyright law and international treaty. Nothing in 
+this License is intended to affect copyright exceptions and limitations 
+(including "fair use" or "fair dealing"). This License shall terminate 
+immediately and You may no longer exercise any of the rights granted to You by 
+this License upon your failure to honor the conditions in Section 1(c).
+
+10) Termination for Patent Action. This License shall terminate automatically 
+and You may no longer exercise any of the rights granted to You by this License 
+as of the date You commence an action, including a cross-claim or counterclaim, 
+against Licensor or any licensee alleging that the Original Work infringes a 
+patent. This termination provision shall not apply for an action alleging patent 
+infringement by combinations of the Original Work with other software or hardware.
+
+11) Jurisdiction, Venue and Governing Law. Any action or suit relating to this 
+License may be brought only in the courts of a jurisdiction wherein the Licensor 
+resides or in which Licensor conducts its primary business, and under the laws 
+of that jurisdiction excluding its conflict-of-law provisions. The application 
+of the United Nations Convention on Contracts for the International Sale of 
+Goods is expressly excluded. Any use of the Original Work outside the scope of 
+this License or after its termination shall be subject to the requirements and 
+penalties of copyright or patent law in the appropriate jurisdiction. This 
+section shall survive the termination of this License.
+
+12) Attorneys' Fees. In any action to enforce the terms of this License or 
+seeking damages relating thereto, the prevailing party shall be entitled to 
+recover its costs and expenses, including, without limitation, reasonable 
+attorneys' fees and costs incurred in connection with such action, including any 
+appeal of such action. This section shall survive the termination of this License.
+
+13) Miscellaneous. If any provision of this License is held to be unenforceable, 
+such provision shall be reformed only to the extent necessary to make it 
+enforceable.
+
+14) Definition of "You" in This License. "You" throughout this License, whether 
+in upper or lower case, means an individual or a legal entity exercising rights 
+under, and complying with all of the terms of, this License. For legal entities, 
+"You" includes any entity that controls, is controlled by, or is under common 
+control with you. For purposes of this definition, "control" means (i) the 
+power, direct or indirect, to cause the direction or management of such entity, 
+whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or 
+more of the outstanding shares, or (iii) beneficial ownership of such entity.
+
+15) Right to Use. You may use the Original Work in all ways not otherwise 
+restricted or conditioned by this License or by law, and Licensor promises not 
+to interfere with or be responsible for such uses by You.
+
+16) Modification of This License. This License is Copyright (c) 2005 Lawrence 
+Rosen. Permission is granted to copy, distribute, or communicate this License 
+without modification. Nothing in this License permits You to modify this License 
+as applied to the Original Work or to Derivative Works. However, You may modify 
+the text of this License and copy, distribute or communicate your modified 
+version (the "Modified License") and apply it to other original works of 
+authorship subject to the following conditions: (i) You may not indicate in any 
+way that your Modified License is the "Open Software License" or "OSL" and you 
+may not use those names in the name of your Modified License; (ii) You must 
+replace the notice specified in the first paragraph above with the notice 
+"Licensed under <insert your license name here>" or with a notice of your own 
+that is not confusingly similar to the notice in this License; and (iii) You may 
+not claim that your original works are open source software unless your Modified 
+License has been approved by Open Source Initiative (OSI) and You comply with 
+its license review and certification process.
+
+--> 
+
+</body>
+</html>
