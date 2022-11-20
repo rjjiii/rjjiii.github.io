@@ -101,7 +101,7 @@ main nav details > summary {
 main nav details > summary::-webkit-details-marker {
   display: none;
 }
-nav details > ol {  
+nav details > ol, #markdown-toc {  
 padding-left: 18pt;
 }
 
