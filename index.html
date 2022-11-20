@@ -1,10 +1,441 @@
-<html>
-  <head>
-  </head>
-  <body>
-    <h1>Test.</h1>
-    <p>
-      Testing.
-    </p>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+
+
+
+<head>
+
+
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
+	<!--
+	<meta name="description" content=" ">
+	-->
+	
+	   
+
+
+
+	<title><!-- Title Here --></title>
+	<!-- 
+		The style sheet with no media query is a foundational base for the the 
+		other styles providing general styling options related to font, spacing,
+		color, and simple typography. Some very old web browsers (Internet 
+		Explorer 5-8 and unix terminal web browsers like Lynx) will be able to 
+		render a subset of this so the page with display with some styling. In 
+		the distant future this could still provided a very general guide for 
+		the display of content. The "styles" sheet is the primary style sheet 
+		for the site. It contains both large and small screen layouts, plus 
+		specific instructions for some older browsers. The "styleSmall" sheet 
+		contains modification that make the small style sheet from the main 
+		document display better on tiny screens like those of many cellphones. 
+		Finally "print" is for printing documents to paper.
+	-->
+	
+	<link rel="stylesheet" href="style_base.css">
+	<link rel="stylesheet" media="screen and (min-width: 280px)" href="styles.css">
+	<link rel="stylesheet" media="screen and (max-width: 600px)" href="stylesSmall.css">
+	<link rel="stylesheet" media="print" href="styles.css">
+	<link rel="stylesheet" media="print" href="print.css">	
+	<style>
+	/* The following lines can be moved out of this comment to adjust the background and colors. 
+	:root{
+		--ink: #000000;
+		--funk: 0, 0, 0;
+	}
+	*/
+
+	</style>
+	
+	
+	
+	</head>
+<body>
+
+
+
+
+<header>
+	<a 
+	rel="author"
+	id="site_heading"
+	href="index.html"
+	role="banner"
+	>
+		Robert Jones
+	</a>
+		<nav>
+		<ul>
+			<li><a href="tools.html">
+				tools</a></li>
+			<li><a href="words.html" id="selected">
+				words</a></li>
+			<li><a href="about.html">
+				about</a></li>
+		</ul>
+		</nav>
+</header>
+
+
+
+<main>
+
+	<h1>Template</h1>
+
+<div>
+	<address rel="author">
+	By: Robert Jones III
+    </address>
+	<time datetime="2022-11">November 2022</time>
+</div>
+<!-- 
+	The div above groups the byline and date into a single block element.
+	This is supported on the oldest web browsers still in use and it will be
+	future proof going forward compared to a CSS solution.
+ -->
+
+
+<!--
+<nav>
+<details open>
+
+  <summary>☛ Contents</summary>
+  
+<ol>
+	<li><a href="index.html">home</a>
+		<ol>
+			<li><a href="words.html">first</a></li>
+			<li><a href="index.html">second</a></li>
+		</ol></li>
+	<li><a href="words.html">Putting </a></li>
+	<li><a href="index.html">contact</a></li>
+	<li><a href="index.html">questions</a></li>
+</ol>
+</details>
+</nav>
+-->
+
+<p>
+	Under construction.
+</p>
+<!--
+<p>
+The first significant thing I wrote on that computer got displayed at the parish fair. This would had to have been in first grade. There was a writing contest. The theme was space and I created <a id="s_1" href="#f_1">a story about tiny space soldiers fighting dinosaurs.<sup>1</sup></a> A haze of light rain at the fair turned the ground into a field of mud. To keep the space stories safe from the elements there were displayed inside the fieldhouse. iOur cosmic stories were juxtposed with snorting hogs.
+</p>
+
+<p class="noted_p"><strong>My grandmother raised me</strong> when I was a little boy. I can only really remember her through that lens, through eyes of five year old. Her two main hobbies were chainsmoking on the porch and writing her autobiography. She typed on a electric typewriter the tobacco-stained color of <q>her teeth</q>. Even when she smoked, lighting each cigarette with glowing ruin of the last one,<sup class="note"></sup> she told me stories. When the sun went down it would be just us on the porch. The ember of her cigarette, a few rectangles of light flung out through the windows, and the stars in the distance. She’d point them out to me and say things like, <mark>"You see that star.</mark> That ain’t no star. Watch it shine." The ember of her cigarette, a few rectangles of light flung out through the windows, and the stars in the distance. She’d point them out to me and say things like, "You see that star. That ain’t no star. Watch it shine." 
+</p>
+
+<aside><figure>
+<img 	src="danaReceipt.jpg"
+		alt="The Alphasmart dana, a simple computer"
+		loading="lazy"
+	>
+<figcaption>Fig.1 - Trulli, Puglia, Italy.</figcaption>
+</figure></aside>
+
+<p>
+When I was five lllllamma<code>llll<mark>lama</mark>two things</code> happened that changed the relationship I had with my grandmother. First, she died. That was the big one. It’s hard for me to remember this right, but I think it took me a long time to realize that she was stuck dead. I think, and I’m ashamed of this, that I tried to comfort my father by telling him she’s probably only be dead for a little while and then she’d be back on the porch smoking.
+</p>
+
+<p class="noted_p">
+Before, this is just a test for blue text<sup class="note"></sup>. the second thing was I learned how to read. I had Dr. Seuss already and was picking up words, but I began really reading. These two things gradually transformed Dot from the woman that raised me into a stack of manilla envelopes containing the manuscript for her autobiography. When I was a kid and I began to write, it was Dot’s bedroom. Her bed had been moved out to make room for an old computer than ran MS-DOS. That was the only real change though. Bookcases lined the wall with her massive typewriter, the stack of envelopes, and thousands of paperback novels. 
+</p>
+
+<aside>Blue text, while also a <a href="http://www.wikipedia.org">widely recognizable</a> clickable-text indicator, is crass and distracting. Luckily, it is also rendered unnecessary by the use of underlining.
+<ul>
+	<li>item</li>
+	<li>item</li>
+	<li>item</li>
+</ul>
+And then we just keep rolling with it.
+</aside>
+
+
+<p>
+After, when I was five <code>two things</code> happened that changed the relationship I had with my grandmother. First, she died. That was the big one. It’s hard for me to remember this right, but I think it took me a long time to realize that she was stuck dead. I think, and I’m ashamed of this, that I tried to comfort my father by telling him she’s probably only be dead for a little while and then she’d be back on the porch smoking.
+</p>
+
+<p class="noted_p">
+The second thing was I learned how to read. I had Dr. Seuss already and was picking up words, but I began really reading. These two things gradually transformed Dot from the woman that raised me into a stack of manilla envelopes containing the manuscript for her autobiography.<sup>§</sup> When I was a kid and I began to write, it was Dot’s bedroom. Her bed had been moved out to make room for an old computer than ran MS-DOS. That was the only real change though. Bookcases lined the wall with her massive typewriter, the stack of envelopes, and thousands of paperback novels. 
+</p>
+
+<aside>
+<strong>§ Note:</strong>
+Blue text, while also a widely recognizable clickable-text indicator, is crass and distracting. Luckily, it is also rendered unnecessary by the use of underlining.
+</aside>
+
+<p>
+iThe first significant Tthing I wrote on that computer got displayed at the parish fair. <span class="small_caps">This would had to have been in first grade. </span>There was a writing contest. The theme was space and I created a story about tiny space soldiers fighting dinosaurs. A haze of light rain at the fair turned the ground into a field of mud. To keep the space stories safe from the elements there were displayed inside the fieldhouse. iOur cosmic stories were juxtposed with snorting hogs. I'm calling the <abbr title="Federal Bureau of Investigation">FBI</abbr> and the <span class="small_caps">Small Caps</span> to let them know what <span class="small_caps">nasa</span> is really up to.
+</p>
+
+<figure>
+	<pre>
+     _______.___________.    ___      .______         
+    /       |           |   /   \     |   _  \        
+   |   (----`---|  |----`  /  ^  \    |  |_)  |       
+    \   \       |  |      /  /_\  \   |      /        
+.----)   |      |  |     /  _____  \  |  |\  \----.   
+|_______/       |__|    /__/     \__\ | _| `._____|   
+                                                      
+____    __    ____  ___      .______          _______.
+\   \  /  \  /   / /   \     |   _  \        /       |
+ \   \/    \/   / /  ^  \    |  |_)  |      |   (----`
+  \            / /  /_\  \   |      /        \   \    
+   \    /\    / /  _____  \  |  |\  \----.----)   |   
+    \__/  \__/ /__/     \__\ | _| `._____|_______/    
+	<mark>llll</mark>
+                                                      
+	</pre>
+</figure>
+
+<ol>
+	<li>item</li>
+	<li>item</li>
+	<li>item</li>
+	<li>item</li>
+</ol>
+
+<ul>
+	<li>item</li>
+	<li>item</li>
+	<li>item</li>
+	<li>item</li>
+</ul>
+
+
+
+<h2>Subheading</h2>
+
+<p>
+iThe first significant thing I wrote on that computer got displayed at the parish fair. This would had to have been in first grade. This an alt test for K-Meleon <a href="wikipedia.org" alt="It's Wikipedia. You know, an encyclopedia." title="A Title">using Wikipedia</a> as a test link. There was a writing contest. The theme was space and I created a story about tiny space soldiers fighting dinosaurs. A haze of light rain at the fair turned the ground into a field of mud. To keep the space stories safe from the elements there were displayed inside the fieldhouse. iOur cosmic stories were juxtposed with snorting hogs.
+</p>
+
+<figure>
+	<img 	src="danaReceipt.jpg"
+			alt="The Alphasmart dana."
+			loading="lazy"
+	>
+	<figcaption>Figure 1: the Alphasmart dana, a simple computer.</figcaption>
+</figure>
+
+<p>
+<span class="drop_caps">T</span>
+he first significant thing I wrote on that computer got displayed at the parish fair. This would had to have been in first grade. There was a writing contest. The theme was space and I created a story about tiny space soldiers fighting dinosaurs.<sup><a id="s_*" href="#f_*">*</a></sup> A haze of light rain at the fair turned the ground into a field of mud. To keep the space stories safe from the elements there were displayed inside the fieldhouse. iOur cosmic stories were juxtposed with snorting hogs.
+</p>
+
+<h3>Subsubheading</h3>
+
+<figure>
+	<pre> A haze of light rain at the fair 
+turned the ground into a field of mud. To keep the space stories safe from the elements there were displayed
+ inside the fieldhouse. iOur cosmic stories were 
+ juxtposed with snorting hogs.
+	</pre>
+	<figcaption>
+	Fig.1 - Trulli, Puglia, Italy.
+	</figcaption>
+</figure>
+
+<h3>Tiny heading?</h3>
+
+<p>
+iThe first significant thing I wrote on that computer got displayed at the parish fair. This would had to have been in first grade. There was a writing contest. The theme was space and I created a story about tiny space soldiers fighting dinosaurs.\ A haze of light rain at the fair turned the ground into a field of mud. To keep the space stories safe from the elements there were displayed inside the fieldhouse. iOur cosmic stories were juxtposed with snorting hogs.
+</p>
+
+<h2>If we had a second section?</h2>
+
+<h3>With it's own subheadings?</h3>
+
+<h3>And then some.</h3>
+
+<blockquote cite="http://www.worldwildlife.org/who/index.html">
+	<p>
+For 50 years, WWF has been protecting the future of nature. The world's leading conservation organization, WWF works in 100 countries and is supported by 1.2 million members in the United States and close to 5 million globally.
+	</p>     
+    
+	<cite>
+            Teddy Roosevelt
+    </cite>
+</blockquote>
+
+<article>
+	<h2>
+	<a href="https://www.thedeltajournal.com/delta61/">
+		Julia, We Need To Talk About The Unicorn
+	</a>
+	</h2>
+	<time datetime="2021-01">January 2021</time>
+	
+	<p>
+	This short story won the Matt Clark award for fiction. It's about emotions, and there is also a unicorn. I hope you can feel things when you read it.
+	</p>
+	
+	<blockquote>
+		<p>
+		[&nbsp;.&nbsp;.&nbsp;.&nbsp;] The unicorn was technically Julia’s. I thought maybe I’d get Julia to come see the unicorn even if the unicorn wasn’t entirely real. I think it’s important to treat fake things right if they have fake emotions.
+		</p>
+	</blockquote>
+	
+	<p class="content_full_link">
+		<a href="https://www.thedeltajournal.com/delta60/">
+		Archive at: Delta Literary Journal
+		</a>
+	</p>
+	
+	<p class="content_full_link">
+		<a href="julia.html">
+		Full story online: here
+		</a>
+	</p>
+</article>
+
+<article>
+	<h2>
+	<a href="http://www.atariage.com">
+		E.T. the Extra Terrestrial
+	</a>
+	</h2>
+	<time datetime="2021-01">January 2021</time>
+	
+	<p>
+	No one remembers the worst game ever made. We don't remember the games that are purely awful; we remember the games that fail spectacularly. Amidst a grey sea of interactive flash ads and licensed LCD key chains, occasionally something truly terrible rises ominous from the waves of normalcy.
+	</p>
+	
+	<p>
+	E.T. the Extra-Terrestrial is frequently regarded as the worst game ever. The financial collapse of Atari Inc and the 1983 crash of the entire North American video game market are blamed on E.T. It's completely unfair of course. (&hellip;)</p>
+	
+	<p class="content_full_link">
+		<a href="http://www.hardcoregaming101.net/e-t-the-extra-terrestrial/">
+		Full Article at: Hardcore Gaming 101
+		</a>
+	</p>
+</article>
+
+<article>
+	<h2>
+	<a href="https://oppositelock.kinja.com/faq-will-walmart-seriously-work-on-my-car-1704314336">
+		FAQ: Will Walmart seriously work on my car?
+	</a>
+	</h2>
+	<time datetime="2021-01">January 2021</time>
+	
+	<blockquote>
+		<p>
+		Yep. When you hear somebody put down a garage saying, “may as well take it to WalMart,” you might at first assume they’re using hyperbole. Why would Walmart, volume supermarket of toilet paper and discount chicken, practically a great big Dollar General, work on something as complex as an automobile? But I shit you not: they do. [&nbsp;.&nbsp;.&nbsp;.&nbsp;]
+		</p>
+	</blockquote>
+	
+	<p class="content_full_link">
+		<a href="https://oppositelock.kinja.com/faq-will-walmart-seriously-work-on-my-car-1704314336">
+			Full Article on: Jalopnik
+		</a>
+	</p>	
+</article>
+-->
+
+
+
+
+<footer>
+
+
+
+<ul id="footer_menu">
+<!--
+<li>
+		<a href="#site_heading">
+		&larr; Previous
+		</a>
+</li>
+<li>
+		<a href="#site_heading">
+		Top
+		</a>
+</li>
+<li>
+		<a href="#site_heading">
+		Next &rarr;
+		</a>
+</li></ul>	
+-->
+	
+
+
+<h2>Notes</h2>
+<!--
+<ul class="notes">
+<li id="f_*">△This story still exists on a floppy diskette.<a href="#s_*">△</a></li>
+<li>△itestthis</li>
+<li>△Third item</li>
+<li>△itestthis</li>
+<li>△Third item</li>
+<li>△itestthis</li>
+<li>△Third item</li>
+<li>△itestthis</li>
+<li>△Third item</li>
+<li>△itestthis</li>
+<li>△Third item</li>
+</ul>
+
+
+<h2>References</h2>
+<ol>
+<li id="f_1"><a href="#s_1" aria-label="Jump up."><sup>△ </sup></a>This story still exists on a floppy diskette.<a href="#s_1">&uarr;</a></li>
+<li>△itestthis</li>
+<li>△Third item</li>
+<li>△Third item</li>
+<li>△Third №  –  — …  item</li>
+</ol>
+
+<h2>External Links</h2>
+<ul>
+<li><a href="index.html">Full Story at: New Delta Review</a></li>
+<li><a href="index.html">Full Story at: New Delta Review</a></li>
+<li><a href="http://www.wikipedia.com">Wikipedia</a></li>
+<li><a href="http://www.google.com">Google Search Engine</a></li>
+</ul>
+-->
+
+
+
+
+<small>
+
+
+
+&copy; 2021 Robert Jones<br>
+
+<copy-left></copy-left> <a href="license.html">Code</a> on this page is available under the <a href="license.html">Open Software License version 3.0.</a>
+</small>
+
+
+
+</footer>
+
+
+
+
+
+
+</main>
+
+<!-- 
+	The "b-gap" tags can create extra white space at the bottom of some pages.
+-->
+	<b-gap> &nbsp; </b-gap>
+
+<!--
+	The script "small.js" will modify a page below a certain screen resolution 
+	to compress lists like the Table of Contents.
+-->
+<script src="phone.js"></script>
+
+ 
+
+
+
+
+
+</body>
 </html>
