@@ -1,0 +1,137 @@
+/* Created on Dec 16, 2016 2:43:42 AM */
+/* This is necessary to ensure that everything lines up.*/
+html, body 
+{   font-size: 12pt;
+    }
+
+img {
+  max-width: 100%;
+  height: auto;
+    display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#site_heading
+{
+	font-size: 32pt;
+	}
+  
+
+ 
+header nav ul li
+ {
+	   padding: 12pt;
+	     font-size: 12pt;
+
+	}
+
+
+li a#selected
+ {
+	   padding: 12pt;
+	}
+	
+header a#selected
+{
+	text-decoration: none;
+}
+
+
+
+main 
+{
+	padding: 6pt;
+	}
+	
+@media screen and  (min-width:320px){
+main 
+{
+padding: 12pt;
+}
+}
+
+
+
+		
+h1
+{
+	padding: 6pt;
+	font-size: 18pt;
+}
+
+
+
+main  p:first-of-type {
+	text-indent: 0;
+}
+main  p+p
+{
+	text-indent: 18pt;
+}
+
+main nav{
+float:none;
+padding-right:36pt;
+display: block;
+width: 100%;
+}
+
+main ul, main ul.notes {
+	right:0;
+	}
+main ol {
+	margin-left:15pt;
+}
+main ol li {
+	padding-left:3pt;
+	}
+
+blockquote
+{
+	margin:0;
+}
+blockquote p
+{
+	padding-left: 18pt;
+}
+blockquote::before
+{
+	content: "\201C";
+	font-size: 12pt;
+	float: left;
+	}
+blockquote footer
+{
+	text-align: right;
+}
+
+figcaption {
+	padding: 18pt;
+	padding-top:6pt;
+	
+}
+	
+
+	
+
+sup { 
+	line-height: 0; 
+	position: relative; 
+	vertical-align: baseline; 
+	top: -0.5em;
+	}
+
+
+
+
+
+
+
+	
+
+   
+
+
+
+

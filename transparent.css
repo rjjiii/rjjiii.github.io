@@ -1,0 +1,56 @@
+/*
+	If we add this line to the html document's head:
+		<link rel="stylesheet" href="transparent.css">
+	this transparent style sheet can give a select page a background image and
+	a variety of transparent elements that work to enhance the background. First
+	we reset the main colors of the page to align with out background/content.
+*/
+:root{
+	--ink: #454545;
+	--funk: 11, 83, 69;
+}
+
+
+
+/* 
+	All of the background drawing, tranparencies, and shadows are drawn only for
+	larger monitor sizes. Cell phones and small monitors will not render the
+	more complex things even though the colors and the changes to page size will
+	carry over.
+*/
+@media (min-width: 1300px) {
+body {
+	  background-size: cover;
+	background-image: url("test_bg.jpg");
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+	background-position: center;
+	  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover; 
+  }
+
+
+main nav, aside, header {
+	opacity: .9;
+}
+aside img {
+	opacity: 1;
+}
+
+main, main nav, aside {
+	box-shadow: 3px 3px 10px rgb(var(--funk));
+}
+}
+
+
+
+/* 	The b-gap is down on the bottom of most pages and contains only a single
+	space. This bit of CSS creates a gap between the white main page and the 
+	actual bottom of the document to make it feel more open when the bottom 
+	of the document is reached.
+*/
+b-gap{
+padding-top:300pt;
+display:block;
+}

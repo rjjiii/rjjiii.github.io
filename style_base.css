@@ -1,0 +1,300 @@
+/*These custom value should follow a hex color to make the page fail gracefully on limited browsers.*/
+:root{
+	--ink: #3B3B3B;
+	--funk: 109, 188, 116;
+}
+
+::selection {
+	background: #454545;
+	background: rgb(var(--funk));
+	color:white;
+}
+
+input, textarea, {
+  caret-color: rgb(var(--funk));
+}
+
+
+
+/*
+Web Fonts:
+Copyright (C) Authors of original metafont fonts:
+Donald Ervin Knuth (cm, concrete fonts)
+1995, 1996, 1997 J"org Knappen, 1990, 1992 Norbert Schwarz (ec fonts)
+1992-2006 A.Khodulev, O.Lapko, A.Berdnikov, V.Volovich (lh fonts)
+1997-2005 Claudio Beccari (cb greek fonts)
+2002 FUKUI Rei (tipa fonts)
+2003-2005 Han The Thanh (Vietnamese fonts)
+1996-2005 Walter Schmidt (cmbright fonts)
+
+Copyright (C) 2003-2009, Andrey V. Panov (panov@canopus.iacp.dvo.ru),
+with Reserved Font Family Name "Computer Modern Unicode fonts".
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is available with a FAQ at:
+http://scripts.sil.org/OFL
+*/
+@font-face {
+    font-family: "CMU Typewriter";
+    src: url('cmunvt-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: "CMU Typewriter";
+    src: url('cmunvi-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: italic;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "CMU Typewriter Mono";
+    src: url('cmuntt-webfont.woff') format('woff');
+    font-weight: normal;
+	font-display: swap;
+	font-display: swap;
+}
+
+
+
+html, body{
+	font-size: 12pt;
+	font-family:  "CMU Typewriter", "Courier Prime", "Garamon", serif;
+	color: #454545;
+	color: var(--ink);
+	background: white;
+}
+
+
+
+header{
+	text-align:center;
+}
+#site_heading{
+	font-family:  "CMU Typewriter", "Courier Prime", Rockwell; Courier, monospace;
+	font-size: 36pt;
+	padding: 24pt;
+	margin: 0 0 18pt 0;
+	font-weight: normal;
+	display:block;
+	text-align: center;
+}
+header nav ul li{
+	display: inline;
+	padding: 18pt;
+	font-size: 16pt;
+}
+a#selected {
+	text-decoration:none;
+}
+
+a:link, a:visited {
+	text-decoration:none;
+	color: #0077aa;
+}
+a:visited {
+	color:#365c3a;
+}
+a:hover{
+	text-decoration:underline;
+}
+a:active{
+	text-decoration:none;
+	color: white;
+	background-color: #454545;
+	background-color: rgb(var(--funk));
+}
+
+
+
+main {
+	display: block;
+		line-height: 130%;
+}
+p {	line-height: 130%;}
+
+nav {
+	display: block;
+} 
+h1{
+	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
+	text-align: center;
+	padding: 18pt;
+	font-size: 18pt;
+	font-weight: normal;
+	line-height: normal;
+}
+h2{
+	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
+	padding-top: 24pt;
+	line-height: normal;
+	font-size: 18pt;
+	margin:0;
+	font-weight: normal;
+}
+h3{
+	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
+	padding-top: 24pt;
+	line-height: normal;
+	font-size: 14pt;
+	margin:0;
+}
+
+
+
+address {
+	display: none;
+}
+time {
+	font-style: italic;
+	display: block;
+	margin:0;
+	padding:0;
+	font-size: 11pt;
+}
+
+
+
+img {
+	max-width: 100%;
+	height: auto;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	padding: 0;
+}
+figcaption {
+	padding: 36pt;
+	padding-top:6pt;
+}
+
+dl {
+	width: 100%;
+	display:inline-block;}
+dt {
+  float:left;
+  clear: left;
+  width: 120pt;
+  text-align:right;
+  padding-right:18pt;
+}
+dd {
+    clear: left;
+    float: left;
+    margin-left: 120pt;
+}
+dt + dd {
+    float: left;
+    clear: none;
+    margin-left: 0;
+}
+
+code, pre, samp, kbd, tt {
+	font-family: "CMU Typewriter Mono", monospace, monospace;
+	white-space: pre;
+	word-wrap: normal; 
+	word-break: normal;
+	padding-bottom:0;
+	margin-bottom:0;
+}
+pre {
+	overflow: auto;
+	width: auto;
+}
+code {
+	white-space: pre-wrap;
+}
+
+p.content_full_link{
+	text-align: right;
+	font-style: italic;
+	margin: 0;
+	display: block;
+	}
+p.content_full_link a:after{
+	content:" → ";
+}
+
+
+main blockquote p {
+	display:block;
+}
+
+
+
+footer{
+	padding-top: 36pt;
+}
+
+hr {
+	padding:0;
+	margin:auto;
+	margin-top: 36pt;
+}
+
+
+
+
+#footer_menu li::before {
+    content: "";
+}
+#footer_menu{
+	border-top: solid 1px black;
+	border-top: solid 1px var(--ink);
+	width: 100%;
+	padding-bottom:36pt;
+	margin-top: 36pt;
+	
+	display: flex;
+	flex-direction: row;
+	
+	position:static;
+	padding:0;
+	list-style: none;	
+}
+
+#footer_menu li{
+	flex-grow: 1;
+	padding-top:3pt;
+	position: static;
+}
+
+#footer_menu li:nth-child(2) {
+	text-align:center;
+}
+
+#footer_menu li:nth-child(3) {
+	text-align: right;
+}
+
+#footer_menu li a:link {
+	display: block;
+}
+
+
+
+small {
+display: block;
+padding-top:120pt;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

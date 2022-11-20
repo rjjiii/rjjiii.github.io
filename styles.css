@@ -1,0 +1,425 @@
+html, body{
+	margin: 0;
+	padding: 0;
+	height: 100%;
+}
+
+
+
+header{
+	margin:0;
+	padding: 0;
+	margin: 0;
+	background-color: #454545;
+	background-color: rgb(var(--funk));
+	color: white;
+	}
+header nav a:link{
+	color: white;
+}
+header nav a:visited{
+	color: white;
+}
+#site_heading{
+	color: white;
+	display: inline-block;
+}
+
+header nav ul{
+	margin:0;
+	padding: 0;
+	border: 0;
+}
+
+header nav ul li #selected{
+	display: inline;
+	background: white;
+	color: #454545;
+	color: rgb(var(--funk));
+	padding: 18pt;
+}
+header nav a#selected{
+	color: #454545;
+	color: rgb(var(--funk));
+}
+main {
+	max-width: 438pt;
+	padding: 36pt;
+	margin: auto;
+	background-color:white;
+	border: none;
+	line-height: 130%;
+}
+
+main  p:first-of-type {
+	text-indent: 0;
+}
+main  p+p{
+	text-indent: 36pt;
+}
+/*I want to make sure that I don't indent after inline asides, but still indent after marginal asides.*/
+@media (min-width: 1300px) {
+main  aside + p{
+	text-indent: 36pt;
+}
+}
+
+
+
+
+/*This secondary navigation element is for a table of contents or other page specific navigation.*/
+main nav
+{
+    max-width: 144pt;
+  }
+@media (min-width: 1111px)
+{
+	main nav
+{
+	transform: translate(0, 18pt); 
+	z-index: 100;
+    position: fixed;
+	top: 177px;
+    left: 0;
+	opacity: .7;
+	padding: 3pt;
+	padding-left: 24pt;
+}
+
+.noted_p{
+display:inline-block;
+}
+}
+
+main nav detils {
+	padding:0;
+}
+
+main nav details > summary {
+  list-style: none;
+}
+main nav details > summary::-webkit-details-marker {
+  display: none;
+}
+nav details > ol {  
+padding-left: 18pt;
+}
+
+  
+
+
+
+main nav ol {
+    counter-reset: item;
+}
+
+main nav ol > li {
+    counter-increment: item;
+}
+
+main nav ol ol > li {
+    display: block;
+}
+
+main nav ol ol > li:before {
+    content: counters(item, ".") ". ";
+    margin-left: -3px;
+}
+
+
+
+/*h1 functions as an article title. H3 and h3 then provide subheadings to divide an article.*/
+h1, h1 a:visited{
+	color: #454545;
+	color: rgb(var(--funk));
+	font-size: 24pt;
+}
+
+
+
+
+figure{
+	padding:0;
+	margin:0;
+	border: none;
+}
+
+article{
+	margin-bottom: 44pt;
+}
+article h1{
+	padding-bottom: 6pt;
+}
+
+
+abbr, span.small_caps{
+	  font-variant: small-caps;
+}
+abbr {
+	text-transform: lowercase;
+	text-decoration: none;
+    font-weight: bold;
+}
+span.drop_caps{
+    float:left;
+    font-size:450%;
+	font-weight: bold;
+	margin:0;
+	padding: 0;
+	border: none;
+	line-height: .5;
+    margin-top:14px;
+    margin-right:5px;
+    color: rgb(var(--funk));
+}
+.drop_caps:before,
+.drop_caps:after {
+  content: "";
+  display: block;
+}
+.drop_caps:before {
+  margin-bottom: -0.175em;
+}
+.drop_caps:after {
+  margin-top: -0.05em;
+}
+code, pre{
+	background-color: #454545;
+	background-color: var(--ink);
+	color: white;
+}
+
+
+
+q{
+	font-style: italic;
+	quotes: none;
+}
+mark{
+	background-color: #454545;
+	background-color: rgb(var(--funk));
+	color: white;
+}
+code mark, pre mark {
+	color: #c7ffcc;
+	background: none;
+}
+main  li,main  ul,main  ol{
+	margin-left: 0;
+	padding-left: 0;
+}
+main  ul {
+	position: relative;
+	right: 17pt;
+	list-style: none;
+	margin-left: 0;
+	padding-left: 17pt;
+}
+main  ul li:before {
+	content: "–";
+	position: absolute;
+	left: 0;
+}
+main  ol{
+	list-style-type: decimal;
+}
+blockquote{
+	margin:0;
+	display: block;
+}
+blockquote p{
+	padding-left: 36pt;
+	display: inline-block;
+}
+blockquote::before{
+	content: "\201C";
+	font-size: 36pt;
+	float: left;
+	transform: translate(0, 18pt); 
+}
+blockquote footer{
+	text-align: right;
+}
+blockquote cite { 
+text-align: right;
+display: block;
+}
+
+hr{
+	height: 1pt;
+	color: #454545;
+	color: var(--ink);
+	border: none;
+	border-bottom: 1pt solid #454545;
+	border-bottom: 1pt solid var(--ink);
+}
+sup {
+	line-height: 0;
+	position: relative;
+	vertical-align: baseline;
+	top: -0.5em;
+}
+main  ul.notes{
+	right: 18pt;
+	list-style: none;
+	margin-left: 0;
+	padding-left: 18pt;
+}
+aside {
+display: inline-block;
+float: right;
+width: 240pt;
+margin-right: -282pt;
+margin-top:9pt;
+font-size: 12pt;
+padding: 3pt;
+opacity: .7
+}
+
+
+
+main aside ol, main aside ul {
+	margin-top:0;
+	margin-bottom:0;
+}
+main  aside ol, main  aside ol li{
+margin-left: 12pt;
+}
+main  aside ul, main  aside ul li{
+margin-left: 18pt;
+}
+
+main  aside figcaption {
+	padding:0;
+	margin:0;
+	margin-top:3pt;
+}
+
+.notes li:nth-child(1):before {
+	content: "*";
+}
+.notes li:nth-child(2):before {
+	content: "†";
+}
+.notes li:nth-child(3):before {
+	content: "‡";
+}
+.notes li:nth-child(4):before {
+	content: "§ ";
+}
+.notes li:nth-child(5):before {
+	content: "¶ ";
+}
+.notes li:nth-child(6):before {
+	content: "** ";
+}
+.notes li:nth-child(7):before {
+	content: "††  ";
+}
+.notes li:nth-child(8):before {
+	content: "‡‡  ";
+}
+.notes li:nth-child(9):before {
+	content: "§§ ";
+}
+.notes li:nth-child(10):before {
+	content: "¶¶ ";
+}
+
+
+
+
+
+ :target {
+	background-color: rgb(var(--funk), .1);
+}
+
+
+copy-left:before {
+  content: "©";
+}
+copy-left{
+	display:inline-block;
+	transform: scale(-1, 1); 
+	}
+
+
+
+@media (max-width: 1300px) {
+aside {	
+display: block;	
+float: none;	
+margin: 12pt 24pt 12pt 24pt;	
+width: auto;
+border: none;
+border-top: 1pt solid black;
+border-bottom: 1pt solid var(--ink);
+padding: 6pt;
+color: #454545;
+color: var(--ink);
+}
+main p {
+	display: block;
+}
+}
+@media (max-width: 1111px) {	
+	
+main nav {	
+    display: block;
+    position: static;
+    float: left;
+    margin: 0;
+    margin-top: 0;
+    margin-right: 18pt;
+	border: 1pt solid var(--ink);
+	color: #454545;
+    color: var(--ink);
+    padding: 11pt;
+}
+
+main nav details > ol {
+	margin:0;
+	    margin-top: 16pt;
+}
+
+
+summary{
+	padding:0;
+}
+main nav li a:link, main nav li a:visited{
+	text-decoration:none;
+	color: #0077aa;
+}
+main nav li a:active{
+	text-decoration:none;
+	color: white;
+	background-color: #454545;
+	background-color: rgb(var(--funk));
+
+}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+	/*
+	Any code placed here will render only in IE10, IE11, and if "high contrast"
+	mode is active on windows: some version of MS Edge. Unless errors make the
+	content illegible, it's better to let those browsers render the content in
+	whatver way it renders.
+	*/
+}
+
+
+
+
