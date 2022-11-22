@@ -11,6 +11,9 @@ description:
 # URL of your avatar or profile pic (you could use your GitHub profile pic)
 avatar: 
 
+# Posts under "words" link:
+paginate_path: "/words/:num/"
+
 #
 # Flags below are optional
 #
