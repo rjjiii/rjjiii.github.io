@@ -1,3 +1,20 @@
+---
+excerpt: 'The AlphaSmart dana is technically a Palm OS PDA, in the same way that Hannibal Lecter is technically a famous chef. The dana does run Palm OS 4.0, but it has almost reversed priorities from a normal PDA. For example, I drafted college essays on a dana, but never used the calendar or address book until I began writing this article. In contrast, Palm OS founder Jeff Hawkins distilled the average PDA user’s needs down to, “All I really care about is calendars and address book and trying to coordinate with my secretary.” Palm designed their operating system to organize a social schedule, but AlphaSmart Inc. used that codebase to create a device that focused on expression rather than organization. AlphaSmart was founded by ex-Apple employees who designed simplified computers for classrooms that couldn’t afford high end computers. AlphaSmart achieved these lower costs by hyperfocusing on composition. Those lower costs became irrelevant as laptop prices dropped, but the hyperfocus on composition itself has become more relevant in an era of distraction. If we consider the dana as a device for producing drafts, even its flaws are transformed into strengths.'
+---
+
+<nav>
+<details open>
+<summary>☛ Contents</summary>
+
+<div markdown="1">
+1. The generated Toc will be an ordered list
+{:toc}
+</div>
+	
+</details>
+</nav>
+
+
 The AlphaSmart dana is technically a Palm OS PDA, in the same way that Hannibal Lecter is technically a famous chef. The dana does run Palm OS 4.0, but it has almost reversed priorities from a normal PDA. For example, I drafted college essays on a dana, but never used the calendar or address book until I began writing this article. In contrast, Palm OS founder Jeff Hawkins distilled the average PDA user’s needs down to, “All I really care about is calendars and address book and trying to coordinate with my secretary.” Palm designed their operating system to organize a social schedule, but AlphaSmart Inc. used that codebase to create a device that focused on expression rather than organization. AlphaSmart was founded by ex-Apple employees who designed simplified computers for classrooms that couldn’t afford high end computers. AlphaSmart achieved these lower costs by hyperfocusing on composition. Those lower costs became irrelevant as laptop prices dropped, but the hyperfocus on composition itself has become more relevant in an era of distraction. If we consider the dana as a device for producing drafts, even its flaws are transformed into strengths.
 
 AlphaWord with this article in progress
