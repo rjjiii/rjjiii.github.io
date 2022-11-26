@@ -7,7 +7,6 @@ excerpt: 'The AlphaSmart dana is technically a Palm OS PDA, in the same way that
 <summary>☛ Contents</summary>
 	
 <div markdown="1">
-<center><a href="#site_heading">[top]</a></center>
 	
 1. The generated Toc will be an ordered list
 {:toc}
@@ -19,11 +18,27 @@ excerpt: 'The AlphaSmart dana is technically a Palm OS PDA, in the same way that
 
 The AlphaSmart dana is technically a Palm OS PDA, in the same way that Hannibal Lecter is technically a famous chef. The dana does run Palm OS 4.0, but it has almost reversed priorities from a normal PDA. For example, I drafted college essays on a dana, but never used the calendar or address book until I began writing this article. In contrast, Palm OS founder Jeff Hawkins distilled the average PDA user’s needs down to, “All I really care about is calendars and address book and trying to coordinate with my secretary.” Palm designed their operating system to organize a social schedule, but AlphaSmart Inc. used that codebase to create a device that focused on expression rather than organization. AlphaSmart was founded by ex-Apple employees who designed simplified computers for classrooms that couldn’t afford high end computers. AlphaSmart achieved these lower costs by hyperfocusing on composition. Those lower costs became irrelevant as laptop prices dropped, but the hyperfocus on composition itself has become more relevant in an era of distraction. If we consider the dana as a device for producing drafts, even its flaws are transformed into strengths.
 
-AlphaWord with this article in progress
+<aside><figure>
+<a	href="{{ site.baseurl }}/images/dana/PhotoOfAlphaWordWithTheArticleInProgress-1536x864.jpg">
+<img 	src="{{ site.baseurl }}/images/dana/PhotoOfAlphaWordWithTheArticleInProgress-1536x864.jpg"
+		alt="Photo of the AlphaSmart dana."
+		loading="lazy"
+	>
+</a>
+<figcaption>AlphaWord with this article in progress.</figcaption>
+</figure></aside>
 
 The dana is the pinnacle of AlphaSmart’s writer-focused devices. Former Apple engineers Ketan Kothari and Joe Barrus created AlphaSmart in the early 90s to create word-processing computers. Kothari said that their goal was to allow the users to “focus on the words”. They floated their ideas in an education discussion board on FidoNet, and met up with a group of enthusiastic teachers to get feedback on a prototype device. The prototype was simply a full keyboard with an LCD display and the ability to store writing. The teachers liked it, but told the engineers they needed something with fewer keys, standard batteries, and a smaller form factor. Kothari and Barrus incorporated these few tweaks into their original AlphaSmart device. All future products kept this form factor: a reduced keyboard with an LCD screen, output ports, and a battery compartment. Future models introduced a handful of new features. The 1995 AlphaSmart Pro could connect to both PC and Mac computers. Five years later, the AlphaSmart 3000 introduced USB support. Then in 2002, the dana adapted Palm OS 4 to facilitate a much more capable machine. The dana included a touch screen, a backlight, proper file management, compatibility with loads of Palm applications, a larger screen, improved font rendering, and a plethora of ports including two SD card slots.
 
-Screenshot of normal sized Palm App Diddlebug running on dana
+<aside><figure>
+<a	href="{{ site.baseurl }}/images/dana/ScreenshotOfNormalSizedPalmAppDiddlebugRunningOnDana.png">
+<img 	src="{{ site.baseurl }}/images/dana/ScreenshotOfNormalSizedPalmAppDiddlebugRunningOnDana.png"
+		alt="Screenshot of Diddlebug."
+		loading="lazy"
+	>
+</a>
+<figcaption>Screenshot of normal sized Palm App Diddlebug running on dana.</figcaption>
+</figure></aside>
 
 The dana was the first of the AlphaSmart machines to use the Palm OS, and also the last. The dana was released at a retail cost of well over $500 adjusted for inflation. At that time, the lower end 600mhz iBook retailed for $1700 adjusted for inflation. As the cost and weight of laptops fell, AlphaSmart had to simplify their designs to compete with lower end laptops. They released the Neo which abandoned Palm OS and many of the dana’s features, but cost half as much as the dana. Initially, AlphaSmart aimed for a two tier product line with the cheaper Neo and the higher end dana. However, they found schools were reluctant to pay more without getting a full-blown laptop. AlphaSmart slightly upgraded the memory in the Neo, rebranded it as the Neo2, and continued for several years with this as their sole device. In 2013, even though the Neo2 sold as low as $119, it was finally killed off. There is no current successor, and the dana stands as the high water mark of AlphaSmart’s mission to create a machine with a focus on the words.
 
@@ -34,7 +49,7 @@ The dana is a text editor that theoretically could function as a complete word p
 The dana has so much word processing power that it can even print straight from the dana, but this feature just highlights how much the dana should not be used for a finished product. First, AlphaWord does not separate documents into pages. Documents are pure streams of text, which is perfect for a first draft. However, the pageless documents mean that the actual layout is a mystery until the document is printed. Next, the dana has quite a few technical printer issues. I connected to two cheap inkjet printers, and both ignored the dana. I connected to a Brother laser printer, and I believe it printed the correct number of pages, but they all came out blank. I found a couple large office-style copiers that could print the documents straight from AlphaWord, but they disregarded the font except for italics and bold. My favorite printer interaction was connecting to a thermal printer. I didn’t expect anything, but the cheap thermal printer spooled out anything the dana threw at it. The thermal printer completely disregarded all formatting on the dana, but there was something fitting in the stark receipt-like printouts coming from the simple keyboard. I experimented with sending some receipt-style list poetry to the thermal paper and was pleased with the output. However, I can’t imagine trying to read an essay off of a narrow scroll of receipt paper.
 
 <aside><figure>
-<a	href="https://rjjiii.com/words/dana/PhotoContrastingAlphaWordDocumentsOnScreenVersusPrinted-1536x864.jpg">
+<a	href="{{ site.baseurl }}/images/dana/PhotoContrastingAlphaWordDocumentsOnScreenVersusPrinted-1536x864.jpg">
 <img 	src="{{ site.baseurl }}/images/dana/PhotoContrastingAlphaWordDocumentsOnScreenVersusPrinted-1536x864.jpg"
 		alt="Photograph of a document on both the AlphaSmart's screen and a printout."
 		loading="lazy"
@@ -47,12 +62,28 @@ While the dana can’t adequately print, Palm OS facilitates a plethora of ways 
 
 A USB cable also allows the dana to upload and sync documents through Palm Desktop, but this is more cumbersome. It required a fair bit of set up on my Windows 10 laptop, and doesn’t offer much benefit if you’re only removing documents from the dana. The big difference is that it allows a two-way flow. Documents can be downloaded into the dana and synced across devices. One benefit of syncing is that it allows you to upload material to the dana. You can add in addresses and calendar dates like any Palm device, but you can also upload documents to work on or even eBooks to read. It’s an easy way to add applications and fonts to the dana, but apps can also be sideloaded via the dana’s SD Card slot.
 
-Custom widescreen launcher using categories
+<aside><figure>
+<a	href="{{ site.baseurl }}/images/dana/PhotoOfCustomWidescreenLauncherUsingCategories-1536x769.jpg">
+<img 	src="{{ site.baseurl }}/images/dana/PhotoOfCustomWidescreenLauncherUsingCategories-1536x769.jpg"
+		alt="Photo of the AlphaSmart dana."
+		loading="lazy"
+	>
+</a>
+<figcaption>Custom widescreen launcher using categories.</figcaption>
+</figure></aside>
 
 The dana’s SD card also works great to back up or transfer information, but I’ve kept my documents primarily in the RAM. Saving and reloading from the SD card slows down the otherwise immediate responses from the dana. The file structure on the card can be natively viewed by any computer that can handle FAT. AlphaWord uses a proprietary format, but it’s easy to strip the formatting and generate text files. There are even Windows apps to convert the dana’s files to RTF or TXT formats. Because it’s a standard file system, these apps can be stored on the SD card and used at any computer. There are also text editors for Palm OS that can open AlphaWord material and save text documents to the SD card from within the dana. The SD card is not as bulletproof as sending via USB cable, but it’s incredibly versatile.
 Before moving on to the experience of typing on the dana, I’m going to quickly run through a few other connection options on the dana that are not as great. It has an infrared port, so you can use the dana like the world’s largest universal remote. It also has Wi-Fi, but only older WEP which my router doesn’t even have as an option. A brief tour of public Wi-Fi hotspots revealed that only the local coffee house built into an old re-purposed train station had WEP available. Even there, I think it was just a mistake, because that coffee house didn’t have any password set up for WEP, so once they catch their error, there will be nowhere for the dana to get online directly here. You may have better results if you live in a rough neighborhood or a time warp. That’s not a big deal, because the dana’s web browser was painfully slow, and it plays into the dana’s hyperfocus on writing. A Wi-Fi connection would open a lot of distractions like email and social media.
 
-Custom widescreen launcher showing apps loaded onto an SD card
+<aside><figure>
+<a	href="{{ site.baseurl }}/images/dana/ScreenshotOfCustomWidescreenLauncherShowingAppsLoadedOntoAnSDCard.png">
+<img 	src="{{ site.baseurl }}/images/dana/ScreenshotOfCustomWidescreenLauncherShowingAppsLoadedOntoAnSDCard.png"
+		alt="Screenshot of a custom launcher."
+		loading="lazy"
+	>
+</a>
+<figcaption>Custom widescreen launcher showing apps loaded onto an SD card.</figcaption>
+</figure></aside>
 
 ## Palm OS in 2019
 
@@ -64,7 +95,16 @@ The keyboard also has 8 function keys all mapped to their own documents. These k
 
 I’ve avoided quirks and flaws so far, because overall I do love the dana. However, it has a couple huge issues. One of the device’s largest shortcomings is the software ecosystem. Alphasmart designed the device two decades ago, and there is no modern version of Palm OS or Palm Desktop for Windows. Bridging that time gap gives the dana an almost archaeological user experience. There’s no physical store or even an app store. Here are some of the experiences that I’ve had in setting up my device in 2019: My device was missing a crucial software update that improves stability and the native AlphaSmart apps; I downloaded that from an enthusiast’s website. The machine lacked a proper file manager, so I downloaded FileZ from a Dropbox link in a Flickr thread. The dana is no longer supported, so I accessed the online user manuals via plugging broken links into the Wayback Machine’s archives of the old manufacturer pages. I found a free text editor specifically written for the dana’s wide screen (SiEd, dana version) on SourceForge in alpha, and left abandoned 4 years ago. That editor will sometimes crash the whole system, but it works fine if used to purely to convert proprietary the AlphaWord format into pure text documents. I really wanted an app that I could tab over to and check the time or battery level, but all the clocks and battery monitors that I found were too complex. They were interactive things that used tiny fonts. None of them quite worked for my drafting workflow, so I downloaded, NS Basic/Palm, an antique IDE. I couldn’t puzzle it out with my limited programming knowledge, so I found some dusty books on Palm OS software in the upper floors of the university library. These are not entirely atypical experiences. In the most active AlphaSmart online community, Flickr users frequently swap tips for obscure resources and discuss how they’ve modified their own danas.
 
-My custom clock and battery monitor
+<aside><figure>
+<a	href="{{ site.baseurl }}/images/dana/PhotoOfMyCustomClockPlusBatteryMonitor-1536x910.jpg">
+<img 	src="{{ site.baseurl }}/images/dana/PhotoOfMyCustomClockPlusBatteryMonitor-1536x910.jpg"
+		alt="Custom Palm software written for the dana."
+		loading="lazy"
+	>
+</a>
+<figcaption>My custom clock and battery monitor.</figcaption>
+</figure></aside>
+
 
 One modification that seems incredibly common among dana users is Vance Fry’s battery hack. From the factory, the dana is wired up to take either AA batteries or a rechargeable battery pack that fit into the AA battery compartment. The rechargeable battery packs make the dana far more useable than trying to swap out AA’s every week or month depending on your usage. However, the packs are out of production, and existing packs are aging. That leaves two options. Some users open up the old battery backs, and replace the batteries inside with modern AA rechargeable batteries. The far more elegant solution on Vance Fry’s website is to wire the battery pack connector to the AA battery terminals. This allows the dana to run on the normal rechargeable batteries sold everywhere. The dana can then be charged up from any USB port. All of this modification was something, that I honestly enjoyed. I enjoyed having to open my device, cut wires, and re-solder them. It was the first time that I soldered electronics, and I’ve built on that knowledge since then. There is something positive in the experience of soldering up battery packs and searching the ruins of crumbling websites for vintage software. However, this may be a deal breaker for some users. This is why many AlphaSmart fans prefer the more basic devices like the Neo or AlphaSmart 3000, where there’s no ecosystem to navigate.
 
