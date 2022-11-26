@@ -7,7 +7,7 @@ excerpt: 'The AlphaSmart dana is technically a Palm OS PDA, in the same way that
 <summary>☛ Contents</summary>
 	
 <div markdown="1">
-<a href="#site_heading">[top]</a>
+<center><a href="#site_heading">[top]</a></center>
 	
 1. The generated Toc will be an ordered list
 {:toc}
@@ -35,7 +35,7 @@ The dana has so much word processing power that it can even print straight from 
 
 <aside><figure>
 <a	href="https://rjjiii.com/words/dana/PhotoContrastingAlphaWordDocumentsOnScreenVersusPrinted-1536x864.jpg">
-<img 	src="https://rjjiii.com/words/dana/PhotoContrastingAlphaWordDocumentsOnScreenVersusPrinted-1536x864.jpg"
+<img 	src="{{ site.baseurl }}/images/dana/PhotoContrastingAlphaWordDocumentsOnScreenVersusPrinted-1536x864.jpg"
 		alt="Photograph of a document on both the AlphaSmart's screen and a printout."
 		loading="lazy"
 	>
