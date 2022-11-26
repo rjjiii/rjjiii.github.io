@@ -17,11 +17,11 @@ The dana is a text editor that theoretically could function as a complete word p
 The dana has so much word processing power that it can even print straight from the dana, but this feature just highlights how much the dana should not be used for a finished product. First, AlphaWord does not separate documents into pages. Documents are pure streams of text, which is perfect for a first draft. However, the pageless documents mean that the actual layout is a mystery until the document is printed. Next, the dana has quite a few technical printer issues. I connected to two cheap inkjet printers, and both ignored the dana. I connected to a Brother laser printer, and I believe it printed the correct number of pages, but they all came out blank. I found a couple large office-style copiers that could print the documents straight from AlphaWord, but they disregarded the font except for italics and bold. My favorite printer interaction was connecting to a thermal printer. I didn’t expect anything, but the cheap thermal printer spooled out anything the dana threw at it. The thermal printer completely disregarded all formatting on the dana, but there was something fitting in the stark receipt-like printouts coming from the simple keyboard. I experimented with sending some receipt-style list poetry to the thermal paper and was pleased with the output. However, I can’t imagine trying to read an essay off of a narrow scroll of receipt paper.
 
 <aside><figure>
-<img 	src="danaReceipt.jpg"
-		alt="The Alphasmart dana, a simple computer"
+<img 	src="dana/PhotoContrastingAlphaWordDocumentsOnScreenVersusPrinted-1536x864.jpg"
+		alt="Photograph of a document on both the AlphaSmart's screen and a printout."
 		loading="lazy"
 	>
-<figcaption>Fig.1 - Trulli, Puglia, Italy.</figcaption>
+<figcaption>AlphaWord Documents on screen versus printed.</figcaption>
 </figure></aside>
 
 While the dana can’t adequately print, Palm OS facilitates a plethora of ways to get documents off of the dana. USB keyboard emulation is both the best way to get material off of the dana, and the machine’s default setup. When connected to via a standard USB cable, the dana becomes a USB keyboard. You can type on it just like any other keyboard. The big difference is the “send” key on the dana, that functions like a robot typing your document keystroke by keystroke. AlphaWord even allows you to set the typing speed in case the connection is slow. This is so versatile that it works not just on every computer that I’ve tested, but also on every phone that I tested. It even allows the dana to connect to USB keyboard to Bluetooth adapters and transform the dana into a wireless Bluetooth keyboard. It’s versatile on the software side as well. Because, the dana treats the characters as keystrokes, I can write fiancé and naiveté even though I don’t know offhand how to create accented characters on-screen. I simply type them out the same way I would on my laptop’s keyboard. If you use any software that converts markup or markdown into formatting as you type the dana can also slot into that workflow. The USB keyboard method of exporting documents works perfect for moving rough drafts off of the dana.
@@ -74,7 +74,6 @@ Overall, the AlphaSmart dana shows the relationship between minimalism and focus
 Photos:
 AlphaWord with this article in progress
 Screenshot of normal sized Palm App Diddlebug running on dana
-AlphaWord Documents on screen versus printed
 Custom widescreen launcher using categories
 Custom widescreen launcher showing apps loaded onto an SD card
 My custom clock and battery monitor
