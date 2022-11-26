@@ -6,7 +6,7 @@ excerpt: 'The AlphaSmart dana is technically a Palm OS PDA, in the same way that
 <address rel="author">
 By: Robert Jones III
 </address>
-<time datetime="2021-01">January 2021</time>
+<time datetime="2020-01">January 2020</time>
 </div>
 <!-- 
 	The div above groups the byline and date into a single block element.
