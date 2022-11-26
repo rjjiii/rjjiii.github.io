@@ -11,8 +11,10 @@ layout: default
       <div class="entry">
         {{ post.excerpt }}
       </div>
-
-      <a href="{{ site.baseurl }}{{ post.url }}" class="read-more">Read More</a>
+     
+      <p class="content_full_link">
+        <a href="{{ site.baseurl }}{{ post.url }}" class="read-more">Read More</a>
+      </p>
     </article>
   {% endfor %}
 </div>
