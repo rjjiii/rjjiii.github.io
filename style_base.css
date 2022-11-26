@@ -94,7 +94,7 @@ a:link, a:visited {
 	color: #0077aa;
 }
 a:visited {
-	color:#365c3a;
+	color:rgb(var(--funk));
 }
 a:hover{
 	text-decoration:underline;
