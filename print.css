@@ -28,7 +28,7 @@ address {
 h1 {
 	font-style: normal;
 	font-size: 24pt;
-	color: var(--ink);
+	color: rgb(var(--ink));
 	}
 
 h2 {
@@ -100,7 +100,7 @@ margin: 12pt 24pt 12pt 24pt;
 width: auto;
 padding: 6pt;
 color: #454545;
-color: var(--ink);
+color: rgb(var(--ink));
 border: none;
 line-height: 100%;
 padding-left: 72pt;

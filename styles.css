@@ -185,7 +185,7 @@ span.drop_caps{
 }
 code, pre{
 	background-color: #454545;
-	background-color: var(--ink);
+	background-color: rgb(var(--ink));
 	color: white;
 }
 
@@ -248,10 +248,10 @@ display: block;
 hr{
 	height: 1pt;
 	color: #454545;
-	color: var(--ink);
+	color: rgb(var(--ink));
 	border: none;
 	border-bottom: 1pt solid #454545;
-	border-bottom: 1pt solid var(--ink);
+	border-bottom: 1pt solid rgb(var(--ink));
 }
 sup {
 	line-height: 0;
@@ -270,9 +270,32 @@ display: inline-block;
 float: right;
 width: 240pt;
 margin-right: -282pt;
+margin-top:9pt;
 font-size: 12pt;
 padding: 3pt;
+color: rgb(var(--ink), 0.7);
 }
+
+/*
+	Auto-numbering asides and sup tags.
+*/
+main {
+    counter-reset: margin-note;
+}
+
+sup.note::before {
+    counter-increment: margin-note;
+	content: counter(margin-note, asterisk);
+}
+aside.note::before{
+	content: counter(margin-note, asterisk) "  ";
+}
+@counter-style asterisk {
+  system: fixed;
+  symbols: \* \† \‡ \§ \¶ \*\* \†\† \‡\‡ \§\§ \¶\¶;
+  suffix: " ";
+}
+
 
 
 
@@ -326,8 +349,6 @@ main  aside figcaption {
 
 
 
-
-
  :target {
 	background-color: rgb(var(--funk), .1);
 }
@@ -351,10 +372,10 @@ margin: 12pt 24pt 12pt 24pt;
 width: auto;
 border: none;
 border-top: 1pt solid black;
-border-bottom: 1pt solid var(--ink);
+border-bottom: 1pt solid rgb(var(--ink));
 padding: 6pt;
 color: #454545;
-color: var(--ink);
+color: rgb(var(--ink));
 }
 main p {
 	display: block;
@@ -369,9 +390,9 @@ main nav {
     margin: 0;
     margin-top: 0;
     margin-right: 18pt;
-	border: 1pt solid var(--ink);
+	border: 1pt solid rgb(var(--ink));
 	color: #454545;
-    color: var(--ink);
+    color: rgb(var(--ink));
     padding: 11pt;
 }
 

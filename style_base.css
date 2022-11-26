@@ -1,6 +1,6 @@
 /*These custom value should follow a hex color to make the page fail gracefully on limited browsers.*/
 :root{
-	--ink: #3B3B3B;
+	--ink: 59, 59, 59;
 	--funk: 109, 188, 116;
 }
 
@@ -62,7 +62,7 @@ html, body{
 	font-size: 12pt;
 	font-family:  "CMU Typewriter", "Courier Prime", "Garamon", serif;
 	color: #454545;
-	color: var(--ink);
+	color: rgb(var(--ink));
 	background: white;
 }
 
@@ -241,7 +241,7 @@ hr {
 }
 #footer_menu{
 	border-top: solid 1px black;
-	border-top: solid 1px var(--ink);
+	border-top: solid 1px rgb(var(--ink));
 	width: 100%;
 	padding-bottom:36pt;
 	margin-top: 36pt;
