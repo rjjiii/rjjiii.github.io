@@ -15,7 +15,7 @@ The dana is a text editor that theoretically could function as a complete word p
 The dana has so much word processing power that it can even print straight from the dana, but this feature just highlights how much the dana should not be used for a finished product. First, AlphaWord does not separate documents into pages. Documents are pure streams of text, which is perfect for a first draft. However, the pageless documents mean that the actual layout is a mystery until the document is printed. Next, the dana has quite a few technical printer issues. I connected to two cheap inkjet printers, and both ignored the dana. I connected to a Brother laser printer, and I believe it printed the correct number of pages, but they all came out blank. I found a couple large office-style copiers that could print the documents straight from AlphaWord, but they disregarded the font except for italics and bold. My favorite printer interaction was connecting to a thermal printer. I didn’t expect anything, but the cheap thermal printer spooled out anything the dana threw at it. The thermal printer completely disregarded all formatting on the dana, but there was something fitting in the stark receipt-like printouts coming from the simple keyboard. I experimented with sending some receipt-style list poetry to the thermal paper and was pleased with the output. However, I can’t imagine trying to read an essay off of a narrow scroll of receipt paper.
 
 <aside><figure>
-<img 	src="dana/PhotoContrastingAlphaWordDocumentsOnScreenVersusPrinted-1536x864.jpg"
+<img 	src="https://rjjiii.com/words/dana/PhotoContrastingAlphaWordDocumentsOnScreenVersusPrinted-1536x864.jpg"
 		alt="Photograph of a document on both the AlphaSmart's screen and a printout."
 		loading="lazy"
 	>
