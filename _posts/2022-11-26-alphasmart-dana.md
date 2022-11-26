@@ -140,12 +140,4 @@ Overall, the AlphaSmart dana shows the relationship between minimalism and focus
 - **[Palm: I’m ready to wallow now](https://www.osnews.com/story/26838/palm-im-ready-to-wallow-now/)** OSNews’s retrospective on Palm OS.
 - I’ve referred to the business behind the AlphaSmart products as AlphaSmart Inc. or simply AlphaSmart for coherency. The brand has been variously owned by: Intelligent Peripheral Devices Inc., AlphaSmart Inc., Renaissance Learning, NEO Direct Inc., and Edmodo.
 
-
-
-
-Photos:
-AlphaWord with this article in progress
-Screenshot of normal sized Palm App Diddlebug running on dana
-Custom widescreen launcher using categories
-Custom widescreen launcher showing apps loaded onto an SD card
-My custom clock and battery monitor
+<p class="content_full_link"><a href="https://www.osnews.com/story/131180/the-alphasmart-dana-in-2019/">Comment at OSnews</a></p>
