@@ -7,8 +7,9 @@ excerpt: 'The AlphaSmart dana is technically a Palm OS PDA, in the same way that
 <summary>☛ Contents</summary>
 	
 <div markdown="1">
-1. Top
-2. The generated Toc will be an ordered list
+<a href="#site_heading">[top]</a>
+	
+1. The generated Toc will be an ordered list
 {:toc}
 </div>
 	
