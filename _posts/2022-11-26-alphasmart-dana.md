@@ -5,10 +5,10 @@ excerpt: 'The AlphaSmart dana is technically a Palm OS PDA, in the same way that
 <nav>
 <details open>
 <summary>☛ Contents</summary>
-<a href="#site_heading">[top]</a>
 	
 <div markdown="1">
-1. The generated Toc will be an ordered list
+1. <a href="#site_heading">[top]</a>
+2. The generated Toc will be an ordered list
 {:toc}
 </div>
 	
