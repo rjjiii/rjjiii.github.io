@@ -17,9 +17,7 @@ This html document is the preferred form of the Interval Tool for making modific
 
 ## Regarding the license:
 
-This software is open source and licensed under the OSL 3.0. The license is publicly available from the Open Source Institute (OSI). The license and a summary are available on the OSI website:
-
-(https://opensource.org/licenses/OSL-3.0)
+This software is open source and licensed under the OSL 3.0. The license is publicly available from the Open Source Institute (OSI). The [license and a summary](https://opensource.org/licenses/OSL-3.0) are available on the OSI website.
 
 ## Goal of the Interval Tool:
 
