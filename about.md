@@ -2,7 +2,7 @@
 layout: page
 title: About
 permalink: /about/
-section: about
+nav-tab: about
 license: OSL
 ---
 
