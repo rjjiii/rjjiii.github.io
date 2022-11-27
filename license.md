@@ -5,10 +5,10 @@ description: The Open Software License 3.0 (OSL) is an open-source copyleft lice
 ---
 
 <div>
-	<address rel="author">
-	By: Robert Jones III
-    </address>
-	<time datetime="2022-01">January 2022</time>
+<address rel="author">
+By: Robert Jones III
+</address>
+<time datetime="2022-01">January 2022</time>
 </div>
 <!-- 
 	The div above groups the byline and date into a single block element.
@@ -59,19 +59,19 @@ I am not a lawyer, at all. <a href="http://www.rosenlaw.com/rosen.htm">Lawrence 
 
 <h2>External Links</h2>
 <ul>
-	<li>
-		<a href="https://tldrlegal.com/license/open-software-licence-3.0">
-		A brief summary of the license</a>
-	</li>
+<li>
+<a href="https://tldrlegal.com/license/open-software-licence-3.0">
+A brief summary of the license</a>
+</li>
 
 	
-	<li>
-		<a href="https://rosenlaw.com/OSL3.0-explained.htm">
-		An explanation of the license from author Lawrence Rosen</a>
-	</li>
+<li>
+<a href="https://rosenlaw.com/OSL3.0-explained.htm">
+An explanation of the license from author Lawrence Rosen</a>
+</li>
 		
-	<li>
-		<a href="https://opensource.org/licenses/OSL-3.0">
-		Open Software License version 3.0 full text at the Open Source Initiative</a>
-	</li>
+<li>
+<a href="https://opensource.org/licenses/OSL-3.0">
+Open Software License version 3.0 full text at the Open Source Initiative</a>
+</li>
 </ul>
