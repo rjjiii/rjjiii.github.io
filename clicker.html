@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
  <meta charset="UTF-8">
 <!--
 
@@ -114,12 +114,12 @@ on the client's therapy and data.
 
 
  
- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js">
+ <script src="Interval%20Recording_files/jquery.min.js">
  </script>
 
 <title>Interval Recording</title>
 
- <meta name="viewport" content="width=device-width"/>
+ <meta name="viewport" content="width=device-width">
 
  
  
@@ -133,8 +133,9 @@ on the client's therapy and data.
 <style>
 body
 {
-background-color: #e0e0eb;
+background-color: #fdf6e3;
 font-family: Arial, Helvetica, sans-serif;
+color: #657b83;
 }
 
 table {
@@ -152,7 +153,8 @@ margin-bottom: 25%;
 
 button
 {
-background-color: white;
+color: #657b83;
+background-color: #eee8d5;
 border-radius: 12px;
   border: none;
 padding: 16px;
@@ -169,6 +171,9 @@ button:active:focus, button:focus {
   outline: none;
 }
 
+#topLeft{
+	color: #586e75
+}
 
 
 /* Style the navigation menu */
@@ -176,7 +181,7 @@ button:active:focus, button:focus {
   overflow: hidden;
   position: relative;
 
-  color: white;
+  color: #fdf6e3;
 }
 
 /* Hide the links inside the navigation menu (except for logo/home) */
@@ -187,7 +192,7 @@ button:active:focus, button:focus {
 
 /* Style navigation menu links */
 .topnav a {
-  color: white;
+  color: #fdf6e3;
   padding: 14px 16px;
   text-decoration: none;
   display: block;
@@ -195,7 +200,7 @@ button:active:focus, button:focus {
 
 .topnav div.settings 
 {
-  color: white;
+  color: #fdf6e3;
   padding: 14px 16px;
   text-decoration: none;
   display: block;
@@ -205,6 +210,7 @@ button:active:focus, button:focus {
 .topnav a.icon {
   display: block;
   position: absolute;
+  color: #586e75;
   
   right: 0;
   top: 0;
@@ -217,9 +223,9 @@ button:active:focus, button:focus {
 
 .smallButton
 {
-border: 2px solid black; 
-background-color: white; 
-color: black; 
+border: 2px solid #657b83; 
+background-color: #eee8d5; 
+color: #657b83;
 border-radius: 5px;
 border: none; 
 padding: 2px;
@@ -234,9 +240,9 @@ box-shadow: 0 1px 1px 0 rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.19);
   }
   
 .hamburgerButtons
-{border: 2px solid white; border-radius: 5px; padding: 2px;}
+{border: 2px solid #fdf6e3; border-radius: 5px; padding: 2px;}
 .hamburgerButtons:active
-{ background-color: white; color: black;}
+{ background-color: #fdf6e3; color: black;}
 </style>
 </head>
 
@@ -251,28 +257,26 @@ box-shadow: 0 1px 1px 0 rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.19);
  |_|  |_|\___|_| |_|\__,_|
                           -->
 <div class="topnav">
- <a id="topLeft" href="#home" style="font-size: 200%;">
- <!-- 'Method (seconds)' This is generated in js from the user's preferences -->  
- </a>
+ <a id="topLeft" href="#home" style="font-size: 200%;">Partial (11)</a>
 
   <!-- Menu -->
   <div id="menu">
   
 
-    <div class="settings" style="background-color: navy;"> 
+    <div class="settings" style="background-color: #268bd2;"> 
 
 	
 	<form>
   <label for="myNumber">Intervals<br>Length (seconds):</label><br>
-  <input type="number" id="myNumber" value="10">
+  <input type="number" id="myNumber" value="11">
   <span class="hamburgerButtons" onclick="intervalSet()">Set</span>
 </form>
 
 <form>
 	<label for="iType">Method:</label><br>
   <select name="iType" id="iType">
-    <option value="0" >partial interval</option>
-    <option value="1" selected>whole interval</option>
+    <option value="0">partial interval</option>
+    <option value="1" selected="selected">whole interval</option>
     <option value="2">momentary</option>
 	<option value="3">timer only</option>
   </select>
@@ -291,12 +295,12 @@ box-shadow: 0 1px 1px 0 rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.19);
 <br>
 
 <p>Data</p>
-<p  id="clearLine">
+<p id="clearLine">
 <span onclick="clearToggle()" class="hamburgerButtons">
 	Clear data</span>
 	</p>
 	<br>
-	<p  id="exportMenu">
+	<p id="exportMenu">
 <span onclick="exportLog()" class="hamburgerButtons">
 	Export data</span>
 	</p>
@@ -304,26 +308,26 @@ box-shadow: 0 1px 1px 0 rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.19);
 	</div>
     
 
-<a href="#help" style="background-color: indigo;" id="help" onclick="helpToggle()">
-Help 	&rarr;	
+<a href="#help" style="background-color: #6c71c4;" id="help" onclick="helpToggle()">
+Help 	→	
 </a>
 	
-<a href="#about" style="background-color: violet;" id="about" onclick="aboutToggle()">
-About 	&rarr;	
+<a href="#about" style="background-color: #d33682;" id="about" onclick="aboutToggle()">
+About 	→	
 </a>
 
   </div>
   <!-- Unicode icon to toggle the menu -->
   <a href="javascript:void(0);" class="icon" onclick="hamburger()">
-    <span class="fa fa-bars" style="font-size: 200%;">&#8942;</span>
+    <span class="fa fa-bars" style="font-size: 200%;">⋮</span>
   </a>
 </div>
 
 
 
 <div id="timerContainer">
-<div class="timer" onclick="startTimer()" >Start</div>
-<div class="startTimer reset" onclick="startTimer()" >
+<div class="timer" onclick="startTimer()">Start</div>
+<div class="startTimer reset" onclick="startTimer()">
   </div>
 </div>
 
@@ -345,15 +349,15 @@ All three buttons in this control panel use Unicode symbols. This:
 		<tr>
 		
 			<td style="text-align: center;">
-<button onclick="plus()" style="background-color: #99d6ff; font-weight: 900;"> 
-&#10003; 
+<button onclick="plus()" style="background-color: #268bd2; color:#eee8d5; font-weight: 900;"> 
+✓ 
 </button>
 <div id="correct" style="font-size: 18pt;">0</div>
  </td>
  
 			<td style="text-align: center;">
 <button class="pauseTimer reset" onclick="pauseTimer()">
-    <span class="fas fa-pause">&#9654;&#10074;&#10074;</span>
+    <span class="fas fa-pause">▶❚❚</span>
   </button>
   <br>
   <br>
@@ -361,8 +365,8 @@ All three buttons in this control panel use Unicode symbols. This:
 			
 			
 			<td style="text-align: center;"> 
-<button onclick="minus()" style="background-color: #ffcc99; font-weight: 900;"> 
-&#10007; 
+<button onclick="minus()" style="background-color: #dc322f; font-weight: 900; color: #eee8d5;"> 
+✗ 
 </button>
 <div id="notyet" style="font-size: 18pt;">0</div>
 </td>
@@ -371,21 +375,28 @@ All three buttons in this control panel use Unicode symbols. This:
 	</table>
 
 
-
+<div style="text-align:center">
+<h2>Counter data:</h2>
 <button class="resetTimer reset" onclick="resetTimer()" style="padding: 6px;"> 
-Reset
+	Reset
 </button>
 
-<button onclick="displayLog()" style="padding: 6px;"> Log </button>
+<span onclick="copyLogs('#logbyintervals')" class="smallButton" style="margin-left:10%; margin-right:10%;">
+    Copy
+</span>
+
+<button onclick="displayLog()" style="padding: 6px;">
+	Show
+</button>
+</div>
 
 <div id="logbyintervals">
 <!-- The displayLog() function writes the current log here and adds the current 
 interval's percentage thus far. --> 
 </div>
 <br>
-<span onclick="copyLogs('#logbyintervals')" class="smallButton">
-    Copy log
-</span>
+
+
 
 
 
@@ -700,15 +711,15 @@ the next interval's data.
 */
  if (current == 0)
 	  {
-   body.style.backgroundColor = "#ffddcc";
+   body.style.backgroundColor = "#fdf6e3";
 	  }
 	  else if (current == 1)
 	  {
- body.style.backgroundColor = "#e6f2ff";
+ body.style.backgroundColor = "#2aa198";
 	  }
 	  else if (current == 2)
 	  {
- body.style.backgroundColor = "#ff6600";
+ body.style.backgroundColor = "#002b36";
 	  }
 
 	  
@@ -716,7 +727,9 @@ the next interval's data.
  { }
 else 
 {
-if (seconds % length === 0 && type == 3)
+var totalSeconds = +seconds + +minutes * 60 +hours * 3600;
+
+if (totalSeconds % length === 0 && type == 3)
 {current = 2;
   if (noteFlag == 1)  {
 if (boop == 1)
@@ -725,10 +738,10 @@ if (boop == 1)
 if (vibrate == 1)
 {navigator.vibrate([500]);}//notification vibrates
  noteFlag = 0;}}
-else if (seconds % (length - (length -1)) == 0 && type == 3)
+else if (totalSeconds % (length - (length -1)) == 0 && type == 3)
 {current = 0;
 noteFlag=1;}
-else if (seconds % length === 0)  
+else if (totalSeconds % length === 0)  
 {
 
 if (boop == 1)
@@ -737,7 +750,7 @@ if (boop == 1)
 if (vibrate == 1)
 {navigator.vibrate([500]);}//notification vibrates
 
-	  if (current  == 0 && thisinterval == 1 && seconds < 1)
+	  if (current  == 0 && thisinterval == 1 && totalSeconds < 1)
 	  {
 		  current = 0;
 	  }
@@ -774,7 +787,6 @@ localStorage.setItem('savedLog', log); //save the log immediately
 
 hit = hit + 1;	
 total = total + 1; 
-console.log("fart");
 localStorage.setItem('savedTotal', total);
 totalCorrect = totalCorrect + 1; // increment the total correct for positive clicker only
 localStorage.setItem('savedTotalCorrect', totalCorrect);
@@ -1230,5 +1242,5 @@ its license review and certification process.
 
 --> 
 
-</body>
-</html>
+
+</body></html>
