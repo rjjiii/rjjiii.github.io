@@ -29,17 +29,15 @@ example, the <a href="https://blitiri.com.ar/p/bola/">Buena Onda License Agreeme
 I am not a lawyer, at all. <a href="http://www.rosenlaw.com/rosen.htm">Lawrence Rosen is a lawyer</a> who specializes in the intersection of computers and intellectual property, and he wrote the <abbr>OSL</abbr> while working as counsel for the Open Source Institute (<abbr>OSI</abbr>). The <abbr>OSI</abbr> has peer reviewed and approved many open-source licenses. Here are some of the core benefits I see of this one in particular:
 </p>
 
-<ul>
-<li>Software and text are both covered. Many licenses target either art (Creative Commons) or software (<abbr title="GNU Public License">GPL</abbr>). This license can cover both, so there's no need to worry about how 2 separate licenses interact.</li>
+<ul><li>Software and text are both covered. Many licenses target either art (Creative Commons) or software (<abbr title="GNU Public License">GPL</abbr>). This license can cover both, so there's no need to worry about how 2 separate licenses interact.</li>
 <li><a href="#f_1" id="s_1">Copyleft is a way to keep things open.<sup>1</sup></a> All open-source license provide similar benefits by lifting some restrictions of copyright law. They each allow their audience to legally reuse, remix, and improve the work. Copyleft takes this a step further by keeping those new improved projects open as well. 
 <li>Web apps are explicitly covered by the copyleft elements. Some open-source licenses emerged when software was more directly distributed by disk, download, or even paper. The <abbr>OSL</abbr> came out years after the emergence of <a href="https://web.archive.org/web/20000310013159/http://www.businessweek.com/1999/99_46/b3655048.htm">early web apps and cloud storage.</a></li>
-<li>Attribution is built into the language of the <abbr>OSL</abbr>. It provides a highly flexible way to <a href="#f_2" id="s_2">preserve notices and disclaimers only within the source code.<sup>2</sup></a> The actual program/document can be built in any way, and messages can be preserved for future creators.</li>
-</ul>
+<li>Attribution is built into the language of the <abbr>OSL</abbr>. It provides a highly flexible way to <a href="#f_2" id="s_2">preserve notices and disclaimers only within the source code.<sup>2</sup></a> The actual program/document can be built in any way, and messages can be preserved for future creators.</li></ul>
 
 
-<h2>What content is covered?</h2>
-<p>Anything that is explicitly "Licensed under the Open Software License version 3.0" is covered by its terms. All rights are reserved unless otherwise stated. Pages on this site with open content contain an explicit statement at the bottom of the page along with links to <strong>source code</strong>. Any material made available under the Open Software License will come with some type of source code that enables remixing and reusing.
-</p>
+## What content is covered?
+
+Anything that is explicitly "Licensed under the Open Software License version 3.0" is covered by its terms. All rights are reserved unless otherwise stated. Pages on this site with open content contain an explicit statement at the bottom of the page along with links to <strong>source code</strong>. Any material made available under the Open Software License will come with some type of source code that enables remixing and reusing.
 
 
 
