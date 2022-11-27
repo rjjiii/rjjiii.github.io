@@ -36,7 +36,7 @@ function in the brain. People often overestimate their ability to multi-task,
 but humans have a natural limit in their working memory that hinders attempts to 
 multi-task. Psychological research has shown that there is an attention cost for 
 switching between tasks. This cost rises as the complexity of the tasks increase 
-and as the differences between the tasks increase.* These findings explain some 
+and as the differences between the tasks increase.[^1] These findings explain some 
 of the difficulties in interval recording because multi-tasking is a core part 
 of the method. Using traditional tools, a behavioral therapist would note a 
 client's behavior on their clipboard, watch the time for upcoming intervals, 
@@ -48,11 +48,11 @@ on the therapist's attention as much as possible.
 
 The attention cost from task switching in interval recording increases as the 
 length of the interval decreases. In a 2013 study, people used 15 seconds on 
-average to switch between complex tasks.† If therapists takes 15 seconds to task 
+average to switch between complex tasks.[^†] If therapists takes 15 seconds to task 
 switch, a 30-second interval would result in a state of constant inattention and 
 stress. Studies show that people compensate for task switching by pushing 
 themselves to work beyond their limits at the cost of experiencing increased 
-stress and frustration.‡ This compensation will therefore reduce the quality of 
+stress and frustration.[^‡] This compensation will therefore reduce the quality of 
 the therapy for the client, the quality of the client's data, and the quality of 
 life for the therapist.
 
@@ -77,16 +77,16 @@ to parse any additional information beyond that glance, thus reducing the load
 on a therapist's working memory and attention and allowing them greater focus
 on the client's therapy and data.
  
-* Rubinstein, J. S., Meyer, D. E. & Evans, J. E. (2001). Executive Control of 
+[1]: Rubinstein, J. S., Meyer, D. E. & Evans, J. E. (2001). Executive Control of 
    Cognitive Processes in Task Switching. Journal of Experimental Psychology: 
    Human Perception and Performance, 27, 763-797.
    
-† Gould, S. J. J., Cox, A. L., & Brumby, D. P. (2013). Frequency and duration of
+[†]: Gould, S. J. J., Cox, A. L., & Brumby, D. P. (2013). Frequency and duration of
    self-initiated task-switching in an online investigation of interrupted 
    performance. Human computation and crowdsourcing: Works in progress and 
    demonstration abstracts AAAI technical report CR-13-01 (pp. 22–23).
    
-‡ Mark, G, Gudith, D, & Klocke, U. (2008). The cost of interrupted work. 
+[‡]: Mark, G, Gudith, D, & Klocke, U. (2008). The cost of interrupted work. 
    Proceedings of the Twenty-sixth Annual CHI Conference on Human Factors in 
    Computing Systems – CHI ’08. Retrieved February 19, 2016 
    from https://ics.uci.edu/~gmark/chi08-mark.pdf.
