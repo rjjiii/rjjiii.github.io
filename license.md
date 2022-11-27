@@ -16,23 +16,20 @@ By: Robert Jones III
 	future proof going forward compared to a CSS solution.
  -->
  
-<p>
-The <a href="https://opensource.org/licenses/OSL-3.0">Open Software License 3.0 (<abbr>OSL</abbr>)</a> is an <a href="https://opensource.com/resources/what-is-copyleft">open-source copyleft</a> license, which allows content to be <strong>freely reused and remixed</strong> so long as it remains under the <abbr>OSL</abbr>. If you are not planning on either modifying or distributing content, there are no limits.</p>
 
-<h2>Why use this license?</h2>
-<p>
+The <a href="https://opensource.org/licenses/OSL-3.0">Open Software License 3.0 (<abbr>OSL</abbr>)</a> is an <a href="https://opensource.com/resources/what-is-copyleft">open-source copyleft</a> license, which allows content to be <strong>freely reused and remixed</strong> so long as it remains under the <abbr>OSL</abbr>. If you are not planning on either modifying or distributing content, there are no limits.
+	
+##Why use this license?
+	
 Hand-crafted open-source license are often written by the very people and projects that use them. Some of these are honestly pretty fascinating. For 
 example, the <a href="https://blitiri.com.ar/p/bola/">Buena Onda License Agreement</a> in addition to some standard terms of usage also provides advice on how to improve your community by helping the neighbors paint their house. That sounds wholesome, but I'm not sure if it's something to put into a legal document, which brings me to an important point:
-<p>
 
-<p>
 I am not a lawyer, at all. <a href="http://www.rosenlaw.com/rosen.htm">Lawrence Rosen is a lawyer</a> who specializes in the intersection of computers and intellectual property, and he wrote the <abbr>OSL</abbr> while working as counsel for the Open Source Institute (<abbr>OSI</abbr>). The <abbr>OSI</abbr> has peer reviewed and approved many open-source licenses. Here are some of the core benefits I see of this one in particular:
-</p>
 
-<ul><li>Software and text are both covered. Many licenses target either art (Creative Commons) or software (<abbr title="GNU Public License">GPL</abbr>). This license can cover both, so there's no need to worry about how 2 separate licenses interact.</li>
-<li><a href="#f_1" id="s_1">Copyleft is a way to keep things open.<sup>1</sup></a> All open-source license provide similar benefits by lifting some restrictions of copyright law. They each allow their audience to legally reuse, remix, and improve the work. Copyleft takes this a step further by keeping those new improved projects open as well. 
-<li>Web apps are explicitly covered by the copyleft elements. Some open-source licenses emerged when software was more directly distributed by disk, download, or even paper. The <abbr>OSL</abbr> came out years after the emergence of <a href="https://web.archive.org/web/20000310013159/http://www.businessweek.com/1999/99_46/b3655048.htm">early web apps and cloud storage.</a></li>
-<li>Attribution is built into the language of the <abbr>OSL</abbr>. It provides a highly flexible way to <a href="#f_2" id="s_2">preserve notices and disclaimers only within the source code.<sup>2</sup></a> The actual program/document can be built in any way, and messages can be preserved for future creators.</li></ul>
+- Software and text are both covered. Many licenses target either art (Creative Commons) or software (<abbr title="GNU Public License">GPL</abbr>). This license can cover both, so there's no need to worry about how 2 separate licenses interact.
+- <a href="#f_1" id="s_1">Copyleft is a way to keep things open.<sup>1</sup></a> All open-source license provide similar benefits by lifting some restrictions of copyright law. They each allow their audience to legally reuse, remix, and improve the work. Copyleft takes this a step further by keeping those new improved projects open as well. 
+- Web apps are explicitly covered by the copyleft elements. Some open-source licenses emerged when software was more directly distributed by disk, download, or even paper. The <abbr>OSL</abbr> came out years after the emergence of <a href="https://web.archive.org/web/20000310013159/http://www.businessweek.com/1999/99_46/b3655048.htm">early web apps and cloud storage.</a>
+- Attribution is built into the language of the <abbr>OSL</abbr>. It provides a highly flexible way to <a href="#f_2" id="s_2">preserve notices and disclaimers only within the source code.<sup>2</sup></a> The actual program/document can be built in any way, and messages can be preserved for future creators.
 
 
 ## What content is covered?
