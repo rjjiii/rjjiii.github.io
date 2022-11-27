@@ -20,10 +20,10 @@ paginate_path: "/words/:num/"
 
 defaults:
   -
-scope:
-path: "" # an empty string here means all files in the project
-values:
-section: "words"
+    scope:
+      path: "" # an empty string here means all files in the project
+    values:
+      section: "words"
 
 # Includes an icon in the footer for each username you enter
 # footer-links:
