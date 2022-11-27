@@ -526,8 +526,10 @@ console.log('else if');
 else
 {
 var log = localStorage.getItem('savedLog');
-if (total > 0);
+console.log('else', total);
+if (total > 0)
 {
+console.log('else', total);
 	intervalPercent = totalCorrect / total * 100;
   log = log + "<br>&nbsp;&nbsp;&nbsp;Correct: " + totalCorrect + "/" + total + 
 	"<br>&nbsp;&nbsp;&nbsp;Percent correct: " + intervalPercent + "%<br><br>";
@@ -535,7 +537,6 @@ if (total > 0);
 
 	totalReset();
 	localStorage.setItem('savedLog', log);
-	console.log('else');
 }
 
 function totalReset()
