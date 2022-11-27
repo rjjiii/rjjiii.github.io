@@ -283,11 +283,13 @@ box-shadow: 0 1px 1px 0 rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.19);
 <br>
 
 <p>Data</p>
+<p>
+<span class="hamburgerButtons" onclick="displayLog()">Display logged data</span>
+</p>
 <p id="clearLine">
 <span onclick="clearToggle()" class="hamburgerButtons">
 	Clear data</span>
 	</p>
-	<br>
 	<p id="exportMenu">
 <span onclick="exportLog()" class="hamburgerButtons">
 	Export data</span>
@@ -361,29 +363,29 @@ All three buttons in this control panel use Unicode symbols. This:
 
 <div style="text-align:right;">
 <button onclick="copyLogs('#logbyintervals')" style="padding: 6px; margin-right:10%;">
-    &#10697;
+    ⧉
 </button>
 
 <button class="resetTimer reset" onclick="resetTimer()" style="padding:6px;"> 
-	&#8634; Reset counters
+	↺ Reset counters
 </button>
 </div>
 
-<br />
-<br />
-<br /><br /><br />
+<br>
+<br>
+<br><br><br>
 
 
 
-<button onclick="displayLog()" style="padding: 6px;">
-	Display counter data &#11183;
-</button>
 
-<br />
-<br />
+<h2>
+Counter log:
+</h2>
+
 <div id="logbyintervals">
 <!-- The displayLog() function writes the current log here and adds the current 
 interval's percentage thus far. --> 
+<span onclick="displayLog()" class="smallButton">Display currently logged data.</span>
 </div>
 <br>
 
@@ -791,6 +793,8 @@ if (type == 0){current = 1;}
 else if (type == 1) {current = 0;}
 else if (type == 2) {current = 0;}
 else if (type == 3) {current = current;}
+
+displayLog();
 }
 
 function minus() // when the cross is pressed
@@ -808,6 +812,8 @@ if (type == 0){current = 0;}
 else if (type == 1) {current = 1;}
 else if (type == 2) {current = 0;}
 else if (type == 3) {current = current;}
+
+displayLog();
 }
 
 function displayLog()
@@ -1235,6 +1241,7 @@ License has been approved by Open Source Initiative (OSI) and You comply with
 its license review and certification process.
 
 --> 
+
 
 
 
