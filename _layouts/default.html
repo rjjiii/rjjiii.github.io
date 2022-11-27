@@ -30,11 +30,11 @@
 	</a>
 		<nav>
 		<ul>
-			<li><a href="{{ site.baseurl }}/tools.html">
+			<li><a href="{{ site.baseurl }}/tools.html" {% if page.section == "tools" %} id="selected" {% endif %}>
 				tools</a></li>
 			<li><a href="{{ site.baseurl }}/words" {% if page.section == "words" %} id="selected" {% endif %}>
 				words</a></li>
-			<li><a href="{{ site.baseurl }}/about">
+			<li><a href="{{ site.baseurl }}/about" {% if page.section == "about" %} id="selected" {% endif %}>
 				about</a></li>
 		</ul>
 		</nav>
