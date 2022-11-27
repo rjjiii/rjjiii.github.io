@@ -19,7 +19,7 @@ By: Robert Jones III
 
 The <a href="https://opensource.org/licenses/OSL-3.0">Open Software License 3.0 (<abbr>OSL</abbr>)</a> is an <a href="https://opensource.com/resources/what-is-copyleft">open-source copyleft</a> license, which allows content to be <strong>freely reused and remixed</strong> so long as it remains under the <abbr>OSL</abbr>. If you are not planning on either modifying or distributing content, there are no limits.
 	
-##Why use this license?
+## Why use this license?
 	
 Hand-crafted open-source license are often written by the very people and projects that use them. Some of these are honestly pretty fascinating. For 
 example, the <a href="https://blitiri.com.ar/p/bola/">Buena Onda License Agreement</a> in addition to some standard terms of usage also provides advice on how to improve your community by helping the neighbors paint their house. That sounds wholesome, but I'm not sure if it's something to put into a legal document, which brings me to an important point:
