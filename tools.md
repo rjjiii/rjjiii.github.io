@@ -9,7 +9,7 @@ permalink: /tools/
 
 - [Open in this browser]({{ site.baseurl }}/clicker.html)
 - Android app. (coming soon.)
-- Source code.
+- Source code is currently availabe by right-clicking the browser window. In the future, a repo will be made publicly available.
 
 ## K-Meleon Extensions
 
