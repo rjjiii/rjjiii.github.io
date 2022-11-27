@@ -8,7 +8,7 @@ permalink: /tools/
 ## Interval Tool
 
 - [Open in this browser]({{ site.baseurl }}/clicker.html)
-- Android app. (coming soon.)
+- [Read about the tool](https://rjjiii.com/tools/interval/) including the goals, license, and development process.
 - Source code is currently availabe by right-clicking the browser window. In the future, a repo will be made publicly available.
 
 ## K-Meleon Extensions
