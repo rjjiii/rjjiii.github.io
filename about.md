@@ -3,6 +3,7 @@ layout: page
 title: About
 permalink: /about/
 section: about
+license: OSL
 ---
 
 Under construction.
