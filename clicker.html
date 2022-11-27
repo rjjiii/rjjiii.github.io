@@ -4,34 +4,21 @@
  <meta charset="UTF-8">
 <!--
 
-
-      .----------------.  .----------------.  .----------------. 
-     | .--------------. || .--------------. || .--------------. |
-     | |      __      | || |   ______     | || |      __      | |
-     | |     /  \     | || |  |_   _ \    | || |     /  \     | |
-     | |    / /\ \    | || |    | |_) |   | || |    / /\ \    | |
-     | |   / ____ \   | || |    |  __'.   | || |   / ____ \   | |
-     | | _/ /    \ \_ | || |   _| |__) |  | || | _/ /    \ \_ | |
-     | ||____|  |____|| || |  |_______/   | || ||____|  |____|| |
-     | |              | || |              | || |              | |
-     | '--------------' || '--------------' || '--------------' |
-      '----------------'  '----------------'  '----------------'       	
   ___       _                       _   _____           _   _   ___  
  |_ _|_ __ | |_ ___ _ ____   ____ _| | |_   _|__   ___ | | / | / _ \ 
   | || '_ \| __/ _ \ '__\ \ / / _` | |   | |/ _ \ / _ \| | | || | | |
   | || | | | ||  __/ |   \ V / (_| | |   | | (_) | (_) | | | || |_| |
  |___|_| |_|\__\___|_|    \_/ \__,_|_|   |_|\___/ \___/|_| |_(_)___/ 
                                                                      
-                                                                  
-                                                                                                                                           					
-ABA Interval Tool
+
+Interval Tool
 version 1.0
 Copyright (c) Robert Jones III 2020
 Licensed under the Open Software License version 3.0
 
 
 Notes on the source code:
-This html document is the preferred form of the ABA Interval Tool for making 
+This html document is the preferred form of the Interval Tool for making 
 modifications. If you received a native/binary application, that application was 
 a wrapper around this document. There are no image files; what may look like 
 icons are done via Unicode characters. There are also no sound files. Any sounds 
@@ -45,9 +32,9 @@ summary are available on the OSI website:
 https://opensource.org/licenses/OSL-3.0
 
 
-Goal of the ABA Interval Tool:
+Goal of the Interval Tool:
 Interval Recording can be difficult and very mentally taxing using traditional 
-ABA tools. These issues are in part due to how attention and working memory 
+behavioral therapy tools. These issues are in part due to how attention and working memory 
 function in the brain. People often overestimate their ability to multi-task, 
 but humans have a natural limit in their working memory that hinders attempts to 
 multi-task. Psychological research has shown that there is an attention cost for 
@@ -141,14 +128,15 @@ color: #657b83;
 table {
 border: none;
 width: 100%;
-margin-bottom: 25%;
+margin-bottom: 5em;
 }
 
 #timerContainer
 { 
 font-size: 550%;
 text-align: center;
-margin-bottom: 25%;
+margin-bottom: 1em;
+color: #859900;
 }
 
 button
@@ -257,7 +245,7 @@ box-shadow: 0 1px 1px 0 rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.19);
  |_|  |_|\___|_| |_|\__,_|
                           -->
 <div class="topnav">
- <a id="topLeft" href="#home" style="font-size: 200%;">Partial (11)</a>
+ <a id="topLeft" href="#home" style="font-size: 200%;">Whole(11)</a>
 
   <!-- Menu -->
   <div id="menu">
@@ -355,15 +343,12 @@ All three buttons in this control panel use Unicode symbols. This:
 <div id="correct" style="font-size: 18pt;">0</div>
  </td>
  
-			<td style="text-align: center;">
+			<td style="text-align: center; vertical-align: top;">
 <button class="pauseTimer reset" onclick="pauseTimer()">
     <span class="fas fa-pause">▶❚❚</span>
   </button>
-  <br>
-  <br>
 			</td>
-			
-			
+
 			<td style="text-align: center;"> 
 <button onclick="minus()" style="background-color: #dc322f; font-weight: 900; color: #eee8d5;"> 
 ✗ 
@@ -374,27 +359,36 @@ All three buttons in this control panel use Unicode symbols. This:
 	</tbody>
 	</table>
 
-
-<div style="text-align:center">
-<h2>Counter data:</h2>
-<button class="resetTimer reset" onclick="resetTimer()" style="padding: 6px;"> 
-	Reset
+<div style="text-align:right;">
+<button onclick="copyLogs('#logbyintervals')" style="padding: 6px; margin-right:10%;">
+    &#10697;
 </button>
 
-<span onclick="copyLogs('#logbyintervals')" class="smallButton" style="margin-left:10%; margin-right:10%;">
-    Copy
-</span>
-
-<button onclick="displayLog()" style="padding: 6px;">
-	Show
+<button class="resetTimer reset" onclick="resetTimer()" style="padding:6px;"> 
+	&#8634; Reset counters
 </button>
 </div>
 
+<br />
+<br />
+<br /><br /><br />
+
+
+
+<button onclick="displayLog()" style="padding: 6px;">
+	Display counter data &#11183;
+</button>
+
+<br />
+<br />
 <div id="logbyintervals">
 <!-- The displayLog() function writes the current log here and adds the current 
 interval's percentage thus far. --> 
 </div>
 <br>
+
+
+
 
 
 
@@ -1036,7 +1030,7 @@ document.getElementById("about").innerHTML = "About &rarr;	";
 else if (aboutSwitch == 0)
 { aboutSwitch = 1; 
 document.getElementById("about").innerHTML = 
-	"About &darr; <br>ABA Interval Tool<br>version 1.0<br>Copyright \u00A9 Robert Jones III 2020<br>All rights reserved.";
+	"About &darr; <br>Interval Tool<br>version 1.0<br>Copyright \u00A9 Robert Jones III 2022<br>All rights reserved.";
 }
 }
 
@@ -1061,7 +1055,7 @@ document.getElementById("help").innerHTML = "Help &rarr;	";
 }
 else if (helpSwitch == 0)
 { helpSwitch = 1; 
-document.getElementById("help").innerHTML = "<p>Help &darr;</p><p>The ABA Interval Tool is designed for recording interval data during behavioral therapy.</p><p>&nbsp;</p><p><strong> Modes.</strong> The software has 4 modes corresponding to the 3 types of interval recording and a fourth timer only mode.</p><ol style='padding-left: 20px;'><li><em>Momentary time sampling:</em> in this mode data should only be taken on whether the behavior is occurring at the very end of the interval. When the intervals end, an optional notification will sound, and the screen will turn deep orange until data for that interval is entered.</li><li><em>Whole interval recording:</em> in this mode data should be taken on whether the behavior occurs throughout the entire interval. If the behavior stops and a miss (✗) is recorded the screen will turn blue to indicate that data has been recorded for the interval. If no misses are recorded by the end of the interval, the screen will turn bright orange until data is entered for the interval.</li><li><em>Partial interval recording:</em> in this mode data should be taken on whether the behavior occurs at any point during the interval. If the behavior occurs and a positive (✓) is recorded the screen will turn blue to indicate that data has been recorded for the interval. If the behavior hasn't been noted when the interval ends, the screen will turn bright orange until data is entered for the interval.</li><li><em>Timer:</em> during the final second of each interval an optional notification will sound, and the screen will briefly turn orange. In this mode the timer is not connected to the correct (✓) or incorrect (✗) clickers.</li></ol><p>&nbsp;</p><p><strong>Clickers.</strong> Both the correct (✓) and incorrect (✗) buttons function as clickers. To maintain flexibility, they can be pressed at any time and will log the data even if the timer is not running. The clicker data will automatically be added to the interval log and saved every time either button is pressed.</p><p>&nbsp;</p><p><strong>Data.</strong> All data entered into the tool is automatically logged into a single document. The data can be displayed by clicking on the 'Log' button or copied to the clipboard by clicking the 'Copy log' button. Data will persist even after the app is closed.</p><p>To clear data before a new session, tap 'Clear data' and then choose 'erase log' in the menu. To begin a new section in the log: reset the timer, set a new interval length, or set a new recording mode. Interval lengths, recording modes, and dates are added automatically.</p>";
+document.getElementById("help").innerHTML = "<p>Help &darr;</p><p>The Interval Tool is designed for recording interval data during behavioral therapy.</p><p>&nbsp;</p><p><strong> Modes.</strong> The software has 4 modes corresponding to the 3 types of interval recording and a fourth timer-only mode. The background will turn <strong>dark</strong> to prompt you to enter data depending on which mode you select. </p><ol style='padding-left: 20px;'><li><em>Momentary time sampling:</em> in this mode data should only be taken on whether the behavior is occurring at the very end of the interval. When the intervals end, an optional notification will sound, and the screen will turn dark until data for that interval is entered.</li><li><em>Whole interval recording:</em> in this mode data should be taken on whether the behavior occurs throughout the whole interval. If the behavior stops and a miss (✗) is recorded the screen will turn <em>blue</em> to indicate that data has been recorded for the interval. If no misses are recorded by the end of the whole interval, the screen will turn dark until data is entered.</li><li><em>Partial interval recording:</em> in this mode data should be taken on whether the behavior occurs at any point during the interval. If the behavior occurs and a positive (✓) is recorded the screen will turn blue to indicate that data has been recorded for the interval. If the behavior hasn't been noted when the interval ends, the screen will turn dark to prompt you to enter data.</li><li><em>Timer:</em> during the final second of each interval an optional notification will sound, and the screen will briefly turn orange. </li></ol><p>&nbsp;</p><p><strong>Clickers.</strong> Both the correct (✓) and incorrect (✗) clicker buttons will record data every time they are pressed. To maintain flexibility, they can be pressed at any time and will log the data even if the timer is not running. The clicker data will automatically be added to the interval log and saved every time either button is pressed.</p><p>&nbsp;</p><p><strong>Data.</strong> All data entered into the tool is automatically logged into a single document. The data can be displayed by clicking on the 'Display counter data' button or copied to the clipboard by clicking the copy (&#10697;) button. Data will persist even after the app is closed.</p><p>To clear data before a new session, tap 'Clear data' and then choose 'erase log' in the menu. To begin a new section in the log: reset the timer, set a new interval length, or set a new recording mode. Interval lengths, recording modes, and dates are added automatically. All data is stored in the web browser; nothing is stored in a remote server.</p>";
 }
 }
 </script>
@@ -1241,6 +1235,7 @@ License has been approved by Open Source Initiative (OSI) and You comply with
 its license review and certification process.
 
 --> 
+
 
 
 </body></html>
