@@ -8,7 +8,7 @@ permalink: /tools/
 ## Interval Tool
 
 - [Open in this browser]({{ site.baseurl }}/clicker.html)
-- Androind app. (coming soon.)
+- Android app. (coming soon.)
 - Source code.
 
 ## K-Meleon Extensions
