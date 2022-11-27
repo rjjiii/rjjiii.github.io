@@ -18,7 +18,10 @@ paginate_path: "/words/:num/"
 # Flags below are optional
 #
 
-section: words
+defaults:
+  -
+path: "" # an empty string here means all files in the project
+section: "words"
 
 # Includes an icon in the footer for each username you enter
 # footer-links:
