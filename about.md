@@ -5,14 +5,19 @@ permalink: /about/
 nav-tab: about
 ---
 
-Under construction.
 
-### More Information
 
-A place to include any other types of information that you'd like to include about yourself.
+## Contact
+<style>#2, #4, #5 {display:none}</style>
+<script>test</script>
+<span id="1">ex</span><span id="2">s</span><span id="3">am<span id="4">son</span>ple<span id="5">@yahoo.com</span><span id="6">example.com</span>
 
-### Contact me
+### Social Media
 
-[email@domain.com](mailto:email@domain.com)
+- <a rel="me" href="https://mastodon.lol/@rjjiii">Mastodon</a>
+- <a href="https://github.com/rjjiii">Github</a>
+  
+## More
+  
 
-<a rel="me" href="https://mastodon.lol/@rjjiii">Mastodon</a>
+  
