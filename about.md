@@ -12,7 +12,7 @@ nav-tab: about
 const list = document.getElementById("e_69");
 list.innerHTML += `example@example.com`;
 </script>
-<span style="display:none">ex</span><span style="display:none">s</span><span id="e_69" style="unicode-bidi: bidi-override; direction: rtl;">moc.iiijjr@top</span style="display:none">son</span><span style="display:none">@yahoo.com</span><span style="display:none">example.com</span>
+<span style="display:none">ex</span><span style="display:none">s</span><span id="e_69" style="unicode-bidi: bidi-override; direction: rtl;">moc.iiijjr@top</span><span style="display:none">son</span><span style="display:none">@yahoo.com</span><span style="display:none">example.com</span>
 
 ### Social Media
 
