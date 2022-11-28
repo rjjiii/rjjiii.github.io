@@ -6,6 +6,31 @@ title: Interval Tool
 permalink: /tools/interval/
 ---
 
+<div>
+<address rel="author">
+By: Robert Jones III
+</address>
+<time datetime="2022-12">December 2022</time>
+</div>
+<!-- 
+	The div above groups the byline and date into a single block element.
+	This is supported on the oldest web browsers still in use and it will be
+	future proof going forward compared to a CSS solution.
+ -->
+ 
+<nav>
+<details open>
+<summary>☛ Contents</summary>
+	
+<div markdown="1">
+	
+1. The generated Toc will be an ordered list
+{:toc}
+</div>
+	
+</details>
+</nav>
+
 
 ## Notes on the source code:
 
