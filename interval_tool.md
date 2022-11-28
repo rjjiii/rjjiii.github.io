@@ -1,19 +1,15 @@
 ---
 layout: post
 license: OSL
-section: tools
+nav-tab: tools
 title: Interval Tool
 permalink: /tools/interval/
 ---
 
-Interval Tool
-version 1.0
-Copyright (c) Robert Jones III 2020
-Licensed under the Open Software License version 3.0
 
 ## Notes on the source code:
 
-This html document is the preferred form of the Interval Tool for making modifications. If you received a native/binary application, that application was a wrapper around this document. There are no image files; what may look like icons are done via Unicode characters. There are also no sound files. Any sounds are created via javascript. All style sheets and scripts are embedded into this document. 
+This [html document](https://rjjiii.com/clicker.html) is the preferred form of the Interval Tool for making modifications. If you received a native/binary application, that application was a wrapper around this document. There are no image files; what may look like icons are done via Unicode characters. There are also no sound files. Any sounds are created via javascript. All style sheets and scripts are embedded into this document. 
 
 ## Regarding the license:
 
