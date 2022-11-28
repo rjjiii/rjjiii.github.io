@@ -11,12 +11,11 @@ nav-tab: about
 <script type="text/javascript">
 function codeAddress() {}
 document.addEventListener('DOMContentLoaded', function() {
-alert('ok');
 const list = document.getElementById("e_69");
-list.innerHTML = `test`;
+list.innerHTML = `moc.iiijjr@top`;
 }, false);
 </script>
-<span style="display:none">ex</span><span style="display:none">s</span><span id="e_69" style="unicode-bidi: bidi-override; direction: rtl;">moc.iiijjr@top</span><span style="display:none">son</span><span style="display:none" onload="codeAddress();">@yahoo.com</span><span style="display:none">example.com</span>
+<span style="display:none">ex</span><span style="display:none">s</span><span id="e_69" style="unicode-bidi: bidi-override; direction: rtl;">moc.iiijjr@nimda</span><span style="display:none">son</span><span style="display:none" onload="codeAddress();">@yahoo.com</span><span style="display:none">example.com</span>
 
 ### Social Media
 
