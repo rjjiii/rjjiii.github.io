@@ -220,6 +220,11 @@ main  ul li:before {
 	position: absolute;
 	left: 0;
 }
+
+li#about_1::before{content:"✉︎";}
+li#about_2::before{content:"🐘︎";}
+li#about_3::before{content:"🐙︎";}
+
 main  ol{
 	list-style-type: decimal;
 }
