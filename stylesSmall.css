@@ -32,7 +32,7 @@ li#selected a
 	   padding: 12pt;
 	}
 	
-header li#selected a
+li#selected a
 {
 	text-decoration: none;
 }
