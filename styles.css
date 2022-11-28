@@ -31,16 +31,19 @@ header nav ul{
 	border: 0;
 }
 
-header nav ul li #selected{
+header nav ul li#selected a{
 	display: inline;
 	background: white;
 	color: #454545;
 	color: rgb(var(--funk));
 	padding: 18pt;
 }
-header nav a#selected{
+header nav li#selected a{
 	color: #454545;
 	color: rgb(var(--funk));
+}
+li#selected {
+	padding:0;
 }
 main {
 	max-width: 438pt;
