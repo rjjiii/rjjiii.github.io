@@ -27,12 +27,12 @@ header nav ul li
 	}
 
 
-li a#selected
+li#selected a
  {
 	   padding: 12pt;
 	}
 	
-header a#selected
+header li#selected a
 {
 	text-decoration: none;
 }
