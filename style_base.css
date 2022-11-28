@@ -85,7 +85,7 @@ header nav ul li{
 	padding: 18pt;
 	font-size: 16pt;
 }
-a#selected {
+li#selected a{
 	text-decoration:none;
 }
 
