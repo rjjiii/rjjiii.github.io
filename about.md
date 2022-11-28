@@ -8,8 +8,7 @@ nav-tab: about
 
 
 ## Contact
-<style>#2, #4, #5 {display:none;}</style>
-<script>test</script>
+<style>#2{display: none;}</style>
 <span id="1">ex</span><span id="2">s</span><span id="3">am<span id="4">son</span>ple<span id="5">@yahoo.com</span><span id="6">example.com</span>
 
 ### Social Media
