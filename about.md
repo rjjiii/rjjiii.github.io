@@ -22,6 +22,8 @@ nav-tab: about
 
 ## Contact
 
+You can contact me at the email address below. My social media accounts are also listed below, but I'll respond to emails more quickly.
+
 <script type="text/javascript">
 function codeAddress() {}
 document.addEventListener('DOMContentLoaded', function() {
@@ -42,7 +44,7 @@ window.location.href = "mailto:" + address;
 <ul>
 <li id="about_1">
 <a href="javascript:decryptEmail('cG90QHJqamlpaS5jb20=');">
-<span style="display:none">ex</span><span style="display:none">s</span><span id="e_69" style="unicode-bidi: bidi-override; direction: rtl;">.ffo si ti fi no tpircsavaj gninrut ro rekcolbda ruoy gnilbasid yliraropmet yrt nac uoY .gninnur morf tpircs eht detneverp gnihtemos neht siht gnidaer era uoy fI .egassem siht gnitteg eb ton dluow uoy yllamroN .maps ecuder ot siht od ot evah I .egap siht no tpircs a aiv delaever dna tluafed yb neddih si tcatnoc liame yM</span><span style="display:none">son</span><span style="display:none" onload="codeAddress();">@yahoo.com</span><span style="display:none">example.com</span>
+<span style="display:none">ex</span><span style="display:none">s</span><span id="e_69" style="unicode-bidi: bidi-override; direction: rtl;">.delbasid si tpircsavaj fi neddih si sserdda liame yM</span><span style="display:none">son</span><span style="display:none" onload="codeAddress();">@yahoo.com</span><span style="display:none">example.com</span>
 </a>
 </li>
 </ul>
