@@ -47,7 +47,8 @@ list.innerHTML = `moc.iiijjr@top`;
 <li id="about_3">
 <a href="https://github.com/rjjiii">Github</a>
 </li>
-  
+</ul>
+
 ## More
   
 
