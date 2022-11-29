@@ -64,7 +64,7 @@ html, body{
 	font-family:  "CMU Typewriter", "Courier Prime", "Garamon", serif;
 	color: #454545;
 	color: rgb(var(--ink));
-	background: rgb(var(--funk));
+	background: rgb(var(--paper));
 }
 
 
@@ -102,7 +102,7 @@ a:hover{
 }
 a:active{
 	text-decoration:none;
-	color: rgb(var(--funk));
+	color: rgb(var(--paper));
 	background-color: #454545;
 	background-color: rgb(var(--funk));
 }
