@@ -225,9 +225,17 @@ main  ul li:before {
 	left: 0;
 }
 
-li#about_1::before{content:"✉︎";}
-li#about_2::before{content:"🐘︎";}
-li#about_3::before{content:"🐙︎";}
+li#about_1::before{
+	content:"✉︎";
+	filter: grayscale(100%);
+}
+li#about_2::before{
+	content:"🐘︎";
+	filter: grayscale(100%);
+}
+li#about_3::before{
+	content:"🐙︎";
+	filter: grayscale(100%);}
 
 main  ol{
 	list-style-type: decimal;
@@ -250,8 +258,8 @@ blockquote footer{
 	text-align: right;
 }
 blockquote cite { 
-text-align: right;
-display: block;
+	text-align: right;
+	display: block;
 }
 
 hr{
@@ -275,14 +283,14 @@ main  ul.notes{
 	padding-left: 18pt;
 }
 aside {
-display: inline-block;
-float: right;
-width: 240pt;
-margin-right: -282pt;
-margin-top:9pt;
-font-size: 12pt;
-padding: 3pt;
-color: rgb(var(--ink), 0.7);
+	display: inline-block;
+	float: right;
+	width: 240pt;
+	margin-right: -282pt;
+	margin-top:9pt;
+	font-size: 12pt;
+	padding: 3pt;
+	color: rgb(var(--ink), 0.7);
 }
 
 /*
@@ -323,37 +331,6 @@ main  aside figcaption {
 	padding:0;
 	margin:0;
 	margin-top:3pt;
-}
-
-.notes li:nth-child(1):before {
-	content: "*";
-}
-.notes li:nth-child(2):before {
-	content: "†";
-}
-.notes li:nth-child(3):before {
-	content: "‡";
-}
-.notes li:nth-child(4):before {
-	content: "§ ";
-}
-.notes li:nth-child(5):before {
-	content: "¶ ";
-}
-.notes li:nth-child(6):before {
-	content: "** ";
-}
-.notes li:nth-child(7):before {
-	content: "††  ";
-}
-.notes li:nth-child(8):before {
-	content: "‡‡  ";
-}
-.notes li:nth-child(9):before {
-	content: "§§ ";
-}
-.notes li:nth-child(10):before {
-	content: "¶¶ ";
 }
 
 
