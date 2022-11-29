@@ -66,6 +66,37 @@ filter: drop-shadow(1px 1px 5px black);
 	max-width:438pt;
 	margin-left:18pt;
 	margin-right:18pt;}
+	
+#circle-svg {
+background: rgb(var(--funk));  position:fixed;
+  bottom:6pt;
+  right:6pt;
+  width:140pt;
+  height:140pt;
+  border-radius: 100%;
+}
+
+svg {
+  fill: currentColor;
+  height: auto;
+  max-width: 66vmin;
+  transform-origin: center;
+  width: 128pt;
+  position:fixed;
+  bottom:12pt;
+  right:12pt;
+  color:white;
+  animation: rotation 120s infinite linear;
+}
+
+@keyframes rotation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(359deg);
+  }
+}
 </style>
 	
   </head>
@@ -124,6 +155,27 @@ filter: drop-shadow(1px 1px 5px black);
       </div>
     </div>
 </main>
+
+<a href="https://rjjiii.com/words">
+<div id="circle-svg">
+<svg viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <path id="circle"
+      d="
+        M 50, 50
+        m -37, 0
+        a 37,37 0 1,1 74,0
+        a 37,37 0 1,1 -74,0"/>
+  </defs>
+  <text font-size="17">
+    <textPath xlink:href="#circle">
+      Under Construction
+    </textPath>
+  </text>
+</svg>
+</div>
+</a>
+
 <center>© 2022 Robert Jones<center>
 	  
 
