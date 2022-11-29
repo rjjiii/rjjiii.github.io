@@ -5,21 +5,6 @@ permalink: /about/
 nav-tab: about
 ---
 
-<nav>
-<details open>
-<summary>☛ Contents</summary>
-	
-<div markdown="1">
-	
-1. The generated Toc will be an ordered list
-{:toc}
-</div>
-	
-</details>
-</nav>
-
-
-
 ## Contact
 
 You can contact me at the email address below. My social media accounts are also listed below, but I'll respond to emails more quickly.
