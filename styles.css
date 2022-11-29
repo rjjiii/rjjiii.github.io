@@ -231,11 +231,14 @@ li#about_1::before{
 }
 li#about_2::before{
 	content:"🐘︎";
-	filter: grayscale(100%);
+	color:transparent; 
+	text-shadow: 0 0 0 rgb(var(--ink));
 }
 li#about_3::before{
 	content:"🐙︎";
-	filter: grayscale(100%);}
+	color:transparent; 
+	text-shadow: 0 0 0 rgb(var(--ink));
+}
 
 main  ol{
 	list-style-type: decimal;
