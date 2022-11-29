@@ -12,16 +12,16 @@ header{
 	margin: 0;
 	background-color: #454545;
 	background-color: rgb(var(--funk));
-	color: white;
+	color: rgb(var(--paper));
 	}
 header nav a:link{
-	color: white;
+	color: rgb(var(--paper));
 }
 header nav a:visited{
-	color: white;
+	color: rgb(var(--paper));
 }
 #site_heading{
-	color: white;
+	color: rgb(var(--paper));
 	display: inline-block;
 }
 
@@ -33,7 +33,7 @@ header nav ul{
 
 li#selected a{
 	display: inline;
-	background: white;
+	background: rgb(var(--paper));
 	color: #454545;
 	color: rgb(var(--funk));
 	padding: 18pt;
@@ -50,7 +50,6 @@ main {
 	max-width: 438pt;
 	padding: 36pt;
 	margin: auto;
-	background-color:white;
 	border: none;
 	line-height: 130%;
 }
@@ -190,7 +189,7 @@ span.drop_caps{
 code, pre{
 	background-color: #454545;
 	background-color: rgb(var(--ink));
-	color: white;
+	color: rgb(var(--paper));
 }
 
 
@@ -202,7 +201,7 @@ q{
 mark{
 	background-color: #454545;
 	background-color: rgb(var(--funk));
-	color: white;
+	color: rgb(var(--paper));
 }
 code mark, pre mark {
 	color: #c7ffcc;
@@ -400,7 +399,7 @@ main nav li a:link, main nav li a:visited{
 }
 main nav li a:active{
 	text-decoration:none;
-	color: white;
+	color: rgb(var(--paper));
 	background-color: #454545;
 	background-color: rgb(var(--funk));
 
