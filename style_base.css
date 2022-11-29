@@ -1,13 +1,14 @@
 /*These custom value should follow a hex color to make the page fail gracefully on limited browsers.*/
 :root{
 	--ink: 59, 59, 59;
+	--paper: 255, 255, 255;
 	--funk: 109, 188, 116;
 }
 
 ::selection {
 	background: #454545;
 	background: rgb(var(--funk));
-	color:white;
+	color:rgb(var(--paper));
 }
 
 input, textarea, {
@@ -63,7 +64,7 @@ html, body{
 	font-family:  "CMU Typewriter", "Courier Prime", "Garamon", serif;
 	color: #454545;
 	color: rgb(var(--ink));
-	background: white;
+	background: rgb(var(--funk));
 }
 
 
@@ -101,7 +102,7 @@ a:hover{
 }
 a:active{
 	text-decoration:none;
-	color: white;
+	color: rgb(var(--funk));
 	background-color: #454545;
 	background-color: rgb(var(--funk));
 }
