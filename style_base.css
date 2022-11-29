@@ -8,6 +8,7 @@
 ::selection {
 	background: #454545;
 	background: rgb(var(--funk));
+	color:white;
 	color:rgb(var(--paper));
 }
 
@@ -64,6 +65,7 @@ html, body{
 	font-family:  "CMU Typewriter", "Courier Prime", "Garamon", serif;
 	color: #454545;
 	color: rgb(var(--ink));
+	background:white;
 	background: rgb(var(--paper));
 }
 
@@ -102,6 +104,7 @@ a:hover{
 }
 a:active{
 	text-decoration:none;
+	color:white;
 	color: rgb(var(--paper));
 	background-color: #454545;
 	background-color: rgb(var(--funk));
