@@ -32,15 +32,15 @@ By: Robert Jones III
 </nav>
 
 
-## Notes on the source code:
+## Source code
 
 This [html document](https://rjjiii.com/clicker.html) is the preferred form of the Interval Tool for making modifications. If you received a native/binary application, that application was a wrapper around this document. There are no image files; what may look like icons are done via Unicode characters. There are also no sound files. Any sounds are created via javascript. All style sheets and scripts are embedded into this document. 
 
-## Regarding the license:
+## License
 
 This software is open source and licensed under the OSL 3.0. The license is publicly available from the Open Source Institute (OSI). The [license and a summary](https://opensource.org/licenses/OSL-3.0) are available on the OSI website.
 
-## Goal of the Interval Tool:
+## Methodology
 
 Interval Recording can be difficult and very mentally taxing using traditional behavioral therapy tools. These issues are in part due to how attention and working memory function in the brain. People often overestimate their ability to multi-task, but humans have a natural limit in their working memory that hinders attempts to multi-task. Psychological research has shown that there is an attention cost for switching between tasks. This cost rises as the complexity of the tasks increase and as the differences between the tasks increase.[^1] These findings explain some of the difficulties in interval recording because multi-tasking is a core part of the method. Using traditional tools, a behavioral therapist would note a client's behavior on their clipboard, watch the time for upcoming intervals, observe the client's behavior, and often perform an additional task with the client related to the tracked behavior. Some computerized interval recording software imposes a greater load on a therapist's attention than the old clipboard and stopwatch method. The goal of this software is to reduce the load on the therapist's attention as much as possible.
 
