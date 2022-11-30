@@ -27,6 +27,12 @@
 	<link rel="me" href="https://mastodon.lol/@rjjiii">
 
 <style>
+/*Print only*/
+@media print{
+#circle-svg{
+	display:none;
+}
+}
 @media screen{
 	
 body, html {
@@ -104,20 +110,14 @@ svg {
 }
 // End CSS media query.	
 }
-
-//Print only
-#circle-svg{
-	display:none;
-}
 	
-//Internet Explorer
+/*Internet Explorer*/
 @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
    #circle-svg, .home_vert{
 	display:none;
 }
 }
-</style>
-	
+</style>	
   </head>
 
   <body>
