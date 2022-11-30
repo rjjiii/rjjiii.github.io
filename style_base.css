@@ -94,7 +94,10 @@ li#selected a{
 
 a:link, a:visited {
 	text-decoration:none;
-	color: #0077aa;
+	color: #268bd2;
+}
+a:visited {
+	color:#6c71c4;
 }
 a:hover{
 	text-decoration:underline;
