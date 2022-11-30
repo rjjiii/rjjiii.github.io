@@ -75,7 +75,7 @@ header{
 	text-align:center;
 }
 #site_heading{
-	font-family:  "CMU Typewriter", "Courier Prime", Rockwell; Courier, monospace;
+	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
 	font-size: 36pt;
 	padding: 24pt;
 	margin: 0 0 18pt 0;
