@@ -159,14 +159,15 @@ article h1{
 	padding-bottom: 6pt;
 }
 
-
+/* Not supported by current font
 abbr, span.small_caps{
 	  font-variant: small-caps;
 	  -moz-font-feature-settings: "c2sc", "smcp";
 	  -webkit-font-feature-settings: "c2sc", "smcp";
 	  font-feature-settings: "c2sc", "smcp";
 	  font-variant-caps: all-small-caps;
-	  font-family: "CMU Typewriter Bold Mono";}
+}
+*/
 abbr {
 	text-decoration: none;
 }
