@@ -58,15 +58,42 @@ http://scripts.sil.org/OFL
 	font-display: swap;
 }
 
+/*Body copy.*/
+@font-face {
+	font-family: "CMU Body";
+    src: url('cmunss-webfont.woff') format('woff');
+    font-weight: normal;
+	font-display: swap;
+}
+
+cmunsx-webfont bold
+@font-face {
+	font-family: "CMU Body";
+    src: url('cmunss-webfont.woff') format('woff');
+    font-weight: bold;
+	font-display: swap;
+}
+
+cmunsi-webfont italic
+@font-face {
+	font-family: "CMU Body";
+    src: url('cmunss-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: italic;
+	font-display: swap;
+}
+
 
 
 html, body{
 	font-size: 12pt;
-	font-family:  "CMU Typewriter", "Courier Prime", "Garamon", serif;
+	font-family:  "CMU Body", "CMU Typewriter", "Courier Prime", "Garamon", serif;
 	color: #454545;
 	color: rgb(var(--ink));
 	background:white;
 	background: rgb(var(--paper));
+}
+nav, h1, h2, h3, h4, small {	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
 }
 
 
