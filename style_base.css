@@ -58,13 +58,6 @@ http://scripts.sil.org/OFL
 	font-display: swap;
 }
 
-@font-face {
-    font-family: "CMU Typewriter Bold Mono";
-    src: url('cmuntb-webfont.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-}
-
 
 
 html, body{
