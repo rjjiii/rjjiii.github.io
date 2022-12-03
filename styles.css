@@ -164,9 +164,9 @@ abbr, span.small_caps{
 	  font-variant: small-caps;
 }
 abbr {
-	text-transform: lowercase;
+	font-variant-caps:all-small-caps;
 	text-decoration: none;
-    font-weight: bold;
+	font-weight: bold;
 }
 span.drop_caps{
     float:left;
