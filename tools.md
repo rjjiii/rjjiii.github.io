@@ -18,7 +18,7 @@ Privacy is important, so **all** of the data is saved _within the browser_ and w
 
 ## K-Meleon Extensions
 
-[K-Meleon](http://kmeleonbrowser.org) is a lightweight open-source web browser that still **supports Windows XP**, Windows Vista, legacy processors, and limited RAM computers. It's a project that continues to breathe life in older machines. You can find extensions for K-Meleon that I maintain at the K-Meleon tools hub:
+[K-Meleon](http://kmeleonbrowser.org) is a lightweight open-source web browser that still **supports Windows XP**, Windows Vista, legacy processors, and limited <abbr>RAM</abbr> computers. It's a project that continues to breathe life in older machines. You can find extensions for K-Meleon that I maintain at the K-Meleon tools hub:
 
 - [K-Meleon Tools Hub](https://rjjiii.com/K-Meleon/) with links to all extensions.
 - [AdBlock Classic](https://rjjiii.com/K-Meleon/AdBlockClassic/) with one-click install from K-Meleon.
