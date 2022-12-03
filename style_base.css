@@ -59,6 +59,7 @@ http://scripts.sil.org/OFL
 }
 
 /*Body copy.*/
+/* Testing:
 @font-face {
 	font-family: "CMU Body";
     src: url('cmunss-webfont.woff') format('woff');
@@ -83,18 +84,21 @@ cmunsi-webfont italic
 	font-display: swap;
 }
 
+nav, h1, h2, h3, h4, small {	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
+}
+*/
+
 
 
 html, body{
 	font-size: 12pt;
-	font-family:  "CMU Body", "CMU Typewriter", "Courier Prime", "Garamon", serif;
+	font-family:  "CMU Typewriter", "Courier Prime", "Garamon", serif;
 	color: #454545;
 	color: rgb(var(--ink));
 	background:white;
 	background: rgb(var(--paper));
 }
-nav, h1, h2, h3, h4, small {	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
-}
+
 
 
 
