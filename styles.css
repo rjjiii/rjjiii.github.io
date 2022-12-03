@@ -162,11 +162,10 @@ article h1{
 
 abbr, span.small_caps{
 	  font-variant: small-caps;
-}
+	  font-variant-caps: all-small-caps;
+	  font-family: "CMU Typewriter Bold Mono";}
 abbr {
-	font-variant-caps:all-small-caps;
 	text-decoration: none;
-	font-weight: bold;
 }
 span.drop_caps{
     float:left;
