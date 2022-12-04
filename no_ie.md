@@ -4,8 +4,6 @@ title: Internet Explorer is Not Supported
 permalink: /no_ie.html
 ---
 
-# Internet Explorer is Not Supported
-
 <p>
 	Internet Explorer is 
 	<a href="https://docs.microsoft.com/en-us/lifecycle/announcements/internet-explorer-11-end-of-support"> 
