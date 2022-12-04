@@ -58,47 +58,20 @@ http://scripts.sil.org/OFL
 	font-display: swap;
 }
 
-/*Body copy.*/
-/* Testing:
-@font-face {
-	font-family: "CMU Body";
-    src: url('cmunss-webfont.woff') format('woff');
-    font-weight: normal;
-	font-display: swap;
-}
-
-cmunsx-webfont bold
-@font-face {
-	font-family: "CMU Body";
-    src: url('cmunss-webfont.woff') format('woff');
-    font-weight: bold;
-	font-display: swap;
-}
-
-cmunsi-webfont italic
-@font-face {
-	font-family: "CMU Body";
-    src: url('cmunss-webfont.woff') format('woff');
-    font-weight: normal;
-    font-style: italic;
-	font-display: swap;
-}
-
-nav, h1, h2, h3, h4, small {	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
-}
-*/
-
-
-
-html, body{
-	font-size: 12pt;
+html {
 	font-family:  "CMU Typewriter", "Courier Prime", "Garamon", serif;
+	font-size: 12pt;
 	color: #454545;
 	color: rgb(var(--ink));
+}
+
+body{
 	background:white;
 	background: rgb(var(--paper));
 }
-
+h1, h2, h3, header{
+	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
+}
 
 
 
@@ -153,7 +126,6 @@ nav {
 	display: block;
 } 
 h1{
-	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
 	text-align: center;
 	padding: 18pt;
 	font-size: 18pt;
@@ -161,7 +133,6 @@ h1{
 	line-height: normal;
 }
 h2{
-	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
 	padding-top: 24pt;
 	line-height: normal;
 	font-size: 18pt;
@@ -169,7 +140,6 @@ h2{
 	font-weight: normal;
 }
 h3{
-	font-family:  "CMU Typewriter", "Courier Prime", Rockwell, Courier, monospace;
 	padding-top: 24pt;
 	line-height: normal;
 	font-size: 14pt;
