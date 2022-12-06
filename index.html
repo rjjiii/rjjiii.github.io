@@ -21,110 +21,15 @@
     	<link rel="stylesheet" href="style_base.css">
 	<link rel="stylesheet" media="screen and (min-width: 280px)" href="styles.css">
 	<link rel="stylesheet" media="screen and (max-width: 600px)" href="stylesSmall.css">
-	<link rel="stylesheet" media="print" href="styles.css">
-	<link rel="stylesheet" media="print" href="print.css">
+   	<link rel="stylesheet" media="screen and (min-width: 280px)" href="test_files/stylesHome.css">
 	<link rel="alternate" type="application/rss+xml" title="Robert Jones" href="https://rjjiii.com/feed.xml">
 	<link rel="me" href="https://mastodon.lol/@rjjiii">
-
-<style>
-/*Print only*/
-@media print{
-#circle-svg{
-	display:none;
-}
-}
-@media screen{
-
-body {
-	background:black;
-	background-size: cover;
-	background-image: url("bg.png");
-	background-repeat: no-repeat;
-	background-attachment: fixed;
-	background-position: center;
-	  -webkit-background-size: cover;
-  -moz-background-size: cover;
-  -o-background-size: cover; 
-  }
-
-.home_block, small, .home_block a, main, strong a:link{
-color: white;
-color:rgb(var(--paper));
-filter: drop-shadow(1px 1px 5px black);
-text-align:left;
-}
-small{
-	display: inline;
-}
-.home_block a {
-	text-decoration:underline;
-	}
-.home_vert{
-	float:left;
-	writing-mode: vertical-lr;
-	margin:0;
-	padding:0;
-	padding-top:18pt;
-	padding-right:6pt;
-	display:inline-block;
-	height:100%;
-	}
-
-.home_hero{
-	display:inline;	
-	font-size:48pt;
-	}
-
-.home_excerpt{
-	max-width:438pt;
-	margin-left:18pt;
-	margin-right:18pt;
-	}
 	
-#circle-svg {
-background: rgb(var(--funk));  position:fixed;
-  bottom:6pt;
-  right:6pt;
-  width:140pt;
-  height:140pt;
-  border-radius: 100%;
-  z-index: 7;
-}
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
 
-svg {
-  fill: currentColor;
-  height: auto;
-  max-width: 66vmin;
-  transform-origin: center;
-  width: 128pt;
-  position:fixed;
-  bottom:12pt;
-  right:12pt;
-  color:white;
-  color:rgb(var(--paper));
-  animation: rotation 120s infinite linear;
-}
-
-@keyframes rotation {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(359deg);
-  }
-}
-// End CSS media query.	
-}
-	
-/*Internet Explorer*/
-@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
-   #circle-svg, .home_vert{
-	display:none;
-}
-}
-</style>
-
-	
 <!--[if lte IE 7]>
 <style>
 	body {
@@ -152,13 +57,13 @@ svg {
 		</nav>
 </header>
 <div class="home_block">
-<p class="home_vert">
+<div class="home_vert">
 	Selected story
-</p>
+</div>
 
-<p class="home_hero">
+<div class="home_hero">
 <a href="https://rjjiii.com/Julia,-We-Need-To-Talk-About-The-Unicorn/">Julia, We Need to Talk About the Unicorn</a>
-</p>	
+</div>	
 
 <!--
 <div class="home_excerpt">
@@ -168,20 +73,36 @@ svg {
 -->
 	
 </div>
+
+<div class="home_block">
+<div class="home_vert">
+	Updates
+</div>
+
+<update-deck>
+<update-card>
+	<strong><a href="https://rjjiii.com/site-is-online/">Building a Static Site via Pages:</strong></a> Now that the site is online, here are some reflections on getting there.
+</update-card>
+
+<!--
+<update-card>
+	<strong><a href="fearitself.net">Another thing.</strong></a> And it just be one sentence. Or it could be several. It could really balloon into a paragaph.
+</update-card>
+
+<update-card>
+	<strong><a href="fearitself.net">Another thing.</strong></a> And it just be one sentence. Or it could be several. It could really balloon into a paragaph.
+</update-card>
+
+<update-card>
+	<strong><a href="some other link">And yet another.</strong></a> Or just a single word.
+</update-card>
+-->
+</update-deck>
+
+</div>
 	  
 
-<main><!--
-
-<h2>
-	Updates
-</h2>
-<p>
-☛ <strong><a href="one.com">One thing.</strong></a> And then like some words and so on.<br />
-☛ <strong><a href="fearitself.net">Another thing.</strong></a> And it just be one sentence. Or it could be several. It could really balloon into a paragaph.<br />
-☛ <strong><a href="some other link">And yet another.</strong></a> Or just a single word.<br />
-</p>
-
--->
+<main>
 
 
 
@@ -189,13 +110,7 @@ svg {
     <div class="wrapper-footer">
       <div class="container">
         <footer class="footer">
-		<small>
 
-
-
-<br>
-
-</small>
         </footer>
       </div>
     </div>
@@ -205,12 +120,11 @@ svg {
 <div id="circle-svg">
 <svg viewBox="0 0 100 100" width="100" height="100">
   <defs>
-    <path id="circle"
-      d="
+    <path id="circle" d="
         M 50, 50
         m -37, 0
         a 37,37 0 1,1 74,0
-        a 37,37 0 1,1 -74,0"/>
+        a 37,37 0 1,1 -74,0"></path>
   </defs>
   <text font-size="17">
     <textPath xlink:href="#circle">
@@ -221,5 +135,4 @@ svg {
 </div>
 </a>
 
-<small>© 2022 Robert Jones<small>
-</body></html>
+<small>© 2022 Robert Jones</small></body></html>
