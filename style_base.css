@@ -105,7 +105,6 @@ a:visited {
 }
 a:hover{
 	text-decoration:underline;
-	text-decoration-style: wavy;
 }
 a:active{
 	text-decoration:none;
