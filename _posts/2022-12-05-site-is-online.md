@@ -1,6 +1,6 @@
 ---
 title: Building a Static Site via Pages
-excerpt: <p>There are still things that are not right. I supposed that's true of life, but I'm speaking specifically about this site. I've been gradually setting everything up to run a lean, static, document-first website that can be a central hub for my work in general. When I make errors, and here I mean just in life in general although it's also true of this specific project, I like to think of them as opportunities to learn. I tend to find _many_ learning opportunities, sometimes far more than I want. I will likely continue learning. As of now though, the site is okay, it's in a place where I like it enough to share my work here.</p>
+excerpt: <p>There are still things that are not right. I supposed that's true of life, but I'm speaking specifically about this site. I've been gradually setting everything up to run a lean, static, document-first website that can be a central hub for my work in general. When I make errors, and here I mean just in life in general although it's also true of this specific project, I like to think of them as opportunities to learn. I tend to find <em>many</em> learning opportunities, sometimes far more than I want. I will likely continue learning. As of now though, the site is okay, it's in a place where I like it enough to share my work here.</p>
 ---
 
 <nav>
