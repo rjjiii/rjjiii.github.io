@@ -1,0 +1,135 @@
+/*Print only*/
+@media print{
+#circle-svg{
+	display:none;
+}
+}
+@media screen{
+
+body {
+	background:black;
+	background-size: cover;
+	background-image: url("bg.png");
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+	background-position: center;
+	  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover; 
+  }
+
+.home_block, small, .home_block a, main, strong a:link{
+color: white;
+color:rgb(var(--paper));
+filter: drop-shadow(1px 1px 5px black);
+text-align:left;
+}
+small{
+	display: inline;
+}
+.home_block a {
+	text-decoration:underline;
+	}
+update-card a:hover{
+text-decoration-thickness: 3pt;
+}
+.home_hero a:hover{
+text-decoration-thickness: 12pt;
+}
+.home_block {
+	margin-bottom:36pt;
+	width:100%;
+	min-height:168pt;
+	
+	display: flex;
+	flex-wrap: nowrap;
+}
+.home_vert{
+	float:left;
+	writing-mode: vertical-lr; 
+	text-orientation: sideways;
+	margin:0;
+	padding:0;
+	padding-top:12pt;
+	padding-right:12pt;
+	display:inline-block;
+	max-width:36pt;
+	}
+
+.home_hero{
+	display:inline;	
+	font-size:48pt;
+	margin-right: 12pt;
+}
+
+.home_excerpt{
+	max-width:438pt;
+	margin-left:18pt;
+	margin-right:18pt;
+	}
+
+update-deck{}
+update-card::before{
+}	
+update-card{
+	width:128pt;
+	min-height:144pt;
+	float:left;
+	background: black;
+	background: rgba(0, 0, 0, .5);
+	margin:6pt;
+	margin-right:12pt;
+	margin-left:0;
+	padding:6pt;
+}
+update-card strong{
+	font-weight:normal;
+	display: block;
+	padding-bottom:12pt;
+	}
+
+small{
+	display:block;
+}
+	
+#circle-svg {
+background: rgb(var(--funk));  position:fixed;
+  bottom:6pt;
+  right:6pt;
+  width:140pt;
+  height:140pt;
+  border-radius: 100%;
+  z-index: 7;
+}
+
+svg {
+  fill: currentColor;
+  height: auto;
+  max-width: 66vmin;
+  transform-origin: center;
+  width: 128pt;
+  position:fixed;
+  bottom:12pt;
+  right:12pt;
+  color:white;
+  color:rgb(var(--paper));
+  animation: rotation 120s infinite linear;
+}
+
+@keyframes rotation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(359deg);
+  }
+}
+// End CSS media query.	
+}
+	
+/*Internet Explorer*/
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+   #circle-svg, .home_vert{
+	display:none;
+}
+}
