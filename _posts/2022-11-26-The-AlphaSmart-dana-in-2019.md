@@ -3,6 +3,19 @@ excerpt: <p>The AlphaSmart dana is technically a Palm OS PDA, in the same way th
 toc: generate
 ---
 
+<nav>
+<details open>
+<summary>☛ Contents</summary>
+	
+<div markdown="1">
+	
+1. The generated _Toc_ will be **an** ordered list
+{:toc}
+</div>
+	
+</details>
+</nav
+	
 <div>
 <address rel="author">
 By: Robert Jones III
