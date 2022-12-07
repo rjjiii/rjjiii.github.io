@@ -14,7 +14,7 @@ toc: generate
 </div>
 	
 </details>
-</nav
+</nav>
 	
 <div>
 <address rel="author">
