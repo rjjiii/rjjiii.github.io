@@ -5,6 +5,27 @@ layout: default
 <article class="post">
   <h1>{{ page.title }}</h1>
 
+{% if page.toc == "generate" %}  
+<nav>
+<details open>
+<summary>☛ Contents</summary>
+	
+<div markdown="1">
+	
+1. The generated Toc will be an ordered list
+{:toc}
+</div>
+	
+</details>
+</nav>
+{% endif %}
+ 
+<nav>
+<details open>
+<summary>☛ Contents</summary>
+	
+<div markdown="1">
+
   <div class="entry">
     {{ content }}
   </div>
