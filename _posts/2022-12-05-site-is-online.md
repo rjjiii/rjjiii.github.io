@@ -4,6 +4,7 @@ excerpt: <p>There are still things that are not right. I supposed that's true of
 ---
 
 # Building a Static Site via Pages
+{:.no_toc}
 
 <nav>
 <details open>
