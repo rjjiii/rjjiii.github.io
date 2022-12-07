@@ -18,6 +18,9 @@ paginate_path: "/words/:num/"
 # Flags below are optional
 #
 
+plugins:
+  - jekyll-titles-from-headings
+  
 defaults:
   -
     scope:
