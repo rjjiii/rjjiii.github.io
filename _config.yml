@@ -21,6 +21,10 @@ paginate_path: "/words/:num/"
 plugins:
   - jekyll-titles-from-headings
   
+whitelist:
+  - jekyll-titles-from-headings
+
+  
 defaults:
   -
     scope:
