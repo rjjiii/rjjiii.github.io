@@ -2,6 +2,7 @@
 layout: page
 title: Internet Explorer is Not Supported
 permalink: /no_ie.html
+nav-tab: none
 ---
 
 <p>
