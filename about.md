@@ -9,7 +9,7 @@ Hello,
 
 I write fables, articles on technology, essays on the mind, documentation for open-source software, and sometimes if I'm being honest just downright lies. I've worked as a freelance writer, developer, instructor, and behavioral therapist over the past decade.
 
-
+<!--
 ## Contact
 
 You can contact me at the email address below. My social media accounts are also down there.
@@ -38,7 +38,7 @@ window.location.href = "mailto:" + address;
 </a>
 </li>
 </ul>
-
+-->
 ### Social Media
 
 <ul>
