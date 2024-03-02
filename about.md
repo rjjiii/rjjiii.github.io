@@ -43,7 +43,7 @@ window.location.href = "mailto:" + address;
 
 <ul>
 <li id="about_2">
-<a rel="me" href="https://mastodon.lol/@rjjiii">Mastodon</a>
+<a rel="me" href="https://mastodon.social/@rjjiii">Mastodon</a>
 </li>
 <li id="about_3">
 <a href="https://github.com/rjjiii">Github</a>
