@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .search-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        #searchInput {
+            width: 70%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+            margin-bottom: 10pt;
+            outline: none;
+        }
+        
+        #searchInput:focus {
+            border-color: #ff0000;
+        }
+        
+        #searchButton {
+            padding: 12px 20px;
+            font-size: 16px;
+            background-color: #ff0000;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        #searchButton:hover {
+            background-color: #cc0000;
+        }
+        
+        #searchButton:active {
+            background-color: #990000;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <h1>YouTube Search</h1>
+        <input type="text" id="searchInput" placeholder="Enter search terms..." />
+        <button id="searchButton">Search</button>
+    </div>
+
+    <script>
+        function performSearch() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (searchTerm) {
+                const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
+                window.open(youtubeUrl, '_blank');
+            }
+        }
+
+        document.getElementById('searchButton').addEventListener('click', performSearch);
+        
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    </script>
+</body>
+</html>
