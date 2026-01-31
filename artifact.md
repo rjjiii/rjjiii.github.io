@@ -33,7 +33,7 @@ By: Robert Jones III
 </details>
 </nav>
 
-## Package and Source files
+## Package and Source Files
 
 The Portable Document Format (<abbr title="Portable Document Format">PDF</abbr>) file, [Color and Compression Effects on a Self-Portrait Photograph.pdf](https://rjjiii.com/color-and-compression-effects-on-a-self-portrait-photograph.pdf), contains the original photograph, derivative output, corresponding listings with file creation details, rendered output size, full license text, and attribution information. The <abbr title="Portable Document Format">PDF</abbr> is the primary distribution format and contains the complete documentation for the work.
 
@@ -44,4 +44,5 @@ This work is licensed under the [GNU Free Documentation License, Version 1.3](ht
 ## Notes
 
 This page exists to provide a stable reference for the source material and its provenance.
+
 
