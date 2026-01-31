@@ -2,7 +2,7 @@
 layout: post
 license: GFDL
 nav-tab: tools
-title: Artifact Performance Impact on Visual Appearance
+title: Artifact Performance and Impact on Visual Appearance
 permalink: /tools/artifact/
 ---
 
@@ -17,7 +17,9 @@ By: Robert Jones III
 	This is supported on the oldest web browsers still in use and it will be
 	future proof going forward compared to a CSS solution.
  -->
- 
+
+<h1>Artifact Performance and Impact on Visual Appearance</h1>
+
 <nav>
 <details open>
 <summary>☛ Contents</summary>
@@ -42,3 +44,4 @@ This work is licensed under the [GNU Free Documentation License, Version 1.3](ht
 ## Notes
 
 This page exists to provide a stable reference for the source material and its provenance.
+
