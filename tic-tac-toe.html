@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tic-Tac-Toe</title>
+<style>
+  :root{
+    --wood:       #5a3d28;
+    --wood-dark:  #3a2616;
+    --wood-edge:  #74522f;
+    --cell-face:  #6b4a30;
+    --line:       #281a0e;
+    --gold:       #ffd75e;
+    --ink-x:      #ef5b50;   /* X draws in red  */
+    --ink-o:      #f0e6cc;   /* O draws in cream */
+    --text:       #e9e3d4;
+    --text-dim:   #a59c86;
+    --gap: clamp(4px, 1.2vmin, 7px);
+    /* One square size for every orientation: the smaller of the width and height
+       budgets (the height budget reserves room for the floating Cancel chip), so
+       the board is always fully on screen and never scrolls. */
+    --cell: clamp(56px, min(calc((100vw - 40px) / 3.5), calc((100vh - 120px) / 3.5)), 150px);
+    --wood-fill:
+      repeating-linear-gradient(64deg, rgba(0,0,0,.10) 0 6px, rgba(255,255,255,.025) 6px 12px),
+      linear-gradient(150deg, var(--wood-edge), var(--wood) 36%, var(--wood-dark));
+    --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+    --font-display:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+
+  body{
+    min-height:100vh;
+    font-family:var(--font-body);
+    color:var(--text);
+    background:radial-gradient(130% 95% at 50% 24%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    background-attachment:fixed;
+    display:flex; align-items:center; justify-content:center;
+    padding:clamp(14px,3vh,28px) 16px;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:4px; }
+
+  /* ---- Board ---- */
+  .boardwrap{ position:relative; }
+  .frame{
+    padding:calc(var(--cell)*0.16); border-radius:14px;
+    background:var(--wood-fill);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.10) inset,
+      0 calc(var(--cell)*0.14) calc(var(--cell)*0.34) rgba(0,0,0,.55),
+      0 2px 3px rgba(0,0,0,.5);
+  }
+  .board{
+    position:relative;
+    width:calc(var(--cell)*3 + var(--gap)*2);
+    height:calc(var(--cell)*3 + var(--gap)*2);
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    grid-template-rows:repeat(3, 1fr);
+    gap:var(--gap);
+    background:var(--line);
+    border-radius:6px;
+    box-shadow:0 0 0 2px rgba(0,0,0,.4), inset 0 0 calc(var(--cell)*0.3) rgba(0,0,0,.4);
+  }
+  .cell{
+    position:relative; overflow:hidden; cursor:pointer;
+    touch-action:none; user-select:none; -webkit-user-select:none;
+    background:radial-gradient(120% 120% at 30% 25%, #79553a, var(--cell-face));
+    box-shadow:inset 0 0 calc(var(--cell)*0.18) rgba(0,0,0,.35);
+    transition:box-shadow .2s, background .2s;
+  }
+  .cell.playable:hover{ background:radial-gradient(120% 120% at 30% 25%, #855f41, #75512f); }
+  .cell.is-active{
+    box-shadow:
+      inset 0 0 0 3px var(--gold),
+      inset 0 0 calc(var(--cell)*0.22) rgba(255,205,80,.35),
+      0 0 calc(var(--cell)*0.18) rgba(255,205,80,.4);
+  }
+  .cell.occupied{ cursor:default; }
+
+  .ink{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .ink .ghost path, .ink .ghost circle{
+    fill:none; stroke-width:7; stroke-linecap:round; opacity:.26;
+  }
+  .ink.x .ghost path, .ink.x .ghost circle{ stroke:var(--ink-x); }
+  .ink.o .ghost path, .ink.o .ghost circle{ stroke:var(--ink-o); }
+  .ink .strokes path{ fill:none; stroke-width:8.5; stroke-linecap:round; stroke-linejoin:round; }
+  .ink.x .strokes path{ stroke:var(--ink-x); filter:drop-shadow(0 0 3px rgba(239,91,80,.45)); }
+  .ink.o .strokes path{ stroke:var(--ink-o); filter:drop-shadow(0 0 3px rgba(240,230,204,.4)); }
+
+  /* winning line */
+  .winline{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4; }
+  .winline line{
+    stroke:var(--gold); stroke-width:9; stroke-linecap:round;
+    filter:drop-shadow(0 0 6px rgba(255,205,80,.7));
+  }
+
+  /* ---- Result overlay ---- */
+  .banner{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(15,17,22,.76); backdrop-filter:blur(3px); border-radius:6px; padding:16px; z-index:6;
+  }
+  .banner.show{ display:flex; animation:fade .25s ease; }
+  @keyframes fade{ from{ opacity:0; } to{ opacity:1; } }
+  .banner-card{ text-align:center; }
+  .result{
+    font-family:var(--font-display); font-size:clamp(26px,7vw,40px);
+    color:#f6efe0; margin:0 0 14px;
+  }
+  .again{
+    font-family:var(--font-body); font-size:13px; font-weight:600; letter-spacing:.03em;
+    color:#221700; cursor:pointer; -webkit-appearance:none; appearance:none;
+    padding:9px 20px; border-radius:999px; border:1px solid rgba(0,0,0,.25);
+    background:linear-gradient(180deg, #f0c451, #d8a431);
+    transition:transform .12s, filter .2s;
+  }
+  .again:hover{ filter:brightness(1.06); }
+  .again:active{ transform:translateY(1px); }
+
+  /* ---- Subtle Cancel chip, floating at bottom centre (out of flow so the board stays centred) ---- */
+  .cancel{
+    position:fixed; left:50%;
+    bottom:calc(clamp(14px,3vh,28px) + env(safe-area-inset-bottom, 0px));
+    transform:translateX(-50%);
+    display:inline-flex; align-items:center; gap:7px;
+    padding:7px 15px; border-radius:999px;
+    font-family:var(--font-body); font-size:12.5px; font-weight:600; letter-spacing:.03em;
+    color:var(--text-dim);
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    cursor:pointer; -webkit-appearance:none; appearance:none;
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease, color .2s, border-color .2s, background .2s;
+  }
+  .cancel.show{ opacity:.66; pointer-events:auto; }
+  .cancel.show:hover{ opacity:1; color:var(--text); border-color:rgba(255,215,94,.5); background:rgba(255,255,255,.07); }
+  .cancel svg{ width:12px; height:12px; }
+
+  @media (prefers-reduced-motion:reduce){
+    .cell, .cancel{ transition:none !important; }
+    .banner.show{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="boardwrap">
+    <div class="frame">
+      <div class="board" id="board">
+        <svg class="winline" id="winline" viewBox="0 0 300 300" aria-hidden="true"></svg>
+        <div class="banner" id="banner">
+          <div class="banner-card">
+            <p class="result" id="result"></p>
+            <button class="again" id="again" type="button">Play again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="cancel" id="cancel" type="button" disabled aria-label="Cancel the current mark">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+    Cancel
+  </button>
+
+<script>
+"use strict";
+document.addEventListener("DOMContentLoaded", function(){
+
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const PAUSE = 320;        // after selecting a cell, before the guide traces in
+  const COMMIT_IDLE = 850;  // after the last stroke, before the mark commits
+  const MIN_LEN = 22;       // minimum drawn length (in 0..100 space) to count as a mark
+
+  const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+  /* ---------------- DOM ---------------- */
+  const boardEl   = document.getElementById("board");
+  const winlineEl = document.getElementById("winline");
+  const bannerEl  = document.getElementById("banner");
+  const resultEl  = document.getElementById("result");
+  const againBtn  = document.getElementById("again");
+  const cancelBtn = document.getElementById("cancel");
+
+  /* ---------------- state ---------------- */
+  let owner;            // owner[0..8] = 'x' | 'o' | null
+  let turn;             // 'x' | 'o'
+  let startingPlayer;   // alternates each round
+  let gameOver;
+
+  let activeCell = null;     // index currently selected for drawing
+  let armAt = 0;             // time after which drawing is allowed in the active cell
+  let drawing = false;       // a stroke is in progress
+  let strokes = [];          // [{ points:[{x,y}], el }] for the active cell
+  let ghostTimer = null, commitTimer = null;
+
+  const cells = [];          // cell elements
+  const ghostGroups = [];    // <g class="ghost"> per cell
+  const strokeGroups = [];   // <g class="strokes"> per cell
+  const inkSvgs = [];        // <svg class="ink"> per cell
+
+  /* ---------------- sound (synth, no files) ---------------- */
+  let actx = null, master = null;
+  function audio(){
+    if(!actx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return null;
+      actx = new AC();
+      master = actx.createGain(); master.gain.value = 0.45; master.connect(actx.destination);
+    }
+    if(actx.state === "suspended") actx.resume();
+    return actx;
+  }
+  function tone(o){
+    const ctx = audio(); if(!ctx) return;
+    const t0 = ctx.currentTime + (o.delay || 0);
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = o.type || "triangle";
+    osc.frequency.setValueAtTime(o.freq, t0);
+    if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t0 + o.dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(o.vol, t0 + (o.attack || 0.005));
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
+    osc.connect(g).connect(master); osc.start(t0); osc.stop(t0 + o.dur + 0.03);
+  }
+  function noise(o){
+    const ctx = audio(); if(!ctx) return;
+    const t0 = ctx.currentTime + (o.delay || 0);
+    const len = Math.floor(ctx.sampleRate * o.dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = Math.random()*2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter();
+    filt.type = o.filter || "highpass"; filt.frequency.value = o.freq || 1800; filt.Q.value = o.q || 0.7;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(o.vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
+    src.connect(filt).connect(g).connect(master); src.start(t0); src.stop(t0 + o.dur + 0.02);
+  }
+  const Sound = {
+    select(){ tone({freq:440, to:560, dur:0.06, vol:0.13, type:"sine"}); },
+    tick(){   tone({freq:600, dur:0.03, vol:0.07, type:"sine"}); },
+    commit(){
+      tone({freq:200, to:120, dur:0.13, vol:0.5, type:"triangle"});
+      noise({freq:2200, dur:0.02, vol:0.14, filter:"highpass"});
+      tone({freq:520, dur:0.18, vol:0.14, type:"sine", delay:0.03}); },
+    cancel(){ tone({freq:340, to:230, dur:0.09, vol:0.12, type:"sine"}); },
+    win(){
+      [523,659,784,1047].forEach((f,i)=> tone({freq:f, dur:0.55, vol:0.32, type:"triangle", delay:i*0.1, attack:0.01}));
+      tone({freq:262, dur:0.8, vol:0.2, type:"sine", delay:0.1}); },
+    tie(){
+      tone({freq:392, dur:0.26, vol:0.2, type:"triangle"});
+      tone({freq:294, dur:0.4, vol:0.2, type:"triangle", delay:0.15}); },
+    nudge(){ tone({freq:96, to:72, dur:0.12, vol:0.2, type:"sine"}); }
+  };
+
+  /* ---------------- helpers ---------------- */
+  const other = p => p === "x" ? "o" : "x";
+  function svgEl(tag, attrs){
+    const el = document.createElementNS(SVGNS, tag);
+    for(const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  // pointer position -> 0..100 within a cell
+  function cellPoint(cellEl, e){
+    const r = cellEl.getBoundingClientRect();
+    let x = (e.clientX - r.left) / r.width * 100;
+    let y = (e.clientY - r.top) / r.height * 100;
+    return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
+  }
+  function strokeD(points){
+    if(points.length === 0) return "";
+    if(points.length === 1){ const p = points[0]; return "M " + p.x + " " + p.y + " L " + (p.x+0.01) + " " + p.y; }
+    let d = "M " + points[0].x + " " + points[0].y;
+    for(let i=1;i<points.length-1;i++){
+      const mx = (points[i].x + points[i+1].x)/2, my = (points[i].y + points[i+1].y)/2;
+      d += " Q " + points[i].x + " " + points[i].y + " " + mx + " " + my;
+    }
+    const last = points[points.length-1];
+    d += " L " + last.x + " " + last.y;
+    return d;
+  }
+  function totalLength(strokeList){
+    let len = 0;
+    for(const s of strokeList){
+      for(let i=1;i<s.points.length;i++){
+        const dx = s.points[i].x - s.points[i-1].x, dy = s.points[i].y - s.points[i-1].y;
+        len += Math.hypot(dx, dy);
+      }
+    }
+    return len;
+  }
+
+  /* ---------------- build ---------------- */
+  function buildBoard(){
+    for(let i=0;i<9;i++){
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.i = i;
+
+      const svg = svgEl("svg", { class:"ink", viewBox:"0 0 100 100", preserveAspectRatio:"xMidYMid meet" });
+      const ghost = svgEl("g", { class:"ghost" });
+      const strokesG = svgEl("g", { class:"strokes" });
+      svg.appendChild(ghost); svg.appendChild(strokesG);
+      cell.appendChild(svg);
+
+      cell.addEventListener("pointerdown", e => onPointerDown(i, e));
+      cell.addEventListener("pointermove", e => onPointerMove(i, e));
+      cell.addEventListener("pointerup",   e => onPointerUp(i, e));
+      cell.addEventListener("pointercancel", e => onPointerUp(i, e));
+
+      boardEl.insertBefore(cell, winlineEl);   // before the winline/banner overlays
+      cells.push(cell); ghostGroups.push(ghost); strokeGroups.push(strokesG); inkSvgs.push(svg);
+    }
+  }
+
+  /* ---------------- guide (ghost) ---------------- */
+  function showGhost(i){
+    if(activeCell !== i) return;
+    const g = ghostGroups[i];
+    g.innerHTML = "";
+    inkSvgs[i].classList.remove("x","o"); inkSvgs[i].classList.add(turn);
+    g.style.opacity = "1";
+
+    const parts = [];
+    if(turn === "x"){
+      parts.push(svgEl("path", { d:"M 26 26 L 74 74" }));
+      parts.push(svgEl("path", { d:"M 74 26 L 26 74" }));
+    } else {
+      parts.push(svgEl("circle", { cx:50, cy:50, r:27 }));
+    }
+    parts.forEach((p, idx) => {
+      g.appendChild(p);
+      const len = (turn === "x") ? 68 : 2 * Math.PI * 27;
+      p.style.strokeDasharray = len;
+      if(reduceMotion){ p.style.strokeDashoffset = 0; return; }
+      p.style.strokeDashoffset = len;
+      p.style.transition = "stroke-dashoffset .5s ease";
+      p.style.transitionDelay = (idx * 0.18) + "s";
+      requestAnimationFrame(() => requestAnimationFrame(() => { p.style.strokeDashoffset = 0; }));
+    });
+  }
+
+  /* ---------------- selection / drawing ---------------- */
+  function selectCell(i){
+    activeCell = i;
+    armAt = performance.now() + PAUSE;
+    strokes = [];
+    cells.forEach(c => c.classList.remove("is-active"));
+    cells[i].classList.add("is-active");
+    ghostGroups[i].innerHTML = ""; strokeGroups[i].innerHTML = "";
+    clearTimeout(ghostTimer); clearTimeout(commitTimer);
+    ghostTimer = window.setTimeout(() => showGhost(i), PAUSE);
+    refreshUI();
+    Sound.select();
+  }
+
+  function clearActiveCell(){
+    if(activeCell === null) return;
+    const i = activeCell;
+    ghostGroups[i].innerHTML = ""; strokeGroups[i].innerHTML = "";
+    cells[i].classList.remove("is-active");
+    activeCell = null; strokes = []; drawing = false;
+    clearTimeout(ghostTimer); clearTimeout(commitTimer);
+  }
+
+  function onPointerDown(i, e){
+    if(gameOver) return;
+    audio();
+    if(owner[i] !== null){ Sound.nudge(); return; }   // occupied
+
+    if(activeCell === null){ selectCell(i); return; }  // first gesture = select only
+
+    if(activeCell === i){
+      if(performance.now() < armAt) return;            // still in the brief pause
+      startStroke(i, e);
+      return;
+    }
+    // a different cell is active
+    if(strokes.length === 0){ clearActiveCell(); selectCell(i); }  // switch (nothing drawn yet)
+    else Sound.nudge();                                            // mid-drawing elsewhere
+  }
+
+  function startStroke(i, e){
+    drawing = true;
+    try { cells[i].setPointerCapture(e.pointerId); } catch(_){}
+    clearTimeout(commitTimer);
+    ghostGroups[i].style.opacity = "0.5";   // fade the guide as the player draws over it
+    const path = svgEl("path", { d:"" });
+    strokeGroups[i].appendChild(path);
+    const stroke = { points:[cellPoint(cells[i], e)], el:path };
+    strokes.push(stroke);
+    path.setAttribute("d", strokeD(stroke.points));
+    Sound.tick();
+  }
+  function onPointerMove(i, e){
+    if(!drawing || activeCell !== i) return;
+    const stroke = strokes[strokes.length-1];
+    if(!stroke) return;
+    stroke.points.push(cellPoint(cells[i], e));
+    stroke.el.setAttribute("d", strokeD(stroke.points));
+  }
+  function onPointerUp(i, e){
+    if(!drawing || activeCell !== i) return;
+    drawing = false;
+    try { cells[i].releasePointerCapture(e.pointerId); } catch(_){}
+    clearTimeout(commitTimer);
+    commitTimer = window.setTimeout(commitActive, COMMIT_IDLE);
+  }
+
+  function commitActive(){
+    if(activeCell === null || gameOver) return;
+    if(totalLength(strokes) < MIN_LEN) return;   // not enough yet — keep waiting
+    const i = activeCell, player = turn;
+
+    owner[i] = player;
+    cells[i].classList.remove("is-active");
+    cells[i].classList.add("occupied");
+    const g = ghostGroups[i];                     // fade the guide out, keep the ink
+    g.style.transition = "opacity .3s ease"; g.style.opacity = "0";
+    window.setTimeout(() => { g.innerHTML = ""; }, 320);
+
+    activeCell = null; strokes = [];
+    clearTimeout(ghostTimer); clearTimeout(commitTimer);
+    Sound.commit();
+
+    const line = winningLine(player);
+    if(line){ finishRound(player, line); }
+    else if(owner.every(o => o !== null)){ finishRound(null, null); }
+    else { turn = other(player); }
+    refreshUI();
+  }
+
+  function cancelActive(){
+    if(activeCell === null || gameOver) return;
+    clearActiveCell();
+    refreshUI();
+    Sound.cancel();
+  }
+
+  /* ---------------- win / round ---------------- */
+  function winningLine(player){
+    for(const L of LINES){ if(owner[L[0]]===player && owner[L[1]]===player && owner[L[2]]===player) return L; }
+    return null;
+  }
+  function center(idx){ return { x:(idx % 3)*100 + 50, y:Math.floor(idx/3)*100 + 50 }; }
+
+  function finishRound(winner, line){
+    gameOver = true;
+    cells.forEach(c => c.classList.remove("playable"));
+    if(winner && line){
+      const a = center(line[0]), b = center(line[2]);
+      const dx = b.x - a.x, dy = b.y - a.y, m = Math.hypot(dx, dy) || 1;
+      const ex = dx / m * 22, ey = dy / m * 22;   // extend past the end marks
+      const ln = svgEl("line", { x1:a.x-ex, y1:a.y-ey, x2:b.x+ex, y2:b.y+ey });
+      winlineEl.appendChild(ln);
+      if(!reduceMotion){
+        const total = Math.hypot((b.x+ex)-(a.x-ex), (b.y+ey)-(a.y-ey));
+        ln.style.strokeDasharray = total; ln.style.strokeDashoffset = total;
+        ln.style.transition = "stroke-dashoffset .45s ease";
+        requestAnimationFrame(() => requestAnimationFrame(() => { ln.style.strokeDashoffset = 0; }));
+      }
+      resultEl.textContent = winner.toUpperCase() + " wins";
+      Sound.win();
+    } else {
+      resultEl.textContent = "Draw";
+      Sound.tie();
+    }
+    window.setTimeout(() => bannerEl.classList.add("show"), winner ? 480 : 220);
+  }
+
+  function newRound(){
+    owner = new Array(9).fill(null);
+    startingPlayer = startingPlayer ? other(startingPlayer) : "x";
+    turn = startingPlayer;
+    gameOver = false;
+    activeCell = null; strokes = []; drawing = false;
+    clearTimeout(ghostTimer); clearTimeout(commitTimer);
+
+    cells.forEach((c, i) => {
+      c.classList.remove("is-active","occupied");
+      ghostGroups[i].innerHTML = ""; ghostGroups[i].style.opacity = ""; ghostGroups[i].style.transition = "";
+      strokeGroups[i].innerHTML = "";
+    });
+    winlineEl.innerHTML = "";
+    bannerEl.classList.remove("show");
+    refreshUI();
+  }
+
+  /* ---------------- ui refresh ---------------- */
+  function refreshUI(){
+    cells.forEach((c, i) => c.classList.toggle("playable", !gameOver && owner[i] === null));
+    const showCancel = activeCell !== null && !gameOver;
+    cancelBtn.classList.toggle("show", showCancel);
+    cancelBtn.disabled = !showCancel;
+  }
+
+  /* ---------------- controls ---------------- */
+  againBtn.addEventListener("click", () => { audio(); newRound(); });
+  cancelBtn.addEventListener("click", () => { if(!cancelBtn.disabled){ audio(); cancelActive(); } });
+  document.addEventListener("keydown", e => {
+    if(e.key === "Escape" && activeCell !== null && !gameOver){ e.preventDefault(); audio(); cancelActive(); }
+  });
+
+  /* ---------------- go ---------------- */
+  buildBoard();
+  startingPlayer = null;   // newRound() sets the first starter to X
+  newRound();
+});
+</script>
+</body>
+</html>
