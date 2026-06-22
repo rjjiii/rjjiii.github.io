@@ -46,7 +46,7 @@
   .ptok.playable{ cursor:pointer; animation:tokpulse 1.3s ease-in-out infinite; }
   @keyframes tokpulse{0%,100%{box-shadow:0 0 0 2.5px rgba(255,215,94,0.85),0 0 8px rgba(255,215,94,0.4);}50%{box-shadow:0 0 0 3px rgba(255,215,94,1),0 0 16px rgba(255,215,94,0.75);}}
   .foxstack{ position:fixed; right:14px; bottom:14px; z-index:15; display:none; align-items:center; gap:6px; padding:5px 10px; border-radius:11px; background:rgba(22,17,14,0.62); border:1px solid rgba(210,124,51,0.55); box-shadow:0 2px 8px rgba(0,0,0,0.45); }
-  .foxstack .fxlabel{ font-size:11px; font-weight:700; color:#e9a06a; letter-spacing:0.3px; }
+  .foxstack .fxlabel{font-family:Georgia,serif; font-weight:700; font-size:15px; margin-right:1px; color:#e9a06a; }
   .foxstack .fxtok{ width:18px;height:18px;border-radius:50%; display:inline-flex;align-items:center;justify-content:center; font-size:9px;font-weight:800;color:#3a2a16; border:1px solid rgba(0,0,0,0.18); }
   .foxstack .fxtok.plus{ background:radial-gradient(circle at 38% 32%, #f0d680, #c99f37); }
   .foxstack .fxtok.num{ background:radial-gradient(circle at 38% 32%, #e7d8b4, #c2ac82); }
@@ -615,7 +615,7 @@ function renderFoxStack(){
   const el=document.getElementById('foxstack'); if(!el) return;
   if(!foxStack || foxStack.length===0){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='flex';
-  let html='<span class="fxlabel">Fox\u2019s loot</span>';
+  let html='<span class="fxlabel">Fox:</span>';
   const show=Math.min(foxStack.length,6);
   for(let i=0;i<show;i++){ const t=foxStack[i]; html+='<span class="fxtok '+(t.type==='plus'?'plus':'num')+'">'+(t.type==='plus'?'+1':t.value)+'</span>'; }
   if(foxStack.length>6) html+='<span class="fxmore">+'+(foxStack.length-6)+'</span>';
