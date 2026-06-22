@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Rabbits &amp; Fox</title>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:radial-gradient(circle at 50% 40%, #2b303b 0%, #13151b 100%);
+    color:#f0e6cc; font-family:'Avenir Next','Segoe UI',system-ui,sans-serif;
+    min-height:100%; -webkit-tap-highlight-color:transparent; overflow:hidden;
+  }
+  .table{ position:fixed; inset:0; overflow:hidden; }
+
+  /* the central play area holds the board (centered) + the HUD floating in the right margin */
+  .core{ position:absolute; inset:48px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+  #boardsvg{
+    height:min(calc(100dvh - 204px), calc((100vw - 96px) * 1.2273));
+    aspect-ratio:880/1080; width:auto; display:block; filter:drop-shadow(0 10px 30px rgba(0,0,0,0.5));
+  }
+  .hud{ width:auto; max-width:calc(100vw - 96px); display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .status{ font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif; font-size:14.5px; text-align:center; color:#f3ead0; line-height:1.32; min-height:20px; }
+  .tray{ display:flex; align-items:center; gap:9px; min-height:48px; }
+  .controls{ min-height:28px; display:flex; justify-content:center; align-items:center; }
+
+  /* player trays pinned to the four edges, rotated to face each seat (counter-clockwise) */
+  .slot{ position:absolute; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .slot .ptray{ pointer-events:auto; }
+  .slot-bottom{ left:0; right:0; bottom:5px; height:42px; }
+  .slot-top{ left:0; right:0; top:5px; height:42px; }
+  .slot-left{ top:0; bottom:0; left:5px; width:42px; }
+  .slot-right{ top:0; bottom:0; right:5px; width:42px; }
+  .slot-top .ptray{ transform:rotate(180deg); }
+  .slot-left .ptray{ transform:rotate(90deg); }
+  .slot-right .ptray{ transform:rotate(-90deg); }
+  .ptray{ display:flex; align-items:center; gap:5px; padding:4px 9px; border-radius:9px; background:linear-gradient(160deg,rgba(58,52,40,0.66),rgba(34,30,22,0.66)); border:1.5px solid rgba(120,100,60,0.4); white-space:nowrap; transition:opacity .25s; }
+  .ptray:not(.active){ opacity:0.42; }
+  .ptray.active{ border-color:rgba(255,215,94,0.6); box-shadow:0 0 12px rgba(255,215,94,0.18); }
+  .pnum{ font-family:Georgia,serif; font-weight:700; font-size:15px; color:#e8dcbb; margin-right:1px; }
+  .pnone{ color:#8a7f68; font-size:15px; padding:0 4px; }
+  .ptok{ width:26px;height:26px;border-radius:50%; display:inline-flex;align-items:center;justify-content:center; font-weight:800;font-size:13px; box-shadow:0 2px 3px rgba(0,0,0,0.35), inset 0 1px 2px rgba(255,255,255,0.35); border:1.5px solid rgba(0,0,0,0.15); flex:0 0 auto; }
+  .ptok.plus{ background:radial-gradient(circle at 38% 32%, #f0d680, #c99f37); color:#3a2a16; }
+  .ptok.num{ background:radial-gradient(circle at 38% 32%, #e7d8b4, #c2ac82); color:#3a2a16; }
+  .ptok.playable{ cursor:pointer; animation:tokpulse 1.3s ease-in-out infinite; }
+  @keyframes tokpulse{0%,100%{box-shadow:0 0 0 2.5px rgba(255,215,94,0.85),0 0 8px rgba(255,215,94,0.4);}50%{box-shadow:0 0 0 3px rgba(255,215,94,1),0 0 16px rgba(255,215,94,0.75);}}
+  .foxstack{ position:fixed; right:14px; bottom:14px; z-index:15; display:none; align-items:center; gap:6px; padding:5px 10px; border-radius:11px; background:rgba(22,17,14,0.62); border:1px solid rgba(210,124,51,0.55); box-shadow:0 2px 8px rgba(0,0,0,0.45); }
+  .foxstack .fxlabel{ font-size:11px; font-weight:700; color:#e9a06a; letter-spacing:0.3px; }
+  .foxstack .fxtok{ width:18px;height:18px;border-radius:50%; display:inline-flex;align-items:center;justify-content:center; font-size:9px;font-weight:800;color:#3a2a16; border:1px solid rgba(0,0,0,0.18); }
+  .foxstack .fxtok.plus{ background:radial-gradient(circle at 38% 32%, #f0d680, #c99f37); }
+  .foxstack .fxtok.num{ background:radial-gradient(circle at 38% 32%, #e7d8b4, #c2ac82); }
+  .foxstack .fxmore{ font-size:10px;color:#e9a06a;font-weight:700; }
+
+  /* dice */
+  .dice{ display:flex; gap:7px; padding:5px; border-radius:13px; }
+  .dice.ready{ cursor:pointer; animation:diceglow 1.2s ease-in-out infinite; }
+  @keyframes diceglow{ 0%,100%{ box-shadow:0 0 0 3px rgba(255,215,94,0.85), 0 0 16px rgba(255,215,94,0.45);} 50%{ box-shadow:0 0 0 3px rgba(255,215,94,1), 0 0 26px rgba(255,215,94,0.75);} }
+  .die{ width:46px;height:46px; background:linear-gradient(150deg,#f6efda,#ddd0b2); border-radius:9px; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); padding:6px; gap:1px; box-shadow:0 3px 6px rgba(0,0,0,0.45), inset 0 1px 2px rgba(255,255,255,0.7); }
+  .die .pip.on{ background:#3a2a16; border-radius:50%; width:7px;height:7px; align-self:center; justify-self:center; }
+  .die.blank{ background:linear-gradient(150deg,#f7f0db,#e6dcc1); }
+  .die.rolling{ animation:wob 0.16s linear infinite; }
+  @keyframes wob{ 0%{transform:rotate(-8deg) translateY(-1px);}50%{transform:rotate(7deg) translateY(1px);}100%{transform:rotate(-8deg) translateY(-1px);} }
+  .die.used{ opacity:0.3; filter:grayscale(0.7); }
+  .die.glow{ cursor:pointer; box-shadow:0 0 0 2.5px rgba(255,215,94,0.95), 0 0 12px rgba(255,215,94,0.55), inset 0 1px 2px rgba(255,255,255,0.7); }
+
+  .played{ display:flex; align-items:center; }
+  .ptoken{ width:38px;height:38px;border-radius:50%; display:flex;align-items:center;justify-content:center; font-weight:800;font-size:16px; box-shadow:0 3px 6px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.4); border:2px solid rgba(0,0,0,0.15); }
+  .ptoken.plus{ background:radial-gradient(circle at 38% 32%, #f0d680, #c99f37); color:#3a2a16; }
+  .ptoken.num{ background:radial-gradient(circle at 38% 32%, #e7d8b4, #c2ac82); color:#3a2a16; }
+  .ptoken.glow{ cursor:pointer; box-shadow:0 0 0 2.5px rgba(255,215,94,0.95), 0 0 12px rgba(255,215,94,0.55); }
+  .ptoken.used{ opacity:0.3; filter:grayscale(0.6); }
+
+  button{ font-family:inherit; font-size:14px; font-weight:700; padding:7px 16px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.5); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  button:hover{ background:linear-gradient(145deg,#444c5d,#2d333f); }
+  button:active{ transform:translateY(1px); }
+
+  .overlay,.banner{ position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:20; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+  .hidden{ display:none !important; }
+  .card{ background:linear-gradient(160deg,#2e333f,#1c2029); border:1.5px solid rgba(255,215,94,0.35); border-radius:18px; padding:26px 32px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.6); max-width:90vw; }
+  .card h1{ font-family:'Iowan Old Style',Georgia,serif; font-weight:700; font-size:25px; margin:0 0 8px; color:#ffe9a8; letter-spacing:.5px; }
+  .card p{ color:#c8bd9f; font-size:14px; margin:0 0 18px; line-height:1.55; }
+  .pcounts{ display:flex; gap:10px; justify-content:center; }
+  .pcount{ width:56px;height:56px; font-size:22px; }
+  svg text{ -webkit-user-select:none; user-select:none; }
+
+  #meadowHi{ opacity:0; }
+  #meadowHi.meadowflash{ animation:meadowglow 0.95s ease-out; }
+  @keyframes meadowglow{ 0%{opacity:0;} 22%{opacity:0.6;} 100%{opacity:0;} }
+  .selring{ animation:selpulse 1s ease-in-out infinite; }
+  @keyframes selpulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.55; } }
+  .tapglow{ animation:tapglow 1.15s ease-in-out infinite; }
+  @keyframes tapglow{ 0%,100%{ opacity:1; } 50%{ opacity:0.45; } }
+  .ghostpulse{ animation:gpulse 1.3s ease-in-out infinite; }
+  @keyframes gpulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+  .flipglow{ animation:flippulse 1.5s ease-in-out infinite; }
+  @keyframes flippulse{ 0%,100%{ opacity:0.45; } 50%{ opacity:1; } }
+
+  /* portrait: keep the HUD compact under the board */
+  @media (orientation:portrait){
+    .hud{ flex-direction:row; flex-wrap:wrap; justify-content:center; gap:12px; }
+    #boardsvg{ height:auto; width:min(calc(100vw - 100px), calc((100dvh - 210px)*0.8148)); }
+  }
+</style>
+</head>
+<body>
+<div class="table">
+  <div class="slot slot-top" id="trayTop"></div>
+  <div class="slot slot-left" id="trayLeft"></div>
+  <div class="slot slot-right" id="trayRight"></div>
+  <div class="slot slot-bottom" id="trayBottom"></div>
+  <div class="core">
+    <svg id="boardsvg" viewBox="0 0 880 1080" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="wood" x1="0" y1="0" x2="0.85" y2="1"><stop offset="0%" stop-color="#855f3a"/><stop offset="38%" stop-color="#5e4128"/><stop offset="100%" stop-color="#311e0d"/></linearGradient>
+        <pattern id="grain" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(63)"><rect width="6.5" height="13" fill="rgba(0,0,0,0.11)"/><rect x="6.5" width="6.5" height="13" fill="rgba(255,240,210,0.03)"/></pattern>
+        <linearGradient id="meadow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#43743b"/><stop offset="1" stop-color="#345e30"/></linearGradient>
+        <linearGradient id="den" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a3826"/><stop offset="1" stop-color="#372a1b"/></linearGradient>
+        <radialGradient id="goldglow" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stop-color="#ffd75e" stop-opacity="0.6"/>
+          <stop offset="0.6" stop-color="#ffd75e" stop-opacity="0.22"/>
+          <stop offset="1" stop-color="#ffd75e" stop-opacity="0"/>
+        </radialGradient>
+        <marker id="arrow" markerWidth="9" markerHeight="9" refX="4.5" refY="4.5" orient="auto"><path d="M1.4,1.4 L7.6,4.5 L1.4,7.6 Z" fill="#f3ead0"/></marker>
+        <filter id="psh" x="-45%" y="-25%" width="190%" height="155%"><feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.45"/></filter>
+      </defs>
+      <g id="staticG"></g>
+      <g id="tokenG"></g>
+      <g id="pawnG"></g>
+      <g id="arrowG"></g>
+      <g id="hitG"></g>
+      <g id="ghostG"></g>
+    </svg>
+    <div class="hud">
+      <div class="status" id="status"></div>
+      <div class="tray"><div class="played" id="played"></div><div class="dice" id="dice"></div></div>
+    </div>
+  </div>
+</div>
+<div id="foxstack" class="foxstack"></div>
+
+<div class="overlay" id="setup">
+  <div class="card">
+    <h1>Rabbits &amp; Fox</h1>
+    <p>A cooperative dash through the forest. Move every rabbit from the den to the meadow before the fox slips out the far side.<br><br>How many players?</p>
+    <div class="pcounts">
+      <button class="pcount" data-n="1">1</button>
+      <button class="pcount" data-n="2">2</button>
+      <button class="pcount" data-n="3">3</button>
+      <button class="pcount" data-n="4">4</button>
+    </div>
+  </div>
+</div>
+
+<div class="banner hidden" id="banner">
+  <div class="card"><h1 id="bannertitle"></h1><p id="bannertext"></p><button id="againbtn">Play again</button></div>
+</div>
+
+<script>
+/* ============================ Audio ============================ */
+let AC=null;
+function ac(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return AC; }
+function tone(freq,dur,opts){ opts=opts||{}; const a=ac(); if(!a) return; const t=a.currentTime+(opts.delay||0);
+  const o=a.createOscillator(), g=a.createGain(); o.type=opts.type||'sine'; o.frequency.setValueAtTime(freq,t);
+  if(opts.glideTo) o.frequency.exponentialRampToValueAtTime(opts.glideTo,t+dur);
+  const vol=opts.vol||0.2; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+dur+0.03);
+}
+function noise(dur,opts){ opts=opts||{}; const a=ac(); if(!a) return; const t=a.currentTime+(opts.delay||0);
+  const n=Math.floor(a.sampleRate*dur); const buf=a.createBuffer(1,n,a.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=Math.random()*2-1; const src=a.createBufferSource(); src.buffer=buf;
+  const f=a.createBiquadFilter(); f.type='bandpass'; f.frequency.value=opts.freq||1000; f.Q.value=opts.q||1;
+  const g=a.createGain(); const vol=opts.vol||0.2; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(f); f.connect(g); g.connect(a.destination); src.start(t); src.stop(t+dur+0.03);
+}
+const SND={
+  roll(){ noise(0.09,{vol:0.16,freq:1200,q:0.7}); noise(0.08,{vol:0.15,freq:850,q:0.7,delay:0.1}); noise(0.07,{vol:0.13,freq:1500,q:0.7,delay:0.19}); },
+  move(){ tone(340,0.11,{type:'sine',vol:0.15}); },
+  hop(){ tone(520,0.1,{type:'triangle',vol:0.13,glideTo:780}); },
+  bounce(){ tone(700,0.16,{type:'triangle',vol:0.14,glideTo:430}); },
+  ladder(){ [523,659,784,1047].forEach((f,i)=>tone(f,0.15,{type:'triangle',vol:0.15,delay:i*0.07})); },
+  chute(){ tone(600,0.34,{type:'sawtooth',vol:0.12,glideTo:150}); noise(0.3,{vol:0.05,freq:300,q:0.5}); },
+  collect(){ tone(784,0.11,{type:'sine',vol:0.15}); tone(1047,0.13,{type:'sine',vol:0.13,delay:0.08}); },
+  flip(){ noise(0.05,{vol:0.12,freq:2200,q:1.2}); tone(900,0.05,{type:'square',vol:0.04}); },
+  fox(){ tone(210,0.2,{type:'sawtooth',vol:0.12,glideTo:150}); },
+  safe(){ [659,880,1175].forEach((f,i)=>tone(f,0.22,{type:'triangle',vol:0.16,delay:i*0.09})); },
+  win(){ [523,659,784,1047,1319].forEach((f,i)=>tone(f,0.32,{type:'triangle',vol:0.17,delay:i*0.12})); },
+  lose(){ [392,330,262,196].forEach((f,i)=>tone(f,0.42,{type:'sine',vol:0.15,delay:i*0.17})); }
+};
+
+/* ============================ Constants ============================ */
+const SVGNS='http://www.w3.org/2000/svg';
+const U=100, FR=40, MEAD=100, DEN=100;
+const BX=40, BY=140, VBW=880, VBH=1080, EXIT=65;
+const N_LADDER=8, N_CHUTE=8, N_PLUS=38;
+const STEP=235;
+
+/* ============================ Path / deck ============================ */
+function rcOf(pos){ const r=Math.floor((pos-1)/8); const i=(pos-1)%8; const c=(r%2===0)?i:7-i; return {row:r,col:c}; }
+function cellCenter(pos){ const {row,col}=rcOf(pos); return {x:BX+col*U+U/2, y:BY+(7-row)*U+U/2}; }
+function posOf(row, col){ return (row%2===0) ? (row*8+col+1) : (row*8+8-col); }
+function buildDeck(){
+  const d=[];
+  for(let i=0;i<N_LADDER;i++) d.push({type:'ladder'});
+  for(let i=0;i<N_CHUTE;i++) d.push({type:'chute'});
+  for(let v=2;v<=6;v++){ d.push({type:'num',value:v}); d.push({type:'num',value:v}); }
+  for(let i=0;i<N_PLUS;i++) d.push({type:'plus'});
+  for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=d[i]; d[i]=d[j]; d[j]=t; }
+  return d;
+}
+
+/* ============================ State ============================ */
+let rabbits=[], fox=null, board=[], hands=[], turn=0, phase='setup',
+    playedToken=null, dice=[], vals=[], movesLeft=0, selected=null,
+    flippedThisTurn=false, gameOver=false, won=false, nPlayers=2, busy=false, diceAnim=false,
+    foxStack=[], foxBonus=false;
+
+function newGame(np){
+  nPlayers=np; rabbits=[]; hands=[];
+  for(let i=0;i<np;i++){ rabbits.push({pos:0,exited:false}); hands.push([]); }
+  fox={pos:0,exited:false};
+  const deck=buildDeck(); board=[null];
+  for(let p=1;p<=64;p++) board.push({token:deck[p-1],faceUp:false});
+  turn=0; phase='token'; playedToken=null; dice=[]; vals=[]; movesLeft=0;
+  selected=null; flippedThisTurn=false; gameOver=false; won=false; busy=false; diceAnim=false;
+  foxStack=[]; foxBonus=false;
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('banner').classList.add('hidden');
+  renderAll();
+}
+
+/* ============================ Movement ============================ */
+function occupied(pos, movingId){
+  for(let i=0;i<rabbits.length;i++){ if(movingId!==i && !rabbits[i].exited && rabbits[i].pos===pos) return true; }
+  if(movingId!=='fox' && !fox.exited && fox.pos===pos) return true;
+  return false;
+}
+function handEmpty(){ return hands[turn] && hands[turn].length===0; }
+function isFlipPhase(){ return phase==='token' && !busy && handEmpty() && !flippedThisTurn; }
+
+function animateMove(idx, steps, done){
+  const r=rabbits[idx]; const target=r.pos+steps; const visited={};
+  busy=true; renderRails(); renderDice(); renderPlayed(); renderControls();
+  SND.move();
+  if(target===EXIT){ r.pos=EXIT; r.exited=true; SND.safe(); flashMeadow(); renderPawns(); renderHit();
+    setTimeout(function(){ finishChain(idx,done); }, STEP+170); return; }
+  if(target>EXIT){ const bounced=EXIT-(target-EXIT); SND.bounce(); flashMeadow();
+    r.pos=bounced; renderPawns(); renderHit();
+    setTimeout(function(){ settleStep(idx,done,0,visited); }, STEP+90); return; }
+  r.pos=target; renderPawns(); renderHit();
+  setTimeout(function(){ settleStep(idx,done,0,visited); }, STEP);
+}
+function settleStep(idx, done, guard, visited){
+  if(guard>400){ finishChain(idx,done); return; }
+  const r=rabbits[idx]; if(r.exited){ finishChain(idx,done); return; }
+  let pos=r.pos;
+  if(pos>=1 && pos<=64 && occupied(pos, idx)){
+    pos+=1; SND.hop();
+    if(pos>=EXIT){ r.pos=EXIT; r.exited=true; SND.safe(); flashMeadow(); renderPawns(); renderHit(); setTimeout(function(){ finishChain(idx,done); }, STEP); return; }
+    r.pos=pos; renderPawns(); renderHit(); setTimeout(function(){ settleStep(idx,done,guard+1,visited); }, STEP); return;
+  }
+  const cell=board[pos];
+  if(cell && cell.token){
+    const tok=cell.token;
+    if(tok.type==='ladder' || tok.type==='chute'){
+      // already fired on this square during this same chain -> stop here (prevents ladder/chute loops)
+      if(visited[pos]){ finishChain(idx,done); return; }
+      visited[pos]=true;
+      cell.faceUp=true; tok.used=true;                 // stay visible + flag for end-of-turn cleanup; do NOT remove
+      const rc=rcOf(pos);
+      if(tok.type==='ladder'){
+        SND.ladder(); renderTokens();
+        if(rc.row+1>7){ r.pos=EXIT; r.exited=true; SND.safe(); flashMeadow(); renderPawns(); renderHit(); setTimeout(function(){ finishChain(idx,done); }, STEP); return; }
+        r.pos=posOf(rc.row+1, rc.col);                 // slide straight up one row, same column
+        renderPawns(); renderHit(); setTimeout(function(){ settleStep(idx,done,guard+1,visited); }, STEP); return;
+      } else {
+        SND.chute(); renderTokens();
+        if(rc.row-1<0){ r.pos=0; renderPawns(); renderHit(); setTimeout(function(){ finishChain(idx,done); }, STEP); return; }
+        r.pos=posOf(rc.row-1, rc.col);                 // slide straight down one row, same column
+        renderPawns(); renderHit(); setTimeout(function(){ settleStep(idx,done,guard+1,visited); }, STEP); return;
+      }
+    }
+    if(tok.type==='plus'){ cell.token=null; hands[turn].push({type:'plus'}); SND.collect(); renderTokens(); renderRails(); finishChain(idx,done); return; }
+    if(tok.type==='num'){ cell.token=null; hands[turn].push({type:'num',value:tok.value}); SND.collect(); renderTokens(); renderRails(); finishChain(idx,done); return; }
+  }
+  finishChain(idx,done);
+}
+function finishChain(idx, done){
+  if(rabbits.every(function(r){return r.exited;})){ busy=false; endGame(true); if(done)done(true); return; }
+  busy=false; renderAll(); if(done)done(true);
+}
+function moveFoxBy(steps, crossed){
+  crossed = crossed || {};
+  const start=fox.pos, target=fox.pos+steps;
+  if(target===EXIT){ for(let p=Math.max(start+1,1);p<=64;p++) crossed[p]=true; fox.pos=EXIT; fox.exited=true; return; }
+  let landing;
+  if(target>EXIT){ for(let p=Math.max(start+1,1);p<=64;p++) crossed[p]=true; landing=EXIT-(target-EXIT); for(let p=Math.max(landing,1);p<=64;p++) crossed[p]=true; }
+  else { landing=target; for(let p=Math.max(start+1,1);p<=landing && p<=64;p++) crossed[p]=true; }
+  let guard=0;
+  while(landing>=1 && landing<=64 && occupied(landing,'fox')){ crossed[landing]=true; landing+=1; if(++guard>300)break; if(landing>=EXIT){ fox.pos=EXIT; fox.exited=true; return; } }
+  fox.pos=landing;
+}
+
+/* ============================ Turn flow ============================ */
+function playHandToken(i){
+  if(phase!=='token'||busy) return;
+  const tok=hands[turn][i]; if(!tok) return;
+  playedToken=tok; hands[turn].splice(i,1); SND.flip(); phase='roll'; renderAll();
+}
+function flipBoardToken(pos){
+  if(!isFlipPhase()) return;
+  const cell=board[pos]; if(!cell||!cell.token||cell.faceUp) return;
+  cell.faceUp=true; flippedThisTurn=true; SND.flip(); renderAll();
+}
+function diceReady(){ return !busy && (phase==='roll' || (phase==='token' && handEmpty() && flippedThisTurn)); }
+function doRoll(){
+  if(busy || !diceReady()) return;
+  busy=true; diceAnim=true; phase='rolling'; dice=[]; SND.roll();
+  renderRails(); renderDice(); renderControls();
+  let ticks=0;
+  const iv=setInterval(function(){ ticks++; renderDice();
+    if(ticks>=9){ clearInterval(iv); diceAnim=false;
+      const d1=1+Math.floor(Math.random()*6), d2=1+Math.floor(Math.random()*6); dice=[d1,d2];
+      vals=[{kind:'die',v:d1,used:false},{kind:'die',v:d2,used:false}];
+      if(playedToken && playedToken.type==='plus'){ vals.push({kind:'plus',v:1,used:false}); movesLeft=3; }
+      else if(playedToken && playedToken.type==='num'){ vals.push({kind:'num',v:playedToken.value,used:false}); movesLeft=2; }
+      else movesLeft=2;
+      phase='move'; selected=null; busy=false; renderAll();
+    }
+  }, 60);
+}
+function selectRabbit(idx){
+  if(phase!=='move'||busy||rabbits[idx].exited) return;
+  selected = (selected===idx) ? null : idx;   // tap the same rabbit again to deselect
+  renderPawns(); renderGhosts(); renderDice(); renderPlayed(); renderControls(); updateStatus();
+}
+function useValue(vi){
+  if(phase!=='move'||busy) return;
+  const val=vals[vi]; if(!val||val.used) return;
+  if(selected===null){ updateStatus('Tap a glowing rabbit first.'); return; }
+  if(movesLeft<=0) return;
+  val.used=true; movesLeft--;
+  animateMove(selected, val.v, function(){
+    if(gameOver) return;
+    selected=null;                       // always deselect after a move
+    if(movesLeft<=0){ endTurnSoon(); } else { renderAll(); }
+  });
+}
+function endTurnSoon(){ busy=true; renderAll(); setTimeout(function(){ busy=false; advanceTurn(); }, 440); }
+function clearUsedTokens(){ for(let p=1;p<=64;p++){ if(board[p].token && board[p].token.used){ board[p].token=null; } } }
+function advanceTurn(){ if(gameOver) return; clearUsedTokens(); selected=null; turn++; if(turn>=nPlayers) runFoxTurn(); else startHumanTurn(); }
+function startHumanTurn(){
+  busy=false; phase='token'; playedToken=null; dice=[]; vals=[]; movesLeft=0; flippedThisTurn=false; selected=null; diceAnim=false; renderAll();
+}
+function runFoxTurn(){
+  busy=true; phase='fox'; selected=null; playedToken=null; vals=[]; dice=[];
+  // the fox "plays" a +1 from its loot if it has one (consuming it) -> earns one extra step this turn
+  foxBonus=false;
+  for(let k=0;k<foxStack.length;k++){ if(foxStack[k].type==='plus'){ foxStack.splice(k,1); foxBonus=true; break; } }
+  renderAll();
+  setTimeout(function(){
+    const d1=1+Math.floor(Math.random()*6), d2=1+Math.floor(Math.random()*6);
+    diceAnim=true; dice=[]; SND.roll(); let ticks=0;
+    const iv=setInterval(function(){ ticks++; renderDice();
+      if(ticks>=8){ clearInterval(iv); diceAnim=false; dice=[d1,d2]; renderDice(); updateStatus();
+        const crossed={};
+        const fin=function(){ foxEnd(crossed); };
+        const doPlus=function(){ if(fox.exited){ fin(); return; }
+          updateStatus('The fox spends a stolen +1 \u2014 one more space\u2026');
+          setTimeout(function(){ SND.collect(); SND.fox(); moveFoxBy(1,crossed); renderPawns(); renderHit(); setTimeout(fin,820); }, 760);
+        };
+        const s1=function(){ SND.fox(); moveFoxBy(d1,crossed); renderPawns(); renderHit(); setTimeout(s2,720); };
+        const s2=function(){ if(fox.exited){ fin(); return; } SND.fox(); moveFoxBy(d2,crossed); renderPawns(); renderHit(); setTimeout(foxBonus?doPlus:fin,720); };
+        setTimeout(s1,460);
+      }
+    }, 60);
+  }, 420);
+}
+function foxEnd(crossed){
+  if(fox.exited){ endGame(false); return; }
+  // count how many rabbits the fox slipped past this turn
+  let passes=0; for(let i=0;i<rabbits.length;i++){ const r=rabbits[i]; if(!r.exited && r.pos>=1 && r.pos<=64 && crossed[r.pos]) passes++; }
+  // for each pass, every player chips in one +1 token (if they have one)
+  let stolen=0;
+  for(let k=0;k<passes;k++){
+    for(let i=0;i<hands.length;i++){ const h=hands[i]; const pi=h.findIndex(function(t){return t.type==='plus';});
+      if(pi>=0){ h.splice(pi,1); foxStack.push({type:'plus'}); stolen++; } }
+  }
+  renderPawns(); renderRails(); renderFoxStack();
+  if(stolen>0){ SND.collect(); updateStatus('The fox slips past '+passes+' rabbit'+(passes===1?'':'s')+' \u2014 the warren loses '+stolen+' +1 token'+(stolen===1?'':'s')+'!'); busy=true; setTimeout(finishFoxTurn,1100); }
+  else finishFoxTurn();
+}
+function finishFoxTurn(){ busy=false; foxBonus=false; turn=0; startHumanTurn(); }
+function endGame(win){
+  gameOver=true; won=win; phase='gameover'; busy=false; renderAll();
+  if(win) SND.win(); else SND.lose();
+  document.getElementById('bannertitle').textContent = win?'The warren is safe!':'Outfoxed!';
+  document.getElementById('bannertext').textContent = win?'Every rabbit reached the meadow before the fox could escape.':'The fox slipped out of the forest while rabbits were still inside.';
+  document.getElementById('banner').classList.remove('hidden');
+}
+
+/* ============================ SVG helpers ============================ */
+function E(tag,attrs,parent){ const el=document.createElementNS(SVGNS,tag); if(attrs){ for(const k in attrs) el.setAttribute(k,attrs[k]); } if(parent) parent.appendChild(el); return el; }
+function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+/* ============================ Static board ============================ */
+function buildStatic(){
+  const g=document.getElementById('staticG'); clear(g);
+  E('rect',{x:0,y:0,width:VBW,height:VBH,rx:30,fill:'url(#wood)'},g);
+  E('rect',{x:0,y:0,width:VBW,height:VBH,rx:30,fill:'url(#grain)'},g);
+  E('rect',{x:BX,y:FR,width:8*U,height:MEAD,fill:'url(#meadow)'},g);
+  E('rect',{x:BX,y:BY+8*U,width:8*U,height:DEN,fill:'url(#den)'},g);
+  for(let pos=1;pos<=64;pos++){
+    const rc=rcOf(pos); const x=BX+rc.col*U, y=BY+(7-rc.row)*U; const dark=((rc.row+rc.col)%2===0);
+    E('rect',{x:x,y:y,width:U,height:U,fill: dark?'#432d1a':'#6a4626'},g);
+  }
+  E('rect',{x:BX,y:FR,width:8*U,height:MEAD+8*U+DEN,fill:'none',stroke:'rgba(0,0,0,0.45)','stroke-width':3},g);
+  E('line',{x1:BX,y1:BY,x2:BX+8*U,y2:BY,stroke:'rgba(0,0,0,0.4)','stroke-width':2},g);
+  E('line',{x1:BX,y1:BY+8*U,x2:BX+8*U,y2:BY+8*U,stroke:'rgba(0,0,0,0.4)','stroke-width':2},g);
+
+  const a=document.getElementById('arrowG'); clear(a);
+  E('rect',{id:'meadowHi',x:BX,y:FR,width:8*U,height:MEAD,rx:4,fill:'#ffe9a8'},a);
+  const ag=E('g',{opacity:0.5},a);
+  const c1=cellCenter(1); const dy=BY+8*U+DEN/2;
+  E('path',{d:'M '+(c1.x+72)+' '+dy+' L '+c1.x+' '+dy+' L '+c1.x+' '+(BY+8*U+12),stroke:'#f3ead0','stroke-width':3.5,fill:'none','stroke-linecap':'round','stroke-linejoin':'round','marker-end':'url(#arrow)'},ag);
+  const c64=cellCenter(64);
+  E('path',{d:'M '+c64.x+' '+(BY-6)+' L '+c64.x+' '+(FR+36)+' L '+(BX+300)+' '+(FR+36),stroke:'#f3ead0','stroke-width':3.5,fill:'none','stroke-linecap':'round','stroke-linejoin':'round','marker-end':'url(#arrow)'},ag);
+  // subtle boustrophedon hints in the wood margins: each row's flow bends up 90 and into the next row
+  const mg=E('g',{opacity:0.4},a);
+  for(let r=0;r<7;r++){ const yr=BY+(7-r)*U+U/2, yr1=yr-U;
+    if(r%2===0){ const xi=845,xo=858;
+      E('path',{d:'M '+xi+' '+yr+' L '+xo+' '+yr+' L '+xo+' '+yr1+' L '+xi+' '+yr1,fill:'none',stroke:'#f3ead0','stroke-width':2.6,'stroke-linecap':'round','stroke-linejoin':'round'},mg);
+      E('path',{d:'M '+(xi+7)+' '+(yr1-5)+' L '+xi+' '+yr1+' L '+(xi+7)+' '+(yr1+5),fill:'none',stroke:'#f3ead0','stroke-width':2.6,'stroke-linecap':'round','stroke-linejoin':'round'},mg);
+    } else { const xi=35,xo=22;
+      E('path',{d:'M '+xi+' '+yr+' L '+xo+' '+yr+' L '+xo+' '+yr1+' L '+xi+' '+yr1,fill:'none',stroke:'#f3ead0','stroke-width':2.6,'stroke-linecap':'round','stroke-linejoin':'round'},mg);
+      E('path',{d:'M '+(xi-7)+' '+(yr1-5)+' L '+xi+' '+yr1+' L '+(xi-7)+' '+(yr1+5),fill:'none',stroke:'#f3ead0','stroke-width':2.6,'stroke-linecap':'round','stroke-linejoin':'round'},mg);
+    }
+  }
+}
+function flashMeadow(){ const m=document.getElementById('meadowHi'); if(!m) return; m.setAttribute('class',''); void m.getBoundingClientRect(); m.setAttribute('class','meadowflash'); }
+
+/* ============================ Tokens (circular) ============================ */
+function renderTokens(){
+  const g=document.getElementById('tokenG'); clear(g); const flip=isFlipPhase();
+  for(let pos=1;pos<=64;pos++){ const cell=board[pos]; if(!cell||!cell.token) continue; const c=cellCenter(pos); drawToken(g,c.x,c.y,cell.token,cell.faceUp,flip); }
+}
+function drawToken(g,x,y,tok,faceUp,flippable){
+  const R=37; const grp=E('g',{},g);
+  E('circle',{cx:x,cy:y+2,r:R,fill:'rgba(0,0,0,0.22)'},grp);
+  function disc(fill,stroke){ E('circle',{cx:x,cy:y,r:R,fill:fill,stroke:stroke,'stroke-width':2.5},grp); E('circle',{cx:x,cy:y,r:R-5,fill:'none',stroke:'rgba(0,0,0,0.15)','stroke-width':2.5},grp); }
+  if(!faceUp){
+    disc('#7c6242','#46341f');
+    E('circle',{cx:x,cy:y,r:R-11,fill:'none',stroke:'rgba(255,215,94,0.25)','stroke-width':1.5},grp);
+    E('circle',{cx:x,cy:y,r:4,fill:'rgba(255,215,94,0.4)'},grp);
+    if(flippable) E('circle',{cx:x,cy:y,r:R+2,fill:'none',stroke:'#ffd75e','stroke-width':3,'class':'flipglow'},grp);
+    return;
+  }
+  if(tok.type==='ladder'){
+    disc('#4f7d3f','#33532a'); const c='#eef0d8',lx=x-11,rxr=x+11,top=y-19,bot=y+21;
+    E('line',{x1:lx,y1:top,x2:lx,y2:bot,stroke:c,'stroke-width':3.5,'stroke-linecap':'round'},grp);
+    E('line',{x1:rxr,y1:top,x2:rxr,y2:bot,stroke:c,'stroke-width':3.5,'stroke-linecap':'round'},grp);
+    for(let i=0;i<3;i++){ const yy=top+10+i*((bot-top-13)/2); E('line',{x1:lx,y1:yy,x2:rxr,y2:yy,stroke:c,'stroke-width':3,'stroke-linecap':'round'},grp); }
+    E('path',{d:'M '+(x-8)+' '+(top-3)+' L '+x+' '+(top-12)+' L '+(x+8)+' '+(top-3),fill:'none',stroke:c,'stroke-width':3.5,'stroke-linecap':'round','stroke-linejoin':'round'},grp);
+  } else if(tok.type==='chute'){
+    disc('#b03a2f','#7a281f'); const c='#f1e3cf';
+    E('path',{d:'M '+(x-16)+' '+(y-18)+' q 14 8 0 17 q -14 9 0 18',fill:'none',stroke:c,'stroke-width':4.5,'stroke-linecap':'round'},grp);
+    E('circle',{cx:x-16,cy:y-18,r:4,fill:c},grp);
+    E('path',{d:'M '+(x+6)+' '+(y+8)+' L '+(x+14)+' '+(y+17)+' L '+(x+22)+' '+(y+8),fill:'none',stroke:c,'stroke-width':3.5,'stroke-linecap':'round','stroke-linejoin':'round'},grp);
+  } else if(tok.type==='num'){
+    disc('#d9c6a0','#6f5430'); const t=E('text',{x:x,y:y+13,'text-anchor':'middle','font-size':38,fill:'#3a2a16','font-weight':800,'font-family':'Georgia,serif'},grp); t.textContent=tok.value;
+  } else {
+    disc('#d6a93c','#8a6a1f'); const t=E('text',{x:x,y:y+13,'text-anchor':'middle','font-size':33,fill:'#3a2a16','font-weight':800,'font-family':'Georgia,serif'},grp); t.textContent='+1';
+  }
+}
+
+/* ============================ Pawns (chess-knight profiles, larger heads) ============================ */
+function stripPositions(pawns, cy){
+  const n=pawns.length, out=[]; if(n===0) return out;
+  const spacing=Math.min(118, 720/Math.max(n,1)); const total=spacing*(n-1), startX=BX+400-total/2;
+  for(let k=0;k<n;k++){ out.push({t:pawns[k].t, i:pawns[k].i, x:startX+k*spacing, y:cy}); }
+  return out;
+}
+function denLayout(){
+  const p=[]; rabbits.forEach(function(r,i){ if(r.pos===0 && !r.exited) p.push({t:'rabbit',i:i}); });
+  if(fox.pos===0 && !fox.exited) p.push({t:'fox'});
+  return stripPositions(p, BY+8*U+DEN/2);
+}
+function renderPawns(){
+  const g=document.getElementById('pawnG'); clear(g);
+  denLayout().forEach(function(p){ drawPawn(g,p.x,p.y,p.t,p.i,0.82,false); });
+  rabbits.forEach(function(r,i){ if(r.pos>=1&&r.pos<=64){ const c=cellCenter(r.pos); drawPawn(g,c.x,c.y,'rabbit',i,0.9, rcOf(r.pos).row%2===1); } });
+  if(fox.pos>=1&&fox.pos<=64){ const c=cellCenter(fox.pos); drawPawn(g,c.x,c.y,'fox',null,0.9, rcOf(fox.pos).row%2===1); }
+}
+function drawPawn(g,x,y,type,idx,scale,faceLeft){
+  scale=scale||1;
+  const selectable=(phase==='move'&&!busy&&type==='rabbit'&&!rabbits[idx].exited);
+  const isSel=(type==='rabbit'&&selected===idx);
+  // glowing aura only while nothing is selected yet; once a rabbit is picked the others go quiet
+  if(selectable && selected===null){ E('ellipse',{cx:x,cy:y-6*scale,rx:34*scale,ry:42*scale,fill:'url(#goldglow)','class':'tapglow'},g); }
+  // selection ring drawn BEFORE the pawn so the pawn stands in front of it (ring runs behind)
+  if(isSel){ E('ellipse',{cx:x,cy:y+33*scale,rx:31*scale,ry:10*scale,fill:'none',stroke:'#ffd75e','stroke-width':4.5,'class':'selring'},g); }
+  const sx = faceLeft ? -scale : scale;
+  const grp=E('g',{transform:'translate('+x+' '+y+') scale('+sx+' '+scale+')',filter:'url(#psh)'},g);
+  if(type==='rabbit') drawRabbitShape(grp, idx, faceLeft); else drawFoxShape(grp);
+}
+function drawRabbitShape(grp, idx, faceLeft){
+  const wood='#8aa869',hi='#c4daa6',sh='#5f7c46',ear='#728f54';
+  // tall tapering leaf ears (more of the figure given to the ears)
+  E('path',{d:'M 0 0 C -4 -8 -4 -19 0 -25 C 4 -19 4 -8 0 0 Z',fill:wood,transform:'translate(1 -28) rotate(-15)'},grp);
+  E('path',{d:'M 0 0 C -4 -8 -4 -19 0 -25 C 4 -19 4 -8 0 0 Z',fill:wood,transform:'translate(10 -29) rotate(-1)'},grp);
+  E('path',{d:'M 0 -3 C -2 -9 -2 -16 0 -21 C 2 -16 2 -9 0 -3 Z',fill:ear,opacity:0.85,transform:'translate(1 -28) rotate(-15)'},grp);
+  E('path',{d:'M 0 -3 C -2 -9 -2 -16 0 -21 C 2 -16 2 -9 0 -3 Z',fill:ear,opacity:0.85,transform:'translate(10 -29) rotate(-1)'},grp);
+  // body: one clean curve, the back sweeping straight down to a rounded base (no bump, no paw, no badge)
+  E('path',{d:'M 1 -9 C -8 -7 -12 6 -11 21 C -10 31 -5 35 1 35 C 7 35 11 30 11 20 C 11 6 8 -7 4 -9 Z',fill:wood},grp);
+  // large spherical head
+  E('circle',{cx:6,cy:-19,r:16,fill:wood},grp);
+  E('ellipse',{cx:-1,cy:-24,rx:5.5,ry:7,fill:hi,opacity:0.45},grp);
+  E('circle',{cx:13,cy:-20,r:2.4,fill:'#26301c'},grp);   // near-black eye
+  E('circle',{cx:21,cy:-15,r:1.7,fill:'#4c6339'},grp);   // dark-green nose
+}
+function drawFoxShape(grp){
+  const wood='#d27c33',hi='#ef9f5b',sh='#9a5418',inner='#7a3d18';
+  // bushy tail as a swaying flame: thick swoosh at the base, tapering to a sharp point
+  E('path',{d:'M 0 33 C -10 33 -19 28 -23 17 C -26 7 -25 -9 -19 -16 C -16 -21 -12 -25 -9 -27 C -11 -19 -14 -9 -13 2 C -12 12 -8 20 -2 25 C 1 28 2 31 0 33 Z',fill:wood},grp);
+  // faint shadow marking the gap between tail and body
+  E('path',{d:'M -6 27 C -9 13 -7 -4 1 -10',fill:'none',stroke:inner,opacity:0.4,'stroke-width':1.6,'stroke-linecap':'round'},grp);
+  // sharper pointed ears
+  E('path',{d:'M -2.5 0 L 0 -19 L 3.5 0 Z',fill:wood,transform:'translate(4 -30) rotate(-13)'},grp);
+  E('path',{d:'M -2.5 0 L 0 -19 L 3.5 0 Z',fill:wood,transform:'translate(11 -31) rotate(9)'},grp);
+  E('path',{d:'M -1.2 -2 L 0 -14 L 1.7 -2 Z',fill:inner,opacity:0.6,transform:'translate(4 -30) rotate(-13)'},grp);
+  E('path',{d:'M -1.2 -2 L 0 -14 L 1.7 -2 Z',fill:inner,opacity:0.6,transform:'translate(11 -31) rotate(9)'},grp);
+  // base with an emphasized leading (front) foot
+  E('ellipse',{cx:1,cy:34,rx:12.5,ry:4.2,fill:sh},grp);
+  E('ellipse',{cx:1,cy:32.8,rx:11.5,ry:3.7,fill:wood},grp);
+  E('path',{d:'M 8 30 C 12 30 18 31 18 34.5 C 18 37 12 37 8 36 Z',fill:wood},grp);
+  E('line',{x1:0,y1:30,x2:0,y2:35,stroke:sh,'stroke-width':1.2,opacity:0.5},grp);
+  // body arcing forward
+  E('path',{d:'M -3 32 C -8 18 -6 -3 4 -10 C 9 -13 15 -11 17 -4 C 15 7 12 21 9 32 Z',fill:wood},grp);
+  // very subtle forepaw down the chest
+  E('path',{d:'M 12 -1 C 14.5 9 14.5 21 12.5 30',fill:'none',stroke:sh,opacity:0.38,'stroke-width':1.6,'stroke-linecap':'round'},grp);
+  // large head + sharper, longer snout
+  E('circle',{cx:8,cy:-19,r:15,fill:wood},grp);
+  E('path',{d:'M 11 -24 L 37 -15 L 13 -7 Z',fill:wood},grp);
+  E('ellipse',{cx:2,cy:-23,rx:4.5,ry:6,fill:hi,opacity:0.45},grp);
+  E('circle',{cx:12,cy:-20,r:2.2,fill:'#2a1a0c'},grp);
+  E('circle',{cx:35,cy:-15,r:1.9,fill:'#2a1a0c'},grp);
+}
+
+/* ============================ Hit layer ============================ */
+function renderHit(){
+  const g=document.getElementById('hitG'); clear(g);
+  for(let pos=1;pos<=64;pos++){ const c=cellCenter(pos);
+    const r=E('rect',{x:c.x-U/2,y:c.y-U/2,width:U,height:U,fill:'transparent',style:'cursor:pointer'},g);
+    (function(p){ r.addEventListener('click',function(){ onCellClick(p); }); })(pos);
+  }
+  if(phase==='move' && !busy){
+    denLayout().forEach(function(p){ if(p.t==='rabbit'){
+      const rr=E('rect',{x:p.x-32,y:p.y-42,width:64,height:84,fill:'transparent',style:'cursor:pointer'},g);
+      (function(i){ rr.addEventListener('click',function(){ selectRabbit(i); }); })(p.i);
+    }});
+  }
+}
+function onCellClick(pos){
+  if(busy) return;
+  if(isFlipPhase()){ flipBoardToken(pos); return; }
+  if(phase==='move'){ for(let i=0;i<rabbits.length;i++){ if(!rabbits[i].exited && rabbits[i].pos===pos){ selectRabbit(i); return; } } }
+}
+
+/* ============================ Ghosts ============================ */
+function renderGhosts(){
+  const g=document.getElementById('ghostG'); clear(g);
+  if(phase!=='move'||busy||selected===null) return;
+  const r=rabbits[selected]; if(!r||r.exited) return;
+  const seen={};
+  for(let k=0;k<vals.length;k++){
+    const c=vals[k]; if(c.used) continue;
+    const t=r.pos+c.v; let landing; if(t===EXIT) landing='exit'; else if(t>EXIT) landing=EXIT-(t-EXIT); else landing=t;
+    if(seen[landing]) continue; seen[landing]=true;
+    if(landing==='exit'){
+      const gg=E('g',{style:'cursor:pointer','class':'ghostpulse'},g);
+      E('rect',{x:BX,y:FR,width:8*U,height:MEAD,rx:4,fill:'rgba(255,215,94,0.2)',stroke:'#ffd75e','stroke-width':4},gg);
+      const t2=E('text',{x:BX+400,y:FR+MEAD/2+9,'text-anchor':'middle','font-size':27,fill:'#fff3d0','font-weight':800,'letter-spacing':'2px'},gg); t2.textContent='SAFE!';
+      (function(idx){ gg.addEventListener('click',function(){ useValue(idx); }); })(k); continue;
+    }
+    const cc=cellCenter(landing); const gg=E('g',{style:'cursor:pointer','class':'ghostpulse'},g);
+    E('circle',{cx:cc.x,cy:cc.y,r:30,fill:'rgba(255,215,94,0.13)',stroke:'#ffd75e','stroke-width':3,'stroke-dasharray':'5 5'},gg);
+    const t2=E('text',{x:cc.x,y:cc.y+8,'text-anchor':'middle','font-size':25,fill:'#ffe9a8','font-weight':800},gg); t2.textContent=(c.kind==='plus'?'+1':c.v);
+    (function(idx){ gg.addEventListener('click',function(){ useValue(idx); }); })(k);
+  }
+}
+
+/* ============================ Player trays (four edges) ============================ */
+function renderRails(){
+  const slots=[document.getElementById('trayBottom'),document.getElementById('trayLeft'),document.getElementById('trayTop'),document.getElementById('trayRight')];
+  for(let s=0;s<4;s++) slots[s].innerHTML='';
+  if(!rabbits.length) return;
+  for(let i=0;i<nPlayers && i<4;i++){
+    const active=(i===turn && phase!=='fox' && phase!=='gameover' && phase!=='setup');
+    const tray=document.createElement('div'); tray.className='ptray'+(active?' active':'');
+    let html='<span class="pnum">'+(i+1)+':</span>';
+    if(hands[i].length===0){ html+='<span class="pnone">\u2014</span>'; }
+    else { for(let ti=0;ti<hands[i].length;ti++){ const tok=hands[i][ti];
+      const playable=(active && phase==='token' && !busy);
+      html+='<span class="ptok '+(tok.type==='plus'?'plus':'num')+(playable?' playable':'')+'" data-p="'+i+'" data-i="'+ti+'">'+(tok.type==='plus'?'+1':tok.value)+'</span>'; } }
+    tray.innerHTML=html; slots[i].appendChild(tray);
+  }
+  if(phase==='token' && !busy){
+    const all=document.querySelectorAll('.ptok.playable');
+    for(let j=0;j<all.length;j++){ (function(el){ el.onclick=function(){ if(parseInt(el.getAttribute('data-p'),10)===turn) playHandToken(parseInt(el.getAttribute('data-i'),10)); }; })(all[j]); }
+  }
+}
+
+/* ============================ Fox's loot ============================ */
+function renderFoxStack(){
+  const el=document.getElementById('foxstack'); if(!el) return;
+  if(!foxStack || foxStack.length===0){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='flex';
+  let html='<span class="fxlabel">Fox\u2019s loot</span>';
+  const show=Math.min(foxStack.length,6);
+  for(let i=0;i<show;i++){ const t=foxStack[i]; html+='<span class="fxtok '+(t.type==='plus'?'plus':'num')+'">'+(t.type==='plus'?'+1':t.value)+'</span>'; }
+  if(foxStack.length>6) html+='<span class="fxmore">+'+(foxStack.length-6)+'</span>';
+  el.innerHTML=html;
+}
+
+/* ============================ Dice / played / controls / status ============================ */
+function pips(v){ const m={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]}; let s=''; for(let i=0;i<9;i++){ s+='<span class="pip'+(m[v].indexOf(i)>=0?' on':'')+'"></span>'; } return s; }
+function renderDice(){
+  const el=document.getElementById('dice'); el.className='dice'; el.onclick=null; el.innerHTML='';
+  if(diceReady() && !diceAnim){ el.classList.add('ready'); el.onclick=doRoll; }
+  for(let i=0;i<2;i++){
+    const d=document.createElement('div'); d.className='die';
+    if(diceAnim){ d.classList.add('rolling'); d.innerHTML=pips(1+Math.floor(Math.random()*6)); el.appendChild(d); continue; }
+    if((phase==='move'||phase==='fox') && dice[i]!==undefined){
+      d.innerHTML=pips(dice[i]);
+      if(phase==='move'){ if(vals[i] && vals[i].used){ d.classList.add('used'); } else if(vals[i]){ d.onclick=(function(idx){return function(){ useValue(idx); };})(i); if(selected!==null) d.classList.add('glow'); } }
+    } else { d.classList.add('blank'); }
+    el.appendChild(d);
+  }
+}
+function renderPlayed(){
+  const el=document.getElementById('played'); el.innerHTML='';
+  if(phase==='fox'){ if(foxBonus){ const d=document.createElement('div'); d.className='ptoken plus'; d.textContent='+1'; el.appendChild(d); } return; }
+  if(!playedToken || phase==='token' || phase==='setup' || phase==='gameover') return;
+  const d=document.createElement('div'); d.className='ptoken '+(playedToken.type==='plus'?'plus':'num');
+  d.textContent = playedToken.type==='plus' ? '+1' : playedToken.value;
+  if(phase==='move' && vals[2]){ if(vals[2].used){ d.classList.add('used'); } else { d.onclick=function(){ useValue(2); }; if(selected!==null) d.classList.add('glow'); } }
+  el.appendChild(d);
+}
+function renderControls(){ /* deselect handled by tapping the selected rabbit again */ }
+function updateStatus(msg){
+  const el=document.getElementById('status');
+  if(msg){ el.textContent=msg; return; }
+  if(gameOver){ el.textContent = won?'The warren is safe.':'The fox got away.'; return; }
+  if(phase==='fox'){ el.textContent = dice.length ? ('The fox rolls '+dice[0]+' and '+dice[1]+(foxBonus?' + a stolen +1\u2026':'\u2026')) : 'The fox stirs\u2026'; return; }
+  const who='Player '+(turn+1);
+  if(phase==='token'){
+    if(!handEmpty()) el.textContent=who+' \u2014 play one of your glowing tokens.';
+    else if(!flippedThisTurn) el.textContent=who+' \u2014 no tokens: tap any glowing tile to flip it.';
+    else el.textContent=who+' \u2014 tap the glowing dice to roll.';
+  } else if(phase==='roll'){ el.textContent=who+' \u2014 tap the glowing dice to roll.'; }
+  else if(phase==='rolling'){ el.textContent=who+' \u2014 rolling\u2026'; }
+  else if(phase==='move'){ const ml=movesLeft+' move'+(movesLeft===1?'':'s')+' left';
+    if(selected===null) el.textContent=who+' \u2014 tap a glowing rabbit. ('+ml+')';
+    else el.textContent=who+' \u2014 tap a die to move it. ('+ml+')';
+  } else el.textContent='';
+}
+
+/* ============================ Render all ============================ */
+function renderAll(){ renderTokens(); renderPawns(); renderHit(); renderGhosts(); renderRails(); renderFoxStack(); renderDice(); renderPlayed(); renderControls(); updateStatus(); }
+
+/* ============================ Init ============================ */
+function init(){
+  buildStatic();
+  const els=document.querySelectorAll('.pcount');
+  for(let i=0;i<els.length;i++){ (function(b){ b.onclick=function(){ ac(); newGame(parseInt(b.getAttribute('data-n'),10)); }; })(els[i]); }
+  document.getElementById('againbtn').onclick=function(){
+    document.getElementById('banner').classList.add('hidden');
+    document.getElementById('setup').classList.remove('hidden');
+  };
+}
+init();
+</script>
+</body>
+</html>
