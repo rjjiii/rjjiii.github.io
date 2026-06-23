@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mancala</title>
+<style>
+  :root{
+    --gold:#ffd75e; --text:#e9e3d4; --text-dim:#a59c86;
+    --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+    --font-display:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;}
+  body{
+    min-height:100vh; font-family:var(--font-body); color:var(--text);
+    background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    background-attachment:fixed; -webkit-tap-highlight-color:transparent;
+  }
+  :focus-visible{outline:2px solid var(--gold); outline-offset:3px; border-radius:6px;}
+
+  .table{position:fixed; inset:0; overflow:hidden;}
+  .core{position:absolute; inset:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;}
+  #board{
+    width:min(calc(100vw - 28px), calc((100dvh - 112px) * 1.8387));
+    height:auto; aspect-ratio:1140/620; display:block;
+    filter:drop-shadow(0 12px 34px rgba(0,0,0,0.55));
+  }
+  .status{font-family:var(--font-display); font-size:17px; color:var(--text); text-align:center; min-height:23px; max-width:calc(100vw - 28px); line-height:1.3;}
+  .status.top{transform:rotate(180deg);}
+
+  .overlay{position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:20; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);}
+  .hidden{display:none !important;}
+  .card{background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:30px 34px; max-width:460px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.6);}
+  .card h1{font-family:var(--font-display); font-size:30px; margin:0 0 2px; color:var(--gold); letter-spacing:1px;}
+  .card .sub{font-size:13px; color:var(--text-dim); margin:0 0 16px; letter-spacing:1.5px; text-transform:uppercase;}
+  .card p{font-size:14px; color:var(--text-dim); line-height:1.6; margin:0 0 20px; text-align:left;}
+  button{font-family:inherit; font-size:14px; font-weight:700; padding:10px 26px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.5); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4);}
+  button:hover{ filter:brightness(1.12); }
+</style>
+</head>
+<body>
+
+<div class="table">
+  <div class="core">
+    <div class="status top" id="statusTop"></div>
+    <svg id="board" viewBox="0 0 1140 620" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="wood" x1="0" y1="0" x2="0.55" y2="1"><stop offset="0%" stop-color="#855f3a"/><stop offset="38%" stop-color="#5e4128"/><stop offset="100%" stop-color="#311e0d"/></linearGradient>
+        <pattern id="grain" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(63)"><rect width="6.5" height="13" fill="rgba(0,0,0,0.11)"/><rect x="6.5" width="6.5" height="13" fill="rgba(255,240,210,0.03)"/></pattern>
+        <filter id="psh" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.45"/></filter>
+        <radialGradient id="glowhalo" cx="50%" cy="50%" r="50%"><stop offset="35%" stop-color="#ffc846" stop-opacity="0.5"/><stop offset="100%" stop-color="#ffc846" stop-opacity="0"/></radialGradient>
+        <radialGradient id="pithole" cx="50%" cy="40%" r="66%"><stop offset="0%" stop-color="#1d110a"/><stop offset="62%" stop-color="#33210f"/><stop offset="100%" stop-color="#4d3318"/></radialGradient>
+        <radialGradient id="seed0" cx="38%" cy="34%" r="70%"><stop offset="0%" stop-color="#a87b4e"/><stop offset="52%" stop-color="#7b5532"/><stop offset="100%" stop-color="#48301a"/></radialGradient>
+        <radialGradient id="seed1" cx="38%" cy="34%" r="70%"><stop offset="0%" stop-color="#d6b485"/><stop offset="52%" stop-color="#b08a5c"/><stop offset="100%" stop-color="#785b35"/></radialGradient>
+        <radialGradient id="seed2" cx="38%" cy="34%" r="70%"><stop offset="0%" stop-color="#a3a892"/><stop offset="52%" stop-color="#7d836d"/><stop offset="100%" stop-color="#525847"/></radialGradient>
+        <radialGradient id="seed3" cx="38%" cy="34%" r="70%"><stop offset="0%" stop-color="#b6cdc3"/><stop offset="52%" stop-color="#8fb0a3"/><stop offset="100%" stop-color="#5f8175"/></radialGradient>
+        <radialGradient id="seed4" cx="38%" cy="34%" r="70%"><stop offset="0%" stop-color="#989248"/><stop offset="52%" stop-color="#74702f"/><stop offset="100%" stop-color="#4a471d"/></radialGradient>
+        <radialGradient id="seed5" cx="38%" cy="34%" r="70%"><stop offset="0%" stop-color="#e8dcc4"/><stop offset="52%" stop-color="#d0c4a6"/><stop offset="100%" stop-color="#a89c7e"/></radialGradient>
+        <radialGradient id="seed6" cx="38%" cy="34%" r="70%"><stop offset="0%" stop-color="#b87045"/><stop offset="52%" stop-color="#92502c"/><stop offset="100%" stop-color="#5d301a"/></radialGradient>
+      </defs>
+      <g id="staticG"></g>
+      <g id="storeG"></g>
+      <g id="pitG"></g>
+      <g id="countG"></g>
+      <g id="ghostG"></g>
+    </svg>
+    <div class="status bottom" id="statusBottom"></div>
+  </div>
+</div>
+
+<div class="overlay" id="setup">
+  <div class="card">
+    <h1>Mancala</h1>
+    <div class="sub">The sowing game: Oware</div>
+    <p>Each player owns the six pits on their near side. On your turn, lift all the seeds from one of your pits and sow them one by one into the pits ahead, going counterclockwise. If your last seed drops into one of your opponent's pits and leaves it holding exactly two or three seeds, you capture them &mdash; and sweep backward through any neighbouring pits that also hold two or three. The player who gathers more than half the 48 seeds wins.</p>
+    <button id="startbtn">Start Game</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="banner">
+  <div class="card">
+    <h1 id="bannertitle"></h1>
+    <p id="bannersub" style="text-align:center;"></p>
+    <button id="againbtn">Play Again</button>
+  </div>
+</div>
+
+<script>
+/* ===================== Geometry ===================== */
+const VBW=1140, VBH=620;
+const PIT_R=54, TOP_Y=212, BOT_Y=408, PIT_X0=260, PIT_DX=124;
+const SEED_R=9;
+const STORE_L={x:110,y:310}, STORE_R={x:1030,y:310};   // left store = B (top/North), right store = A (bottom/South)
+const STORE_RX=56, STORE_RY=150;
+const NAME={A:'Player 1', B:'Player 2'};
+const ACCENT={A:'#ffd75e', B:'#cdd6df'};
+const SEED_HI=['#c69a6a','#e6cda0','#bcc0ac','#d2e3db','#b3ad62','#f3ebd9','#d28d5e'];   // light tints, one per nickernut colour
+function seedCol(i,k){ return ((((i+1)*73856093) ^ ((k+1)*19349663)) >>> 0) % 7; }       // stable, scattered colour per seed slot
+
+function pitXY(i){ return i<6 ? {x:PIT_X0+i*PIT_DX, y:BOT_Y} : {x:PIT_X0+(11-i)*PIT_DX, y:TOP_Y}; }
+function storeXY(p){ return p==='A'?STORE_R:STORE_L; }
+
+const SVGNS='http://www.w3.org/2000/svg';
+function E(tag,attrs,parent){ const el=document.createElementNS(SVGNS,tag); for(const k in attrs) el.setAttribute(k,attrs[k]); if(parent) parent.appendChild(el); return el; }
+function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+/* deterministic phyllotaxis scatter (no flicker between renders) */
+function scatter(n,cx,cy,rx,ry,cap){ const out=[]; const shown=Math.min(n,cap); const GA=2.399963;
+  for(let k=0;k<shown;k++){ const a=k*GA; const t=Math.sqrt((k+0.62)/cap); out.push({x:cx+rx*t*Math.cos(a), y:cy+ry*t*Math.sin(a)}); }
+  return out; }
+
+/* ===================== Audio ===================== */
+let actx=null;
+function ac(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(actx&&actx.state==='suspended') actx.resume(); return actx; }
+function tone(freq,dur,opts){ const a=ac(); if(!a) return; opts=opts||{}; const o=a.createOscillator(); const g=a.createGain(); o.type=opts.type||'sine'; o.frequency.value=freq; const t0=a.currentTime+(opts.delay||0); const vol=opts.vol||0.18; g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(vol,t0+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur); o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0+dur+0.02); }
+function noise(dur,opts){ const a=ac(); if(!a) return; opts=opts||{}; const buf=a.createBuffer(1,Math.max(1,Math.floor(a.sampleRate*dur)),a.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2); const src=a.createBufferSource(); src.buffer=buf; const g=a.createGain(); const t0=a.currentTime+(opts.delay||0); g.gain.setValueAtTime(opts.vol||0.12,t0); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur); src.connect(g); g.connect(a.destination); src.start(t0); }
+const SND={
+  drop:function(){ noise(0.05,{vol:0.09}); tone(150+Math.random()*40,0.06,{type:'triangle',vol:0.06}); },
+  pickup:function(){ noise(0.12,{vol:0.10}); },
+  capture:function(){ tone(540,0.1,{type:'sine',vol:0.14}); tone(760,0.12,{type:'sine',vol:0.10,delay:0.05}); },
+  win:function(){ [523,659,784,1047].forEach(function(f,i){ tone(f,0.24,{type:'triangle',vol:0.16,delay:i*0.11}); }); }
+};
+
+/* ===================== Oware engine (validated) ===================== */
+function otherP(p){ return p==='A'?'B':'A'; }
+function ownerOf(i){ return i<6 ? 'A':'B'; }
+function sideStart(p){ return p==='A'?0:6; }
+function sideEmpty(pits,p){ const s=sideStart(p); for(let i=s;i<s+6;i++) if(pits[i]>0) return false; return true; }
+function sideSeeds(pits,p){ const s=sideStart(p); let t=0; for(let i=s;i<s+6;i++) t+=pits[i]; return t; }
+function simulateSow(pits, start){
+  const p=pits.slice(); let seeds=p[start]; p[start]=0; let pos=start; const sown=[];
+  while(seeds>0){ pos=(pos+1)%12; if(pos===start) continue; p[pos]++; seeds--; sown.push(pos); }
+  return {pits:p, sown:sown, landed:pos};
+}
+function simulateMove(pits, start, player){
+  const sow=simulateSow(pits, start); const p=sow.pits; const opp=otherP(player);
+  let captured=[];
+  if(ownerOf(sow.landed)===opp){
+    let q=sow.landed;
+    while(ownerOf(q)===opp && (p[q]===2||p[q]===3)){ captured.push(q); q=(q-1+12)%12; }
+  }
+  let capSeeds=0; for(let k=0;k<captured.length;k++) capSeeds+=p[captured[k]];
+  let grandSlam=false;
+  if(capSeeds>0){
+    let oppLeft=0, s=sideStart(opp); for(let i=s;i<s+6;i++) oppLeft+=p[i];
+    if(capSeeds===oppLeft){ grandSlam=true; captured=[]; capSeeds=0; }
+  }
+  if(!grandSlam){ for(let k=0;k<captured.length;k++) p[captured[k]]=0; }
+  return {pits:p, sown:sow.sown, landed:sow.landed, captured:captured, capSeeds:capSeeds, grandSlam:grandSlam};
+}
+function feedsOpponent(pits, start, player){
+  const opp=otherP(player), s=sideStart(opp);
+  const sow=simulateSow(pits, start);
+  for(let k=0;k<sow.sown.length;k++){ const idx=sow.sown[k]; if(idx>=s && idx<s+6) return true; }
+  return false;
+}
+function turnStatus(pits, player){
+  const s=sideStart(player); const candidates=[];
+  for(let i=s;i<s+6;i++) if(pits[i]>0) candidates.push(i);
+  if(candidates.length===0) return {type:'end', collector: otherP(player)};
+  const opp=otherP(player);
+  if(sideEmpty(pits, opp)){
+    const feeders=candidates.filter(function(i){ return feedsOpponent(pits, i, player); });
+    if(feeders.length>0) return {type:'play', moves:feeders};
+    return {type:'end', collector: player};
+  }
+  return {type:'play', moves:candidates};
+}
+
+/* ===================== State ===================== */
+let pits=[], scores={A:0,B:0}, turn='A', phase='setup', legal=[], busy=false,
+    gameOver=false, winner=null, seenStates=new Set(), forcedFeed=false, moveNote='';
+
+function newGame(){
+  pits=Array(12).fill(4); scores={A:0,B:0};
+  phase='play'; legal=[]; busy=false; gameOver=false; winner=null; seenStates=new Set(); forcedFeed=false; moveNote='';
+  turn = Math.random()<0.5 ? 'A':'B';
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('banner').classList.add('hidden');
+  beginTurn(turn);
+}
+
+function beginTurn(player){
+  turn=player; moveNote=moveNote; // keep last note for the prompt line
+  const st=turnStatus(pits, player);
+  if(st.type==='end'){
+    let t=0; for(let i=0;i<12;i++){ t+=pits[i]; pits[i]=0; } scores[st.collector]+=t;
+    finishGame(); return;
+  }
+  legal=st.moves; forcedFeed = sideEmpty(pits, otherP(player)); phase='choose';
+  renderAll();
+}
+
+function sweepRemainingToOwners(){
+  for(const p of ['A','B']){ let t=0, s=sideStart(p); for(let i=s;i<s+6;i++){ t+=pits[i]; pits[i]=0; } scores[p]+=t; }
+}
+function finishGame(){
+  gameOver=true; phase='over';
+  winner = scores.A>scores.B ? 'A' : (scores.B>scores.A ? 'B' : null);
+  renderAll(); showBanner();
+}
+
+function afterMove(player, res){
+  if(scores[player]>=25){ sweepRemainingToOwners(); finishGame(); return; }
+  if(res.capSeeds>0){ seenStates=new Set(); }
+  else {
+    const key=pits.join(',')+'|'+otherP(player);
+    if(seenStates.has(key)){ sweepRemainingToOwners(); finishGame(); return; }
+    seenStates.add(key);
+  }
+  beginTurn(otherP(player));
+}
+
+/* ===================== Move + animation ===================== */
+function doMove(start){
+  if(phase!=='choose' || busy) return;
+  if(legal.indexOf(start)<0) return;
+  busy=true; phase='anim'; moveNote='';
+  const player=turn;
+  const res=simulateMove(pits, start, player);
+  SND.pickup();
+  pits[start]=0; renderAll();
+  const seq=res.sown; let k=0;
+  const g=document.getElementById('ghostG');
+  function sowStep(){
+    if(k>=seq.length){ doCapture(); return; }
+    const fromI=(k===0)?start:seq[k-1];
+    const fromXY=pitXY(fromI), toXY=pitXY(seq[k]);
+    flySeed(g, fromXY, toXY, 140, function(){ pits[seq[k]]++; SND.drop(); renderAll(); k++; setTimeout(sowStep, 24); }, (k%7));
+  }
+  function doCapture(){
+    if(res.grandSlam){ moveNote='Grand slam \u2014 capture forfeited'; }
+    if(res.captured.length===0 || res.capSeeds===0){ commit(); return; }
+    let ci=0; const order=res.captured.slice();
+    function capStep(){
+      if(ci>=order.length){ commit(); return; }
+      const cp=order[ci]; const cnt=pits[cp]; const fromXY=pitXY(cp), toXY=storeXY(player);
+      flyBurst(g, fromXY, toXY, cnt, function(){ scores[player]+=cnt; pits[cp]=0; SND.capture(); renderAll(); ci++; setTimeout(capStep,140); });
+    }
+    capStep();
+  }
+  function commit(){
+    if(res.capSeeds>0) moveNote='Captured '+res.capSeeds;
+    busy=false;
+    afterMove(player, res);
+  }
+  setTimeout(sowStep, 180);
+}
+
+function drawSeed(parent,x,y,r,ci){ r=r||SEED_R; ci=ci||0; const grp=E('g',{},parent);
+  E('ellipse',{cx:x,cy:y+r*0.5,rx:r*0.8,ry:r*0.28,fill:'rgba(0,0,0,0.28)'},grp);
+  E('circle',{cx:x,cy:y,r:r,fill:'url(#seed'+ci+')',stroke:'#3a2412','stroke-width':0.8},grp);
+  E('ellipse',{cx:x-r*0.3,cy:y-r*0.32,rx:r*0.34,ry:r*0.22,fill:SEED_HI[ci],opacity:0.5},grp);
+  return grp;
+}
+function flySeed(g, fromXY, toXY, dur, cb, ci){
+  const node=drawSeed(g, fromXY.x, fromXY.y, SEED_R, ci||0);
+  const steps=Math.max(6,Math.round(dur/16)); let i=0; const bow=-26;
+  const iv=setInterval(function(){ i++; const t=Math.min(1,i/steps);
+    const dx=(toXY.x-fromXY.x)*t, dy=(toXY.y-fromXY.y)*t + bow*Math.sin(Math.PI*t);
+    node.setAttribute('transform','translate('+dx+','+dy+')');
+    if(t>=1){ clearInterval(iv); if(node.parentNode) node.parentNode.removeChild(node); cb(); } }, 16);
+}
+function flyBurst(g, fromXY, toXY, count, cb){
+  const n=Math.max(1,count); let done=0;
+  for(let s=0;s<n;s++){
+    setTimeout(function(){
+      const jx=(Math.random()-0.5)*PIT_R*0.5, jy=(Math.random()-0.5)*PIT_R*0.5;
+      flySeed(g, {x:fromXY.x+jx,y:fromXY.y+jy}, {x:toXY.x+(Math.random()-0.5)*40,y:toXY.y+(Math.random()-0.5)*120}, 220, function(){ done++; if(done>=n) cb(); }, (s%7));
+    }, s*45);
+  }
+}
+
+/* ===================== Rendering ===================== */
+function buildStatic(){
+  const g=document.getElementById('staticG'); clear(g);
+  E('rect',{x:0,y:0,width:VBW,height:VBH,rx:30,fill:'url(#wood)'},g);
+  E('rect',{x:0,y:0,width:VBW,height:VBH,rx:30,fill:'url(#grain)'},g);
+  E('rect',{x:14,y:14,width:VBW-28,height:VBH-28,rx:22,fill:'none',stroke:'rgba(0,0,0,0.4)','stroke-width':3},g);
+  E('rect',{x:14,y:14,width:VBW-28,height:VBH-28,rx:22,fill:'none',stroke:'rgba(255,225,170,0.12)','stroke-width':1.5},g);
+}
+
+function drawPit(parent,cx,cy,R,glow){
+  if(glow) E('circle',{cx:cx,cy:cy,r:R+11,fill:'url(#glowhalo)'},parent);
+  E('circle',{cx:cx,cy:cy,r:R+5,fill:'none',stroke:'#6f5128','stroke-width':5},parent);
+  E('circle',{cx:cx,cy:cy,r:R+5,fill:'none',stroke: glow?'#ffd75e':'#bb9551','stroke-width':2.4,opacity: glow?0.95:0.6},parent);
+  E('circle',{cx:cx,cy:cy,r:R,fill:'url(#pithole)'},parent);
+  E('circle',{cx:cx,cy:cy,r:R,fill:'none',stroke:'rgba(0,0,0,0.55)','stroke-width':3},parent);
+  E('path',{d:'M '+(cx-R*0.72)+' '+(cy-R*0.5)+' A '+R+' '+R+' 0 0 1 '+(cx+R*0.72)+' '+(cy-R*0.5),fill:'none',stroke:'rgba(255,235,200,0.13)','stroke-width':3},parent);
+}
+
+function renderPits(){
+  const g=document.getElementById('pitG'); clear(g);
+  for(let i=0;i<12;i++){
+    const c=pitXY(i); const isLegal=(phase==='choose' && legal.indexOf(i)>=0);
+    drawPit(g, c.x, c.y, PIT_R, isLegal);
+    const pos=scatter(pits[i], c.x, c.y, PIT_R*0.56, PIT_R*0.56, 13);
+    for(let s=0;s<pos.length;s++) drawSeed(g, pos[s].x, pos[s].y, SEED_R, seedCol(i,s));
+    if(isLegal){
+      const hit=E('circle',{cx:c.x,cy:c.y,r:PIT_R+5,fill:'transparent',style:'cursor:pointer'},g);
+      hit.onclick=(function(idx){ return function(){ doMove(idx); }; })(i);
+    }
+  }
+}
+
+function renderCounts(){
+  const g=document.getElementById('countG'); clear(g);
+  for(let i=0;i<12;i++){
+    if(pits[i]===0) continue;
+    const c=pitXY(i); const y = i<6 ? (BOT_Y+PIT_R+22) : (TOP_Y-PIT_R-20);
+    const rot = turn==='B' ? (' rotate(180 '+c.x+' '+y+')') : '';
+    const t=E('text',{x:c.x,y:y,'text-anchor':'middle','dominant-baseline':'central','font-family':"'Iowan Old Style',Palatino,Georgia,serif",'font-size':23,'font-weight':700,fill:'#e7d4a6',transform:('translate(0,0)'+rot)},g);
+    t.textContent=pits[i];
+  }
+}
+
+function drawStoreHollow(parent,s){
+  E('ellipse',{cx:s.x,cy:s.y,rx:STORE_RX+6,ry:STORE_RY+6,fill:'none',stroke:'#6f5128','stroke-width':5},parent);
+  E('ellipse',{cx:s.x,cy:s.y,rx:STORE_RX,ry:STORE_RY,fill:'url(#pithole)'},parent);
+  E('ellipse',{cx:s.x,cy:s.y,rx:STORE_RX,ry:STORE_RY,fill:'none',stroke:'rgba(0,0,0,0.55)','stroke-width':3},parent);
+}
+
+function renderStores(){
+  const g=document.getElementById('storeG'); clear(g);
+  ['A','B'].forEach(function(p){
+    const s=storeXY(p); const active=(phase==='choose' && turn===p);
+    drawStoreHollow(g, s);
+    if(active){
+      E('ellipse',{cx:s.x,cy:s.y,rx:STORE_RX+6,ry:STORE_RY+6,fill:'none',stroke:'#ffd75e','stroke-width':2.6,opacity:0.95},g);
+    }
+    // faint captured pile for texture
+    const pile=scatter(scores[p], s.x, s.y, STORE_RX*0.62, STORE_RY*0.7, 16);
+    for(let k=0;k<pile.length;k++) drawSeed(g, pile[k].x, pile[k].y, SEED_R-1, seedCol(p==='A'?20:21,k));
+    // score numeral (faces whoever is to move)
+    const rot = turn==='B' ? (' rotate(180 '+s.x+' '+s.y+')') : '';
+    const num=E('text',{x:s.x,y:s.y,'text-anchor':'middle','dominant-baseline':'central','font-family':"'Iowan Old Style',Palatino,Georgia,serif",'font-size':54,'font-weight':700,fill: active?'#ffe9a8':'#d8c9ad',opacity:0.96,transform:('translate(0,0)'+rot)},g);
+    num.textContent=scores[p];
+  });
+}
+
+function updateStatus(){
+  const top=document.getElementById('statusTop'), bot=document.getElementById('statusBottom');
+  top.textContent=''; bot.textContent='';
+  if(gameOver || phase==='setup') return;
+  let prompt = NAME[turn]+' to sow.';
+  if(forcedFeed && phase==='choose') prompt = NAME[turn]+' must feed \u2014 only moves reaching the far side count.';
+  const text = moveNote ? (moveNote+'  \u00b7  '+prompt) : prompt;
+  if(turn==='A') bot.textContent=text; else top.textContent=text;   // top line is CSS-flipped to face Player 2
+}
+
+function renderAll(){ renderStores(); renderPits(); renderCounts(); updateStatus(); }
+
+function showBanner(){
+  const t=document.getElementById('bannertitle'), sub=document.getElementById('bannersub');
+  if(winner){ t.textContent=NAME[winner]+' wins'; sub.textContent='Final tally '+scores[winner]+'\u2013'+scores[otherP(winner)]+', from 48 seeds on the board.'; }
+  else { t.textContent='A draw'; sub.textContent='The seeds split evenly, 24\u201324.'; }
+  document.getElementById('banner').classList.remove('hidden');
+  SND.win();
+}
+
+/* ===================== Init ===================== */
+function init(){
+  buildStatic();
+  document.getElementById('startbtn').onclick=function(){ ac(); newGame(); };
+  document.getElementById('againbtn').onclick=function(){
+    document.getElementById('banner').classList.add('hidden');
+    document.getElementById('setup').classList.remove('hidden');
+  };
+}
+init();
+</script>
+</body>
+</html>
