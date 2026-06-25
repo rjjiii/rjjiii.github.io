@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Amazons</title>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:radial-gradient(circle at 50% 40%, #2b303b 0%, #13151b 100%);
+    color:#f0e6cc; font-family:'Avenir Next','Segoe UI',system-ui,sans-serif;
+    min-height:100%; -webkit-tap-highlight-color:transparent; overflow:hidden;
+  }
+  .table{ position:fixed; inset:0; overflow:hidden; }
+  .core{ position:absolute; inset:46px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+  #boardsvg{
+    height:min(calc(100dvh - 168px), calc(100vw - 36px));
+    aspect-ratio:1/1; width:auto; display:block; filter:drop-shadow(0 10px 30px rgba(0,0,0,0.5));
+  }
+  .hud{ width:auto; max-width:calc(100vw - 60px); display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .status{ font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif; font-size:14.5px; text-align:center; color:#f3ead0; line-height:1.32; min-height:20px; max-width:560px; }
+
+  button{ font-family:inherit; font-size:14px; font-weight:700; padding:8px 16px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.5); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  button:hover{ background:linear-gradient(145deg,#444c5d,#2d333f); }
+  button:active{ transform:translateY(1px); }
+
+  .overlay,.banner{ position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:20; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+  .hidden{ display:none !important; }
+  .card{ background:linear-gradient(160deg,#2e333f,#1c2029); border:1.5px solid rgba(255,215,94,0.35); border-radius:18px; padding:24px 30px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.6); max-width:min(92vw,470px); }
+  .card h1{ font-family:'Iowan Old Style',Georgia,serif; font-weight:700; font-size:25px; margin:0 0 8px; color:#ffe9a8; letter-spacing:.5px; }
+  .card p.lead{ color:#c8bd9f; font-size:13.5px; margin:0 0 14px; line-height:1.5; text-align:center; }
+  .rules{ color:#bcb094; font-size:12.5px; line-height:1.5; text-align:left; margin:0 0 16px; padding-left:2px; }
+  .rules li{ margin:3px 0; }
+  .choices{ display:flex; flex-direction:column; gap:9px; align-items:stretch; }
+  .choices button{ font-size:15px; padding:11px 16px; }
+  svg text{ -webkit-user-select:none; user-select:none; }
+
+  .selring{ animation:selpulse 1s ease-in-out infinite; }
+  @keyframes selpulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+  .ghostpulse{ animation:gpulse 1.3s ease-in-out infinite; }
+  @keyframes gpulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.55; } }
+  .glowpulse{ animation:glowpulse 1.6s ease-in-out infinite; }
+  @keyframes glowpulse{ 0%,100%{ opacity:0.5; } 50%{ opacity:0.16; } }
+
+  @media (orientation:portrait){
+    .hud{ gap:6px; }
+    #boardsvg{ height:auto; width:min(calc(100vw - 30px), calc(100dvh - 168px)); }
+  }
+</style>
+</head>
+<body>
+<div class="table">
+  <div class="core">
+    <svg id="boardsvg" viewBox="0 0 684 684" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="wood" x1="0" y1="0" x2="0.85" y2="1"><stop offset="0%" stop-color="#855f3a"/><stop offset="38%" stop-color="#5e4128"/><stop offset="100%" stop-color="#311e0d"/></linearGradient>
+        <pattern id="grain" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(63)"><rect width="6.5" height="13" fill="rgba(0,0,0,0.10)"/><rect x="6.5" width="6.5" height="13" fill="rgba(255,240,210,0.03)"/></pattern>
+        <radialGradient id="goldglow" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stop-color="#ffd75e" stop-opacity="0.55"/>
+          <stop offset="0.6" stop-color="#ffd75e" stop-opacity="0.2"/>
+          <stop offset="1" stop-color="#ffd75e" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="psh" x="-45%" y="-25%" width="190%" height="155%"><feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.45"/></filter>
+        <filter id="bsh" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#000000" flood-opacity="0.55"/></filter>
+      </defs>
+      <g id="staticG"></g>
+      <g id="ghostG"></g>
+      <g id="pieceG"></g>
+      <g id="bowG"></g>
+      <g id="moveG"></g>
+      <g id="hitG"></g>
+    </svg>
+    <div class="hud">
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="setup">
+  <div class="card">
+    <h1>Game of the Amazons</h1>
+    <p class="lead">Two white queens and two red, each racing to wall the other in. The fight ranges across the whole board.</p>
+    <ul class="rules">
+      <li>On your turn, move one queen like a chess queen — any number of empty squares in a straight line, in any of the eight directions.</li>
+      <li>Then that same queen fires an arrow from her new square, travelling the same way. The arrow drops a black disc on an empty square.</li>
+      <li>Arrows stay forever. Nothing may move through or onto a queen or an arrow.</li>
+      <li>Every shot shrinks the open board. The last player able to move a queen wins.</li>
+      <li>White moves first.</li>
+    </ul>
+    <div class="choices">
+      <button id="playbtn">Play</button>
+    </div>
+  </div>
+</div>
+
+<div class="banner hidden" id="banner">
+  <div class="card"><h1 id="bannertitle"></h1><p class="lead" id="bannertext"></p><button id="againbtn">Play again</button></div>
+</div>
+
+<script>
+/* ============================ Audio ============================ */
+let AC=null;
+function ac(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return AC; }
+function tone(freq,dur,opts){ opts=opts||{}; const a=ac(); if(!a) return; const t=a.currentTime+(opts.delay||0);
+  const o=a.createOscillator(), g=a.createGain(); o.type=opts.type||'sine'; o.frequency.setValueAtTime(freq,t);
+  if(opts.glideTo) o.frequency.exponentialRampToValueAtTime(opts.glideTo,t+dur);
+  const vol=opts.vol||0.2; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+dur+0.03);
+}
+function noise(dur,opts){ opts=opts||{}; const a=ac(); if(!a) return; const t=a.currentTime+(opts.delay||0);
+  const n=Math.floor(a.sampleRate*dur); const buf=a.createBuffer(1,n,a.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=Math.random()*2-1; const src=a.createBufferSource(); src.buffer=buf;
+  const f=a.createBiquadFilter(); f.type='bandpass'; f.frequency.value=opts.freq||1000; f.Q.value=opts.q||1;
+  const g=a.createGain(); const vol=opts.vol||0.2; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(f); f.connect(g); g.connect(a.destination); src.start(t); src.stop(t+dur+0.03);
+}
+const SND={
+  select(){ tone(560,0.05,{type:'sine',vol:0.10}); },
+  move(){ noise(0.13,{vol:0.07,freq:560,q:0.6}); tone(300,0.09,{type:'sine',vol:0.06}); },
+  land(){ tone(235,0.12,{type:'sine',vol:0.12,glideTo:175}); noise(0.05,{vol:0.07,freq:200,q:1}); },
+  whoosh(){ noise(0.16,{vol:0.07,freq:760,q:0.5}); tone(500,0.12,{type:'sine',vol:0.035,glideTo:300}); },
+  thock(){ noise(0.022,{vol:0.13,freq:1900,q:0.7}); tone(240,0.10,{type:'triangle',vol:0.17,glideTo:150}); tone(150,0.13,{type:'sine',vol:0.11,glideTo:95,delay:0.004}); tone(380,0.045,{type:'sine',vol:0.05,glideTo:240}); },
+  win(){ [659,880,1175,1568].forEach(function(f,i){tone(f,0.3,{type:'triangle',vol:0.16,delay:i*0.11});}); tone(1976,0.4,{type:'sine',vol:0.08,delay:0.46}); }
+};
+
+/* ============================ Pure logic (verified) ============================ */
+const N=8;
+function inB(r,c){ return r>=0&&r<N&&c>=0&&c<N; }
+function sideOf(p){ return p==='W'?'W':(p==='R'?'R':null); }
+function emptyB(){ return Array.from({length:N},function(){return Array(N).fill(null);}); }
+function cloneB(b){ return b.map(function(row){return row.slice();}); }
+function initBoard(){ const b=emptyB();
+  b[6][2]='W'; b[6][5]='W'; b[1][2]='R'; b[1][5]='R'; return b;
+}
+const QDIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+function queenReach(b,r,c){ const res=[];
+  for(let i=0;i<8;i++){ const dr=QDIRS[i][0],dc=QDIRS[i][1]; let nr=r+dr,nc=c+dc;
+    while(inB(nr,nc) && b[nr][nc]===null){ res.push([nr,nc]); nr+=dr; nc+=dc; } }
+  return res;
+}
+function applyMove(b,from,to){ const p=b[from[0]][from[1]]; b[to[0]][to[1]]=p; b[from[0]][from[1]]=null; }
+function hasAnyMove(b,side){ for(let r=0;r<N;r++)for(let c=0;c<N;c++){ if(sideOf(b[r][c])===side && queenReach(b,r,c).length) return true; } return false; }
+
+/* ============================ Game state ============================ */
+const BX=22, BY=22, U=80;
+let board=null, turn='W', phase='move', busy=false, over=false, winner=null,
+    selected=null, shooter=null, anim=null;
+function cc(rc){ const r=rc[0],c=rc[1]; return {x:BX+c*U+U/2, y:BY+r*U+U/2}; }
+function eqd(d,r,c){ return d[0]===r&&d[1]===c; }
+
+/* ============================ SVG helpers ============================ */
+const SVGNS='http://www.w3.org/2000/svg';
+function E(tag,attrs,parent){ const el=document.createElementNS(SVGNS,tag); if(attrs){ for(const k in attrs) el.setAttribute(k,attrs[k]); } if(parent) parent.appendChild(el); return el; }
+function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+/* ============================ Static board ============================ */
+function buildStatic(){
+  const g=document.getElementById('staticG'); clear(g);
+  const W=BX*2+N*U;
+  E('rect',{x:0,y:0,width:W,height:W,rx:26,fill:'url(#wood)'},g);
+  E('rect',{x:0,y:0,width:W,height:W,rx:26,fill:'url(#grain)'},g);
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const x=BX+c*U,y=BY+r*U; const dark=((r+c)%2===0);
+    E('rect',{x:x,y:y,width:U,height:U,fill: dark?'#46301c':'#5c3f24'},g); }
+  for(let i=0;i<=N;i++){
+    E('line',{x1:BX+i*U,y1:BY,x2:BX+i*U,y2:BY+N*U,stroke:'rgba(0,0,0,0.22)','stroke-width':1.4},g);
+    E('line',{x1:BX,y1:BY+i*U,x2:BX+N*U,y2:BY+i*U,stroke:'rgba(0,0,0,0.22)','stroke-width':1.4},g);
+  }
+  E('rect',{x:BX,y:BY,width:N*U,height:N*U,fill:'none',stroke:'rgba(0,0,0,0.5)','stroke-width':3},g);
+}
+
+/* ============================ Piece shapes (carved wood) ============================ */
+function drawQueen(g,body,base,collar,hi){
+  E('ellipse',{cx:0,cy:27,rx:19,ry:5.5,fill:'rgba(0,0,0,0.28)'},g);
+  E('ellipse',{cx:0,cy:25,rx:16,ry:4.5,fill:base},g);
+  E('path',{d:'M -8 -2 C -12 7 -16 16 -16 25 L 16 25 C 16 16 12 7 8 -2 C 4.5 0.5 -4.5 0.5 -8 -2 Z',fill:body},g);
+  E('ellipse',{cx:-6,cy:11,rx:3.4,ry:8.5,fill:hi,opacity:0.30},g);
+  E('ellipse',{cx:0,cy:-3,rx:9.5,ry:3.2,fill:collar},g);
+  E('ellipse',{cx:0,cy:-4,rx:8,ry:1.6,fill:hi,opacity:0.5},g);
+  E('circle',{cx:0,cy:-13,r:6.5,fill:body},g);
+  E('ellipse',{cx:-2.5,cy:-15,rx:2.4,ry:3.2,fill:hi,opacity:0.5},g);
+  E('path',{d:'M -10 -18 Q 0 -15.5 10 -18 L 10 -21 Q 0 -18.5 -10 -21 Z',fill:body},g);
+  E('path',{d:'M -9 -19.5 Q 0 -17.3 9 -19.5',fill:'none',stroke:hi,'stroke-width':1,opacity:0.7},g);
+  const pts=[[-10,-27],[-5,-29],[0,-30.5],[5,-29],[10,-27]];
+  for(let i=0;i<pts.length;i++) E('path',{d:'M '+(pts[i][0]-2.2)+' -21 L '+pts[i][0]+' '+pts[i][1]+' L '+(pts[i][0]+2.2)+' -21 Z',fill:body},g);
+  for(let i=0;i<pts.length;i++) E('circle',{cx:pts[i][0],cy:pts[i][1],r:1.7,fill:hi},g);
+}
+function drawArrowFlat(g){
+  E('circle',{cx:0,cy:0,r:26,fill:'#1a1c20'},g);
+  E('circle',{cx:0,cy:0,r:26,fill:'none',stroke:'#3a3d44','stroke-width':2},g);
+}
+function drawShape(g,piece){
+  if(piece==='W') drawQueen(g,'#e7e0d0','#b3a888','#d7ccae','#f7f1e3');
+  else if(piece==='R') drawQueen(g,'#c23b2e','#822117','#a83226','#e98a7a');
+  else drawArrowFlat(g);
+}
+function drawPieceAt(parent,x,y,piece,sel){
+  if(sel){ E('ellipse',{cx:x,cy:y+27,rx:19,ry:7,fill:'none',stroke:'#ffd75e','stroke-width':4,'class':'selring'},parent); }
+  const g=E('g',{transform:'translate('+x+' '+y+')',filter:'url(#psh)'},parent);
+  drawShape(g,piece);
+}
+
+/* ============================ Bow (shooter aim indicator) ============================ */
+const REST_ANGLE=90;  // bow rests pointing down, clear of the queen's face
+function angleDeg(from,to){ return Math.atan2(to[0]-from[0], to[1]-from[1])*180/Math.PI; }
+function drawBow(parent,cx,cy,angle){
+  const g=E('g',{transform:'translate('+cx+' '+cy+') rotate('+angle+')',filter:'url(#bsh)'},parent);
+  const gold='#ffd75e',goldd='#caa14a';
+  E('path',{d:'M -3 -13 Q 12 0 -3 13',fill:'none',stroke:gold,'stroke-width':3,'stroke-linecap':'round'},g);
+  E('line',{x1:-3,y1:-13,x2:-3,y2:13,stroke:goldd,'stroke-width':1.4},g);
+  E('line',{x1:-9,y1:0,x2:14,y2:0,stroke:gold,'stroke-width':2,'stroke-linecap':'round'},g);
+  E('path',{d:'M 20 0 L 13 -4.5 L 13 4.5 Z',fill:gold},g);
+  E('line',{x1:-9,y1:0,x2:-13,y2:-3.5,stroke:goldd,'stroke-width':1.6},g);
+  E('line',{x1:-9,y1:0,x2:-13,y2:3.5,stroke:goldd,'stroke-width':1.6},g);
+}
+function renderBow(){
+  const g=document.getElementById('bowG');
+  if(busy) return;                 // during spin/flight the animation owns bowG
+  clear(g);
+  if(over || phase!=='shoot' || !shooter) return;
+  const ctr=cc(shooter); drawBow(g,ctr.x,ctr.y,REST_ANGLE);
+}
+function spinBow(from,to,cb){
+  const g=document.getElementById('bowG'); const ctr=cc(from);
+  let delta=((angleDeg(from,to)-REST_ANGLE+540)%360)-180;  // shortest signed rotation
+  const dur=200, t0=performance.now();
+  function frame(now){ let u=Math.min(1,(now-t0)/dur); const e=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+    clear(g); drawBow(g,ctr.x,ctr.y,REST_ANGLE+delta*e);
+    if(u<1) requestAnimationFrame(frame); else cb();
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ============================ Rendering ============================ */
+function renderPieces(){
+  const g=document.getElementById('pieceG'); clear(g);
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const p=board[r][c]; if(!p) continue;
+    if(anim && anim.hideFrom && anim.from[0]===r && anim.from[1]===c) continue;
+    const ctr=cc([r,c]);
+    const sel=(selected && selected[0]===r && selected[1]===c);
+    drawPieceAt(g,ctr.x,ctr.y,p,sel);
+  }
+}
+function renderGhosts(){
+  const g=document.getElementById('ghostG'); clear(g);
+  if(over||busy||!board) return;
+  if(phase==='shoot' && shooter){
+    const ts=queenReach(board,shooter[0],shooter[1]);
+    for(let i=0;i<ts.length;i++){ const ctr=cc(ts[i]); const gg=E('g',{'class':'ghostpulse'},g);
+      E('circle',{cx:ctr.x,cy:ctr.y,r:13,fill:'rgba(255,215,94,0.14)',stroke:'#ffd75e','stroke-width':2.5,'stroke-dasharray':'4 4'},gg);
+      E('circle',{cx:ctr.x,cy:ctr.y,r:6,fill:'rgba(20,21,25,0.55)'},gg);
+    }
+  } else if(selected){
+    const ds=queenReach(board,selected[0],selected[1]);
+    for(let i=0;i<ds.length;i++){ const ctr=cc(ds[i]); const gg=E('g',{'class':'ghostpulse'},g);
+      E('circle',{cx:ctr.x,cy:ctr.y,r:13,fill:'rgba(255,215,94,0.18)',stroke:'#ffd75e','stroke-width':2.5,'stroke-dasharray':'4 4'},gg);
+    }
+  } else {
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const p=board[r][c];
+      if(sideOf(p)===turn && queenReach(board,r,c).length){ const ctr=cc([r,c]);
+        E('circle',{cx:ctr.x,cy:ctr.y,r:30,fill:'url(#goldglow)','class':'glowpulse'},g);
+      }
+    }
+  }
+}
+function renderHit(){
+  const g=document.getElementById('hitG'); clear(g);
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const x=BX+c*U,y=BY+r*U;
+    const rect=E('rect',{x:x,y:y,width:U,height:U,fill:'transparent',style:'cursor:pointer'},g);
+    (function(rr,cc2){ rect.addEventListener('click',function(){ onCellTap(rr,cc2); }); })(r,c);
+  }
+}
+function updateStatus(msg){
+  const el=document.getElementById('status');
+  if(msg){ el.textContent=msg; return; }
+  if(!board){ el.textContent=''; return; }
+  if(over){ el.textContent = (winner==='W'?'White':'Red')+' wins.'; return; }
+  const who=turn==='W'?'White':'Red';
+  if(phase==='shoot') el.textContent=who+' \u2014 fire an arrow: tap a glowing square.';
+  else if(selected) el.textContent=who+' \u2014 tap a glowing square to move, or tap the queen again to cancel.';
+  else el.textContent=who+' to move \u2014 tap one of the glowing queens.';
+}
+function render(){ renderGhosts(); renderPieces(); renderBow(); renderHit(); updateStatus(); }
+
+/* ============================ Movement / turns ============================ */
+function onCellTap(r,c){
+  if(over||busy||!board) return;
+  if(phase==='shoot'){
+    if(shooter && queenReach(board,shooter[0],shooter[1]).some(function(d){return eqd(d,r,c);})) shootArrow(shooter,[r,c]);
+    return;
+  }
+  if(selected){ const sr=selected[0],sc=selected[1];
+    if(sr===r&&sc===c){ selected=null; render(); return; }
+    if(queenReach(board,sr,sc).some(function(d){return eqd(d,r,c);})){ moveAmazon([sr,sc],[r,c]); return; }
+  }
+  const p=board[r][c];
+  if(sideOf(p)===turn){ selected=[r,c]; SND.select(); render(); return; }
+  selected=null; render();
+}
+function animateSlide(from,to,drawFn,hideFrom,cb){
+  anim={from:from,to:to,hideFrom:hideFrom}; render();
+  const p1=cc(from), p2=cc(to);
+  const mg=document.getElementById('moveG'); clear(mg);
+  const g=E('g',{filter:'url(#psh)'},mg); drawFn(g);
+  const dur=240, t0=performance.now();
+  function frame(now){ let u=Math.min(1,(now-t0)/dur); const e=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+    const x=p1.x+(p2.x-p1.x)*e, y=p1.y+(p2.y-p1.y)*e;
+    g.setAttribute('transform','translate('+x+' '+y+')');
+    if(u<1) requestAnimationFrame(frame); else { clear(mg); anim=null; cb(); }
+  }
+  requestAnimationFrame(frame);
+}
+function moveAmazon(from,to){
+  busy=true; selected=null;
+  const piece=board[from[0]][from[1]];
+  SND.move();
+  animateSlide(from,to,function(g){ drawShape(g,piece); },true,function(){
+    applyMove(board,from,to);
+    SND.land();
+    phase='shoot'; shooter=to;
+    busy=false; render();
+  });
+}
+function shootArrow(from,to){
+  busy=true;
+  clear(document.getElementById('ghostG'));   // remove target markers; queen + rest bow remain
+  spinBow(from,to,function(){
+    SND.whoosh();
+    animateSlide(from,to,function(g){ drawArrowFlat(g); },false,function(){
+      clear(document.getElementById('bowG'));
+      board[to[0]][to[1]]='X';
+      SND.thock();
+      const mover=turn, opp=(mover==='W')?'R':'W';
+      phase='move'; selected=null; shooter=null;
+      if(!hasAnyMove(board,opp)){ endGame(mover); return; }
+      turn=opp; busy=false; render();
+    });
+  });
+}
+function endGame(w){
+  over=true; winner=w; busy=false; selected=null; shooter=null; phase='move'; render();
+  SND.win();
+  const title=document.getElementById('bannertitle'), text=document.getElementById('bannertext');
+  title.textContent=(w==='W'?'White':'Red')+' Wins!';
+  text.textContent='The '+(w==='W'?'red':'white')+' queens are walled in with no move left. '+(w==='W'?'White':'Red')+' takes the board.';
+  document.getElementById('banner').classList.remove('hidden');
+}
+
+/* ============================ Start / init ============================ */
+function startGame(){
+  board=initBoard(); turn='W'; phase='move'; over=false; winner=null; busy=false; selected=null; shooter=null; anim=null;
+  clear(document.getElementById('moveG')); clear(document.getElementById('bowG'));
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('banner').classList.add('hidden');
+  render();
+}
+function init(){
+  buildStatic();
+  document.getElementById('playbtn').onclick=function(){ ac(); startGame(); };
+  document.getElementById('againbtn').onclick=function(){
+    document.getElementById('banner').classList.add('hidden');
+    document.getElementById('setup').classList.remove('hidden');
+  };
+}
+init();
+</script>
+</body>
+</html>
