@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ghost Camaro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0e0c;
+    --surface2: #242220;
+    --orange: #e07818;
+    --amber: #c49030;
+    --cream: #ede5d8;
+    --muted: #685e50;
+    --green: #4a9060;
+    --border: #332f28;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'Lora', Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 60px;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23g)'/%3E%3C/svg%3E");
+  }
+
+  /* ── SLIDER NAV ── */
+  .chapter-nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 60px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 0 32px;
+  }
+  .chapter-nav.visible { display: flex; }
+
+  .nav-inner {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .nav-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  /* The track area — this is what we measure for dragging */
+  .nav-track-wrap {
+    flex: 1;
+    position: relative;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  /* Segmented bar */
+  .nav-track {
+    width: 100%;
+    height: 6px;
+    display: flex;
+    gap: 3px;
+    position: relative;
+  }
+
+  .nav-seg {
+    flex: 1;
+    height: 100%;
+    border-radius: 1px;
+    background: #1e1c18;
+    transition: background 0.25s;
+  }
+  .nav-seg.reachable { background: #4a3a14; }
+  .nav-seg.current   { background: var(--orange); }
+
+  /* Pentagon thumb */
+  .nav-thumb {
+    position: absolute;
+    top: 50%;
+    width: 30px;
+    height: 30px;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    touch-action: none;
+    /* Pentagon pointing down */
+    clip-path: polygon(0% 0%, 100% 0%, 100% 62%, 50% 100%, 0% 62%);
+    background: var(--orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 6px;
+    transition: left 0.0s; /* no transition while dragging; JS handles it */
+    z-index: 10;
+    user-select: none;
+  }
+  .nav-thumb.snapping {
+    transition: left 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .nav-thumb:active { cursor: grabbing; }
+
+  .nav-thumb-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    color: var(--bg);
+    line-height: 1;
+  }
+
+  /* ── BOOK ── */
+  .book {
+    width: 100%;
+    max-width: 1000px;
+    padding: 0 0 80px;
+  }
+
+  .page {
+    display: none;
+    padding: 52px 40px 44px;
+    animation: pageIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  .page.active { display: block; }
+
+  @keyframes pageIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── COVER ── */
+  .cover-inner { display: flex; flex-direction: column; }
+  .cover-eyebrow {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 12px;
+    letter-spacing: 5px;
+    color: var(--amber);
+    margin-bottom: 20px;
+    margin-top: 48px;
+  }
+  .cover-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(80px, 14vw, 120px);
+    line-height: 0.88;
+    color: var(--cream);
+  }
+  .cover-title .accent { color: var(--orange); }
+  .cover-divider { width: 56px; height: 2px; background: var(--orange); margin: 20px 0 16px; }
+  .cover-subtitle {
+    font-size: 15px;
+    font-style: italic;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 36px;
+  }
+  .cover-subtitle strong { color: var(--amber); font-style: normal; }
+  .cover-img {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 32px;
+  }
+  .btn-begin {
+    padding: 18px 52px;
+    background: var(--orange);
+    border: none;
+    color: var(--bg);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 5px;
+    cursor: pointer;
+    transition: background 0.18s, transform 0.12s;
+    align-self: flex-start;
+  }
+  .btn-begin:hover { background: var(--amber); transform: translateY(-2px); }
+
+  /* ── TWO-COLUMN CHAPTER ── */
+  .chapter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+
+  .chapter-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: var(--amber);
+    margin-bottom: 6px;
+    margin-top: 36px;
+  }
+  .chapter-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1;
+    color: var(--cream);
+    margin-bottom: 24px;
+  }
+  .page-content {
+    font-size: 17px;
+    line-height: 1.85;
+    color: #d8d0c4;
+  }
+  .page-content p { margin-bottom: 16px; }
+  .page-content p:last-child { margin-bottom: 0; }
+  .page-content strong {
+    color: var(--orange);
+    font-weight: 600;
+    border-bottom: 1px solid rgba(224,120,24,0.35);
+    padding-bottom: 1px;
+  }
+
+  .col-media {
+    padding-top: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .chapter-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* ── QUIZ ── */
+  .quiz-section { display: flex; flex-direction: column; gap: 10px; }
+
+  .btn-question {
+    width: 100%;
+    padding: 14px 20px;
+    background: transparent;
+    border: 1px solid var(--orange);
+    color: var(--orange);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s, transform 0.1s;
+  }
+  .btn-question:hover { background: var(--orange); color: var(--bg); transform: translateY(-1px); }
+
+  .question-text {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    font-style: italic;
+    color: var(--cream);
+    line-height: 1.6;
+    display: none;
+  }
+
+  .answer-buttons { display: none; flex-direction: column; gap: 8px; }
+
+  .btn-answer {
+    padding: 13px 18px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--cream);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    text-align: left;
+    max-height: 72px;
+    overflow: hidden;
+  }
+  .btn-answer:hover:not(:disabled) {
+    border-color: var(--amber);
+    color: var(--amber);
+    background: rgba(196,144,48,0.07);
+  }
+  .btn-answer.correct {
+    border-color: var(--green) !important;
+    color: var(--green) !important;
+    background: rgba(74,144,96,0.1) !important;
+    animation: correctPop 0.35s ease;
+  }
+  @keyframes correctPop {
+    0% { transform: scale(1); } 40% { transform: scale(1.025); } 100% { transform: scale(1); }
+  }
+  .btn-answer.wrong { animation: wrongShake 0.28s ease; }
+  @keyframes wrongShake {
+    0% { transform: translateX(0); } 20% { transform: translateX(-7px); }
+    60% { transform: translateX(7px); } 100% { transform: translateX(0); }
+  }
+  .btn-answer.vanishing {
+    transition: opacity 0.35s ease, max-height 0.4s ease 0.28s,
+                padding 0.4s ease 0.28s, border-color 0.4s ease 0.28s !important;
+    opacity: 0; max-height: 0 !important;
+    padding-top: 0 !important; padding-bottom: 0 !important;
+    border-color: transparent !important; pointer-events: none;
+  }
+
+  /* Continue button (shown on revisited pages) */
+  .btn-continue {
+    width: 100%;
+    padding: 14px 20px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: border-color 0.18s, color 0.18s;
+  }
+  .btn-continue:hover { border-color: var(--orange); color: var(--orange); }
+
+  /* ── END PAGE ── */
+  .end-eyebrow {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 12px; letter-spacing: 5px;
+    color: var(--amber); margin-top: 56px; margin-bottom: 16px;
+  }
+  .end-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(60px, 12vw, 96px);
+    line-height: 0.9; color: var(--cream); margin-bottom: 28px;
+  }
+  .end-title span { color: var(--orange); }
+  .end-divider { width: 48px; height: 2px; background: var(--orange); margin-bottom: 28px; }
+  .end-text { font-size: 17px; line-height: 1.8; color: #9a9080; margin-bottom: 12px; }
+  .end-text strong { color: var(--amber); font-style: italic; }
+  .btn-restart {
+    margin-top: 44px; padding: 15px 40px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px; letter-spacing: 4px; cursor: pointer;
+    transition: border-color 0.18s, color 0.18s; display: inline-block;
+  }
+  .btn-restart:hover { border-color: var(--orange); color: var(--orange); }
+
+  @media (max-width: 640px) {
+    .chapter-grid { grid-template-columns: 1fr; gap: 28px; }
+    .col-media { padding-top: 0; }
+    .page { padding: 44px 20px 36px; }
+    .page-content { font-size: 16px; }
+    .nav-label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="chapter-nav" id="chapterNav">
+  <div class="nav-inner">
+    <span class="nav-label">CH 1</span>
+    <div class="nav-track-wrap" id="trackWrap">
+      <div class="nav-track" id="navTrack"></div>
+      <div class="nav-thumb" id="navThumb">
+        <span class="nav-thumb-label" id="thumbLabel">1</span>
+      </div>
+    </div>
+    <span class="nav-label">CH 7</span>
+  </div>
+</nav>
+
+<div class="book" id="book"></div>
+
+<script>
+const TOTAL = 7;
+const PAGES = [
+  { type: 'cover' },
+  {
+    chapter: 1, title: 'The War on the News', image: 'image-asset.jpeg',
+    content: `<p>Helge Meyer sat in his home in <strong>Denmark</strong>, watching the news. The pictures were awful. In a faraway country called Yugoslavia, a terrible war had broken out. Cities were on fire. Families had lost everything. And children — thousands of children — were going hungry.</p>
+<p>Most people watched and felt helpless. What could one person even do?</p>
+<p>But Helge wasn't most people. He had spent years in the Danish military as a special forces soldier. He had trained with America's Green Berets. He knew how to move fast. He knew how to stay calm when things got dangerous.</p>
+<p>And when he saw those hungry children on the screen, he made up his mind.</p>
+<p>He was going in.</p>`,
+    question: 'Where was Helge watching the news from?',
+    answers: ['Bosnia', 'Denmark', 'Germany'], correct: 'Denmark'
+  },
+  {
+    chapter: 2, title: 'The Ghost Camaro', image: 'image-asset3.png',
+    content: `<p>Helge had a plan, but he needed a car. He found a 1979 Chevrolet Camaro for sale on an American military base in Germany. It was a big, powerful muscle car — exactly what he had in mind.</p>
+<p>Then he went to the U.S. Army with his idea. He wanted to drive food and supplies into the war zone — alone. No soldiers, no convoys. Just him and his car.</p>
+<p>The Army said yes.</p>
+<p>Their mechanics got to work. They coated the Camaro in special matte <strong>black</strong> paint, the kind used on military aircraft. It could barely be seen at night, and didn't show up well on radar. They added armor to the doors, bulletproof glass, run-flat tires, night vision cameras, and a nitrous boost for extra speed. A battering ram went on the front in case he needed to smash through a roadblock.</p>
+<p>The car could carry nearly 900 pounds of supplies.</p>
+<p>The Ghost Camaro was born.</p>`,
+    question: 'What color was the Ghost Camaro painted for stealth?',
+    answers: ['Green', 'Gray', 'Black'], correct: 'Black'
+  },
+  {
+    chapter: 3, title: 'Into the Dark', image: 'gods-rambo-7.jpeg',
+    content: `<p>Helge liked to run his missions at <strong>night</strong>.</p>
+<p>In the dark, the black Camaro was nearly invisible. He would drive through checkpoints fast — too fast for anyone to react. Sometimes soldiers fired at him. He could hear bullets pinging off the armor. He kept driving.</p>
+<p>The roads were dangerous. Some were lined with landmines. Others were controlled by armed bandits who attacked aid trucks and stole everything inside. That's why the United Nations had stopped sending help into some areas — it was just too risky.</p>
+<p>But Helge kept going back.</p>
+<p>He didn't follow anyone's orders. He went wherever the need was greatest — to schools, orphanages, and villages cut off from the world. He brought food, medicine, clothes, diapers, and toys.</p>
+<p>And he drove that Camaro like his life depended on it.</p>
+<p>Because it did.</p>`,
+    question: 'When did Helge prefer to run his missions?',
+    answers: ['Dawn', 'Night', 'Noon'], correct: 'Night'
+  },
+  {
+    chapter: 4, title: 'No Weapons', image: '35166887_10211112363434486_1764993024762314752_n.avif',
+    content: `<p>Helge carried no gun. Not a single weapon.</p>
+<p>"Every time I go," he explained, "I ask God to let me go down, give out my stuff, and get back."</p>
+<p>He had no weapons.</p>
+<p>The Camaro was packed with supplies donated by American soldiers — $12,000 worth of food, clothes, diapers, toys, and medicine. Some of the toys came from LEGO, the famous Danish toy company.</p>
+<p>And on the very front of the bull bar — right in the middle of all that armor and steel — Helge attached one small thing: a bright yellow rubber <strong>duck</strong>.</p>
+<p>Even in the middle of a war, he wanted the children to see something cheerful coming their way.</p>`,
+    question: 'What was mounted on the front of the car?',
+    answers: ['Gun', 'Duck', 'Light'], correct: 'Duck'
+  },
+  {
+    chapter: 5, title: 'Close Calls', image: 'bullet.webp',
+    content: `<p>Being unarmed didn't mean being safe.</p>
+<p>Helge was shot at many times. Bullets hit the car. Snipers tracked him through their scopes. Once, a bullet struck his <strong>helmet</strong> — and the helmet saved his life.</p>
+<p>He stayed calm. That was his military training. He knew how to breathe through fear. He knew how to think clearly when everything went wrong.</p>
+<p>The Camaro helped too. It was fast. When trouble started, he floored it. The nitrous oxide gave him a burst of speed that most vehicles couldn't match. The run-flat tires meant that even with a bullet in them, he could keep going.</p>
+<p>He drove through Bosnia, Croatia, and later Kosovo. He did this not just for one year, but for more than a decade — from 1991 all the way to 2005.</p>
+<p>Through all of it, he never fired a single shot.</p>`,
+    question: "What saved Helge's life when a bullet struck?",
+    answers: ['Armor', 'Luck', 'Helmet'], correct: 'Helmet'
+  },
+  {
+    chapter: 6, title: 'A Baby on His Chest', image: '258287940_10219182021570896_1369921939485139417_n.jpg',
+    content: `<p>One night, Helge stopped at a home to deliver supplies. Inside, he found a family — an old man, a young mother, and her newborn baby. Everyone was dirty. Everyone was thin.</p>
+<p>Helge gave them soap, water, food, and baby formula. The mother washed herself and her child. The baby ate.</p>
+<p>They all sat together in silence. The only light came from a <strong>candle</strong>. The old man read quietly from his Koran. Helge read quietly from his Bible.</p>
+<p>Then, just as Helge was getting ready to leave, the young woman knocked on his window.</p>
+<p>She placed her newborn baby on his bare chest.</p>
+<p>No words. Just trust.</p>
+<p>Helge later wrote: "I will never forget this moving moment in my life."</p>
+<p>This is why he kept going back. Not for glory. Not for medals. For moments like this one.</p>`,
+    question: 'What lit the room during this moment?',
+    answers: ['Lamp', 'Candle', 'Fire'], correct: 'Candle'
+  },
+  {
+    chapter: 7, title: 'The Orange Camaro', image: 'orange.avif',
+    content: `<p>The war finally ended. Then another began. Helge kept driving.</p>
+<p>By the time his missions were over, Helge Meyer had made hundreds of runs into war zones. He had delivered food, medicine, and hope to thousands of people who had nothing left.</p>
+<p>He received medals and commendations from the U.S. Air Force and NATO. But the most important rewards weren't on paper. They were the children who got to eat. The families who made it through.</p>
+<p>Today, Helge still owns his Camaro. But it doesn't look the same.</p>
+<p>He repainted it <strong>orange</strong>.</p>
+<p>Bright, bold, impossible to miss. The Ghost Camaro that once hid in the dark now shines on the roads of Germany, where Helge lives today.</p>`,
+    question: 'What color is the Camaro today?',
+    answers: ['Black', 'Red', 'Orange'], correct: 'Orange'
+  },
+  { type: 'end' }
+];
+
+// ── STATE ─────────────────────────────────────────────────────────
+let current = 1;       // current chapter index (1–7)
+let maxReached = 1;    // furthest chapter reached
+const answered = new Set(); // chapters where question answered correctly
+
+// ── NAV SETUP ────────────────────────────────────────────────────
+const nav       = document.getElementById('chapterNav');
+const trackWrap = document.getElementById('trackWrap');
+const navTrack  = document.getElementById('navTrack');
+const thumb     = document.getElementById('navThumb');
+const thumbLbl  = document.getElementById('thumbLabel');
+
+// Build 7 segment divs
+for (let i = 0; i < TOTAL; i++) {
+  const seg = document.createElement('div');
+  seg.className = 'nav-seg';
+  navTrack.appendChild(seg);
+}
+
+function segmentCenterX(segIdx) {
+  // segIdx: 0-based
+  const segs = navTrack.querySelectorAll('.nav-seg');
+  const r = segs[segIdx].getBoundingClientRect();
+  const wr = trackWrap.getBoundingClientRect();
+  return r.left - wr.left + r.width / 2;
+}
+
+function updateNav() {
+  const segs = navTrack.querySelectorAll('.nav-seg');
+  segs.forEach((seg, i) => {
+    const ch = i + 1;
+    seg.className = 'nav-seg';
+    if (ch === current)        seg.classList.add('current');
+    else if (ch <= maxReached) seg.classList.add('reachable');
+  });
+  // Position thumb
+  const cx = segmentCenterX(current - 1);
+  thumb.style.left = cx + 'px';
+  thumbLbl.textContent = current;
+}
+
+// ── DRAG LOGIC ───────────────────────────────────────────────────
+let dragging = false;
+let dragChapter = current; // chapter being hovered while dragging
+
+thumb.addEventListener('pointerdown', e => {
+  dragging = true;
+  thumb.setPointerCapture(e.pointerId);
+  thumb.classList.remove('snapping');
+  e.preventDefault();
+});
+
+thumb.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const wr = trackWrap.getBoundingClientRect();
+  const x = e.clientX - wr.left;
+  const segW = wr.width / TOTAL;
+  let ch = Math.round(x / segW - 0.5) + 1;
+  ch = Math.max(1, Math.min(ch, maxReached));  // can't drag past maxReached
+  dragChapter = ch;
+  // Move thumb freely while dragging
+  const cx = segmentCenterX(ch - 1);
+  thumb.style.left = cx + 'px';
+  thumbLbl.textContent = ch;
+  // Update segment highlight live
+  const segs = navTrack.querySelectorAll('.nav-seg');
+  segs.forEach((seg, i) => {
+    const sc = i + 1;
+    seg.className = 'nav-seg';
+    if (sc === ch)             seg.classList.add('current');
+    else if (sc <= maxReached) seg.classList.add('reachable');
+  });
+});
+
+thumb.addEventListener('pointerup', () => {
+  if (!dragging) return;
+  dragging = false;
+  thumb.classList.add('snapping');
+  goTo(dragChapter);
+});
+
+thumb.addEventListener('pointercancel', () => { dragging = false; });
+
+// ── RENDER ───────────────────────────────────────────────────────
+function renderCover() {
+  return `<div class="cover-inner">
+    <div class="cover-eyebrow">A TRUE STORY</div>
+    <div class="cover-title">GHOST<br><span class="accent">CAMARO</span></div>
+    <div class="cover-divider"></div>
+    <div class="cover-subtitle">The Story of <strong>Helge Meyer</strong><br>and his phantom Camaro</div>
+    <img class="cover-img" src="image-asset6.png" alt="">
+    <button class="btn-begin" onclick="startReading()">BEGIN READING</button>
+  </div>`;
+}
+
+function renderChapter(page, idx) {
+  const alreadyAnswered = answered.has(idx);
+  const isLast = idx === TOTAL;
+
+  let quizHtml = '';
+  if (alreadyAnswered) {
+    // Show continue only if there's a next page to go to
+    if (!isLast) {
+      quizHtml = `<button class="btn-continue" onclick="goTo(${idx + 1})">CONTINUE →</button>`;
+    }
+  } else {
+    quizHtml = `
+      <div class="quiz-section">
+        <button class="btn-question" id="btnQ" onclick="revealQuestion()">QUESTION</button>
+        <div class="question-text" id="qText">${page.question}</div>
+        <div class="answer-buttons" id="aBtns">
+          ${page.answers.map(a =>
+            `<button class="btn-answer" onclick="handleAnswer(this,'${a}','${page.correct}',${idx})">${a.toUpperCase()}</button>`
+          ).join('')}
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="chapter-grid">
+      <div class="col-text">
+        <div class="chapter-label">CHAPTER ${page.chapter} OF 7</div>
+        <div class="chapter-title">${page.title}</div>
+        <div class="page-content">${page.content}</div>
+      </div>
+      <div class="col-media">
+        <img class="chapter-img" src="${page.image}" alt="">
+        ${quizHtml}
+      </div>
+    </div>`;
+}
+
+function renderEnd() {
+  return `
+    <div class="end-eyebrow">YOU FINISHED THE STORY</div>
+    <div class="end-title">THE<br><span>END</span></div>
+    <div class="end-divider"></div>
+    <p class="end-text">Helge Meyer made hundreds of runs into war zones over fourteen years. Unarmed, he delivered food, medicine, and hope to thousands of people who had nothing left.</p>
+    <p class="end-text">He still owns the Camaro. It's <strong>orange</strong> now.</p>
+    <button class="btn-restart" onclick="restart()">READ AGAIN</button>`;
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────────
+function goTo(ch) {
+  current = ch;
+  if (ch > maxReached) maxReached = ch;
+
+  const pageData = PAGES[ch]; // chapters are PAGES[1]–PAGES[7]
+  const div = document.createElement('div');
+  div.className = 'page active';
+  div.innerHTML = renderChapter(pageData, ch);
+
+  const book = document.getElementById('book');
+  book.innerHTML = '';
+  book.appendChild(div);
+
+  nav.classList.add('visible');
+  thumb.classList.add('snapping');
+  // Wait a tick for DOM, then update nav position
+  requestAnimationFrame(() => { requestAnimationFrame(updateNav); });
+  window.scrollTo({ top: 0 });
+}
+
+function startReading() {
+  goTo(1);
+}
+
+function showEnd() {
+  nav.classList.remove('visible');
+  const div = document.createElement('div');
+  div.className = 'page active';
+  div.innerHTML = renderEnd();
+  const book = document.getElementById('book');
+  book.innerHTML = '';
+  book.appendChild(div);
+  window.scrollTo({ top: 0 });
+}
+
+function restart() {
+  answered.clear();
+  maxReached = 1;
+  current = 1;
+  nav.classList.remove('visible');
+  const div = document.createElement('div');
+  div.className = 'page active';
+  div.innerHTML = renderCover();
+  const book = document.getElementById('book');
+  book.innerHTML = '';
+  book.appendChild(div);
+  window.scrollTo({ top: 0 });
+}
+
+function revealQuestion() {
+  document.getElementById('btnQ').style.display = 'none';
+  document.getElementById('qText').style.display = 'block';
+  document.getElementById('aBtns').style.display = 'flex';
+}
+
+function handleAnswer(btn, answer, correct, idx) {
+  if (answer === correct) {
+    btn.classList.add('correct');
+    document.querySelectorAll('.btn-answer').forEach(b => { b.disabled = true; });
+    answered.add(idx);
+    setTimeout(() => {
+      if (idx === TOTAL) showEnd();
+      else goTo(idx + 1);
+    }, 900);
+  } else {
+    btn.classList.add('wrong');
+    setTimeout(() => btn.classList.add('vanishing'), 0);
+  }
+}
+
+window.addEventListener('resize', () => { if (nav.classList.contains('visible')) updateNav(); });
+
+// ── INIT ─────────────────────────────────────────────────────────
+(function init() {
+  const div = document.createElement('div');
+  div.className = 'page active';
+  div.innerHTML = renderCover();
+  document.getElementById('book').appendChild(div);
+})();
+</script>
+</body>
+</html>
