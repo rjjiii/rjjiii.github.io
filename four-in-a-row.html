@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Connect Four</title>
+<style>
+  :root{
+    --gold:#ffd75e; --text:#e9e3d4; --text-dim:#a59c86;
+    --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+    --font-display:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;}
+  body{ min-height:100vh; font-family:var(--font-body); color:var(--text);
+    background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    background-attachment:fixed; -webkit-tap-highlight-color:transparent; }
+  :focus-visible{outline:2px solid var(--gold); outline-offset:3px; border-radius:6px;}
+  .table{position:fixed; inset:0; overflow:hidden;}
+  .core{position:absolute; inset:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;}
+  #board{ width:min(calc(100vw - 28px), calc((100dvh - 96px) * 1.1475)); height:auto; aspect-ratio:700/610; display:block; filter:drop-shadow(0 12px 34px rgba(0,0,0,0.55)); }
+  .status{font-family:var(--font-display); font-size:18px; color:var(--text); text-align:center; min-height:24px; max-width:calc(100vw - 28px);}
+  .overlay{position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:20; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);}
+  .hidden{display:none !important;}
+  .card{background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:30px 34px; max-width:440px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.6);}
+  .card h1{font-family:var(--font-display); font-size:28px; margin:0 0 2px; color:var(--gold); letter-spacing:.5px;}
+  .card .sub{font-size:13px; color:var(--text-dim); margin:0 0 16px; letter-spacing:1.5px; text-transform:uppercase;}
+  .card p{font-size:14px; color:var(--text-dim); line-height:1.6; margin:0 0 20px; text-align:left;}
+  button{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  button:hover{ border-color:rgba(255,215,94,0.85); }
+  button:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
+</style>
+</head>
+<body>
+<div class="table">
+  <div class="core">
+    <svg id="board" viewBox="0 0 700 610" xmlns="http://www.w3.org/2000/svg">
+      <defs id="defs">
+        <linearGradient id="rod" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#6f5430"/><stop offset="26%" stop-color="#c6a677"/><stop offset="47%" stop-color="#efe2c2"/><stop offset="64%" stop-color="#c2a472"/><stop offset="100%" stop-color="#664c2c"/></linearGradient>
+        <linearGradient id="rodBack" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#2c2820"/><stop offset="50%" stop-color="#574f43"/><stop offset="100%" stop-color="#272320"/></linearGradient>
+        <linearGradient id="baseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e6cb98"/><stop offset="55%" stop-color="#c2a06c"/><stop offset="100%" stop-color="#956f42"/></linearGradient>
+        <radialGradient id="glowhalo" cx="50%" cy="50%" r="50%"><stop offset="35%" stop-color="#ffc846" stop-opacity="0.7"/><stop offset="100%" stop-color="#ffc846" stop-opacity="0"/></radialGradient>
+        <radialGradient id="mW" cx="38%" cy="32%" r="68%"><stop offset="0%" stop-color="#ffffff"/><stop offset="26%" stop-color="#f3f3f6"/><stop offset="60%" stop-color="#d4d4db"/><stop offset="100%" stop-color="#a0a1ab"/></radialGradient>
+        <radialGradient id="mG" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="#9ccf98"/><stop offset="30%" stop-color="#2f7d3e"/><stop offset="66%" stop-color="#18512a"/><stop offset="100%" stop-color="#0a2e16"/></radialGradient>
+      </defs>
+      <g id="backG"></g>
+      <g id="marbleG"></g>
+      <g id="ghostG"></g>
+      <g id="pegG"></g>
+      <g id="baseG"></g>
+      <g id="fxG"></g>
+      <g id="hitG"></g>
+    </svg>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<div class="overlay" id="setup">
+  <div class="card">
+    <h1>Connect Four</h1>
+    <div class="sub">Four in a row</div>
+    <p>Drop marbles into the wooden rack &mdash; each falls between the dowels and stacks on the marbles below. A greyed marble waits above every open column and a gold ring marks where the next one will land; tap a column to drop. The first to line up four of their own marbles &mdash; across, up, or on either diagonal &mdash; wins. White drops first.</p>
+    <button id="startbtn">Start Game</button>
+  </div>
+</div>
+<div class="overlay hidden" id="banner">
+  <div class="card">
+    <h1 id="bannertitle"></h1>
+    <p id="bannersub" style="text-align:center;"></p>
+    <button id="againbtn">Play Again</button>
+  </div>
+</div>
+
+<script>
+/* ===================== Geometry ===================== */
+const COLX0=110, COL_SP=80, ROW_SP=68, MARBLE_R=34;
+const BY0=512;                          // bottom-row marble centre (rests on the base)
+const PEG_W=26, PEG_TOP=118, PEG_BOT=552, CAP=PEG_W/2;
+const CAPB=19, PEG_TOP_BACK=110;   // background row: a touch wider + taller so it peeks behind the front pegs
+const BASE_TOP=542, BASE_X=44, BASE_W=612;
+const IND_CY=78;                        // full-size greyed indicator marbles, sitting above the rack
+const DROP_START_Y=IND_CY;              // a dropped marble falls from the indicator position
+function colX(c){ return COLX0 + c*COL_SP; }
+function windowCY(r){ return BY0 - r*ROW_SP; }
+function bx(i){ return COLX0 - COL_SP/2 + i*COL_SP; }   // dowel centres (8 dowels -> 7 columns)
+const SVGNS='http://www.w3.org/2000/svg';
+function E(tag,attrs,parent){ const el=document.createElementNS(SVGNS,tag); for(const k in attrs) el.setAttribute(k,attrs[k]); if(parent) parent.appendChild(el); return el; }
+function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+/* ===================== Engine (validated) ===================== */
+const COLS=7, ROWS=6;
+function newBoard(){ const b=[]; for(let c=0;c<COLS;c++) b.push(new Array(ROWS).fill(null)); return b; }
+function dropRow(b,c){ for(let r=0;r<ROWS;r++) if(!b[c][r]) return r; return -1; }
+function legalCols(b){ const o=[]; for(let c=0;c<COLS;c++) if(dropRow(b,c)>=0) o.push(c); return o; }
+function isFull(b){ return legalCols(b).length===0; }
+function winningLine(b,c,r,p){ const dirs=[[1,0],[0,1],[1,1],[1,-1]];
+  for(let i=0;i<dirs.length;i++){ const dc=dirs[i][0], dr=dirs[i][1]; let line=[[c,r]];
+    for(let s=1;s<4;s++){ const nc=c+dc*s, nr=r+dr*s; if(nc<0||nc>=COLS||nr<0||nr>=ROWS||b[nc][nr]!==p) break; line.push([nc,nr]); }
+    for(let s=1;s<4;s++){ const nc=c-dc*s, nr=r-dr*s; if(nc<0||nc>=COLS||nr<0||nr>=ROWS||b[nc][nr]!==p) break; line.unshift([nc,nr]); }
+    if(line.length>=4) return line; }
+  return null; }
+function other(p){ return p==='A'?'B':'A'; }
+function colorKey(p){ return p==='A'?'W':'G'; }
+
+/* ===================== Audio ===================== */
+let actx=null, master=null;
+function ac(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); master=actx.createGain(); master.gain.value=0.9; var comp=actx.createDynamicsCompressor(); comp.threshold.setValueAtTime(-6,actx.currentTime); comp.knee.setValueAtTime(6,actx.currentTime); comp.ratio.setValueAtTime(16,actx.currentTime); comp.attack.setValueAtTime(0.003,actx.currentTime); comp.release.setValueAtTime(0.12,actx.currentTime); master.connect(comp); comp.connect(actx.destination); }catch(e){} } if(actx&&actx.state==='suspended') actx.resume(); return actx; }
+function tone(freq,dur,opts){ const a=ac(); if(!a||!master) return; opts=opts||{}; const t0=a.currentTime+0.018+(opts.delay||0); const o=a.createOscillator(); o.type=opts.type||'sine'; o.frequency.setValueAtTime(freq,t0); if(opts.glide) o.frequency.exponentialRampToValueAtTime(opts.glide,t0+dur); const g=a.createGain(); const vol=opts.vol||0.2; g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(vol,t0+0.005); g.gain.exponentialRampToValueAtTime(0.0006,t0+dur); o.connect(g); g.connect(master); o.start(t0); o.stop(t0+dur+0.03); }
+function noise(dur,opts){ const a=ac(); if(!a||!master) return; opts=opts||{}; const t0=a.currentTime+0.018+(opts.delay||0); const n=Math.max(1,Math.floor(a.sampleRate*dur)); const buf=a.createBuffer(1,n,a.sampleRate); const d=buf.getChannelData(0); const sh=opts.shape||3; for(let i=0;i<n;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/n,sh); } const src=a.createBufferSource(); src.buffer=buf; const f=a.createBiquadFilter(); f.type=opts.filter||'lowpass'; f.frequency.setValueAtTime(opts.freq||1800,t0); f.Q.setValueAtTime(opts.Q||0.7,t0); const g=a.createGain(); const vol=opts.vol||0.3; g.gain.setValueAtTime(vol,t0); g.gain.exponentialRampToValueAtTime(0.0005,t0+dur); src.connect(f); f.connect(g); g.connect(master); src.start(t0); }
+const SND={
+  click:function(){ noise(0.015,{vol:0.30,freq:3300,filter:'bandpass',Q:1.1,shape:2}); noise(0.065,{vol:0.28,freq:1150,filter:'lowpass',shape:3}); tone(820,0.05,{type:'sine',vol:0.13,glide:430}); tone(190,0.085,{type:'sine',vol:0.14,glide:120}); },
+  tap:function(){ tone(1300,0.05,{type:'sine',vol:0.10}); noise(0.02,{vol:0.09,freq:2200,filter:'lowpass'}); },
+  win:function(){ [523,659,784,1047].forEach(function(f,i){ tone(f,0.26,{type:'triangle',vol:0.22,delay:i*0.11}); }); }
+};
+
+/* ===================== State ===================== */
+let board=[], turn='A', phase='setup', winner=null, winLine=null, busy=false;
+
+function newGame(){
+  board=newBoard(); turn='A'; phase='play'; winner=null; winLine=null; busy=false;
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('banner').classList.add('hidden');
+  render();
+}
+function win(p){ phase='over'; winner=p; render(); showBanner(); }
+
+/* ===================== Drop + animation ===================== */
+function easeOutBounce(t){ const n1=7.5625, d1=2.75; if(t<1/d1) return n1*t*t; if(t<2/d1){ t-=1.5/d1; return n1*t*t+0.75; } if(t<2.5/d1){ t-=2.25/d1; return n1*t*t+0.9375; } t-=2.625/d1; return n1*t*t+0.984375; }
+function drop(c){
+  if(busy || phase!=='play') return; const r=dropRow(board,c); if(r<0) return;
+  busy=true; phase='anim'; render();
+  const cx=colX(c), y0=DROP_START_Y, y1=windowCY(r), dist=y1-y0;
+  const gl=document.getElementById('ghostG'); clear(gl); const g=ghostMarble(gl, cx, y0, MARBLE_R, colorKey(turn));
+  const dur=Math.round(300 + dist*0.55); const steps=Math.max(10,Math.round(dur/16)); let i=0, contacted=false;
+  const iv=setInterval(function(){ i++; const t=Math.min(1,i/steps); const e=easeOutBounce(t); const y=y0+dist*e;
+    g.setAttribute('transform','translate(0,'+(y-y0)+')');
+    if(!contacted && e>=0.999){ contacted=true; SND.click(); }
+    if(t>=1){ clearInterval(iv); SND.tap(); clear(gl); settle(c,r); }
+  }, 16);
+}
+function settle(c,r){
+  board[c][r]=turn;
+  const line=winningLine(board,c,r,turn); if(line){ winLine=line; win(turn); return; }
+  if(isFull(board)){ win(null); return; }
+  turn=other(turn); busy=false; phase='play'; render();
+}
+
+/* ===================== Rendering ===================== */
+function drawPeg(parent,x){
+  const sx=x+CAP, ex=x-CAP, midY=PEG_TOP+CAP;
+  const d='M '+(x-CAP)+' '+midY+' A '+CAP+' '+CAP+' 0 0 1 '+(x+CAP)+' '+midY+' L '+(x+CAP)+' '+PEG_BOT+' L '+(x-CAP)+' '+PEG_BOT+' Z';
+  E('path',{d:d,fill:'url(#rod)'},parent);
+  E('rect',{x:x-CAP+5,y:midY-2,width:5,height:(PEG_BOT-midY)-2,rx:2.5,fill:'rgba(255,252,240,0.42)'},parent);
+  E('ellipse',{cx:x-CAP*0.2,cy:midY+1,rx:CAP*0.5,ry:CAP*0.42,fill:'rgba(255,252,240,0.5)'},parent);
+  E('path',{d:d,fill:'none',stroke:'rgba(0,0,0,0.32)','stroke-width':1.2},parent);
+}
+function drawBackPeg(parent,x){
+  const midY=PEG_TOP_BACK+CAPB;
+  const d='M '+(x-CAPB)+' '+midY+' A '+CAPB+' '+CAPB+' 0 0 1 '+(x+CAPB)+' '+midY+' L '+(x+CAPB)+' '+PEG_BOT+' L '+(x-CAPB)+' '+PEG_BOT+' Z';
+  E('path',{d:d,fill:'url(#rodBack)',opacity:0.6},parent);
+  E('path',{d:d,fill:'none',stroke:'rgba(0,0,0,0.35)','stroke-width':1,opacity:0.55},parent);
+}
+function buildStatic(){
+  const bk=document.getElementById('backG'); clear(bk);
+  for(let i=0;i<8;i++) drawBackPeg(bk, bx(i));
+  const pg=document.getElementById('pegG'); clear(pg);
+  for(let i=0;i<8;i++) drawPeg(pg, bx(i));
+  const bsg=document.getElementById('baseG'); clear(bsg);
+  E('rect',{x:BASE_X,y:BASE_TOP,width:BASE_W,height:36,rx:9,fill:'url(#baseGrad)'},bsg);
+  E('rect',{x:BASE_X,y:BASE_TOP,width:BASE_W,height:7,rx:3,fill:'rgba(255,250,235,0.22)'},bsg);
+  E('rect',{x:BASE_X,y:BASE_TOP,width:BASE_W,height:36,rx:9,fill:'none',stroke:'rgba(0,0,0,0.40)','stroke-width':2},bsg);
+}
+function drawMarble(parent,x,y,r,key){
+  E('circle',{cx:x,cy:y,r:r,fill:'url(#m'+key+')'},parent);
+  E('circle',{cx:x,cy:y,r:r,fill:'none',stroke:'rgba(0,0,0,0.30)','stroke-width':1.1},parent);
+  const hi=(key==='W')?0.55:0.34;
+  E('ellipse',{cx:x-r*0.3,cy:y-r*0.36,rx:r*0.4,ry:r*0.28,fill:'#ffffff',opacity:hi},parent);
+  E('circle',{cx:x-r*0.38,cy:y-r*0.42,r:r*0.13,fill:'#ffffff',opacity:0.95},parent);
+  E('ellipse',{cx:x+r*0.18,cy:y+r*0.46,rx:r*0.34,ry:r*0.14,fill:'#ffffff',opacity:0.10},parent);
+}
+function ghostMarble(parent,x,y,r,key){ const grp=E('g',{},parent); drawMarble(grp,x,y,r,key); return grp; }
+
+function render(){
+  const marbleG=document.getElementById('marbleG'); clear(marbleG);
+  for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ if(board[c][r]) drawMarble(marbleG, colX(c), windowCY(r), MARBLE_R, colorKey(board[c][r])); }
+
+  const fx=document.getElementById('fxG'); clear(fx);
+  if(phase==='play' && !busy){
+    for(let c=0;c<COLS;c++){ const dr=dropRow(board,c); if(dr<0) continue; const x=colX(c);
+      const grp=E('g',{opacity:0.5},fx); drawMarble(grp, x, IND_CY, MARBLE_R, colorKey(turn));
+      const ly=windowCY(dr);
+      E('circle',{cx:x,cy:ly,r:MARBLE_R-3,fill:'none',stroke:'#ffd75e','stroke-width':3.5,opacity:0.95},fx);
+      E('circle',{cx:x,cy:ly,r:5.5,fill:'#ffd75e',opacity:0.95},fx);
+    }
+  }
+  if(winLine){ for(let i=0;i<winLine.length;i++){ const c=winLine[i][0], r=winLine[i][1]; E('circle',{cx:colX(c),cy:windowCY(r),r:MARBLE_R+9,fill:'url(#glowhalo)'},fx); }
+    const a=winLine[0], b=winLine[winLine.length-1]; E('line',{x1:colX(a[0]),y1:windowCY(a[1]),x2:colX(b[0]),y2:windowCY(b[1]),stroke:'#ffd75e','stroke-width':9,'stroke-linecap':'round',opacity:0.9},fx);
+    for(let i=0;i<winLine.length;i++){ const c=winLine[i][0], r=winLine[i][1]; E('circle',{cx:colX(c),cy:windowCY(r),r:MARBLE_R+3,fill:'none',stroke:'#ffd75e','stroke-width':3.5,opacity:0.97},fx); }
+  }
+
+  const hitG=document.getElementById('hitG'); clear(hitG);
+  if(phase==='play' && !busy){ for(let c=0;c<COLS;c++){ if(dropRow(board,c)<0) continue;
+    const h=E('rect',{x:bx(c),y:40,width:COL_SP,height:510,fill:'transparent',style:'cursor:pointer'},hitG);
+    h.onclick=(function(cc){ return function(){ drop(cc); }; })(c);
+  } }
+  updateStatus();
+}
+function updateStatus(){
+  const el=document.getElementById('status'); const NAME={A:'White',B:'Green'};
+  if(phase==='over'){ el.textContent = winner ? (NAME[winner]+' connects four!') : 'The rack is full \u2014 a draw.'; return; }
+  el.textContent='';
+}
+function showBanner(){
+  const NAME={A:'White',B:'Green'}; const t=document.getElementById('bannertitle'), s=document.getElementById('bannersub');
+  if(winner){ t.textContent=NAME[winner]+' wins'; s.textContent='Four in a row.'; } else { t.textContent='A draw'; s.textContent='The rack filled with no line of four.'; }
+  document.getElementById('banner').classList.remove('hidden'); SND.win();
+}
+
+/* ===================== Init ===================== */
+function init(){
+  buildStatic();
+  document.getElementById('startbtn').onclick=function(){ ac(); newGame(); };
+  document.getElementById('againbtn').onclick=function(){ document.getElementById('banner').classList.add('hidden'); document.getElementById('setup').classList.remove('hidden'); };
+}
+init();
+</script>
+</body>
+</html>

@@ -35,7 +35,7 @@
     min-height:100vh;
     font-family:var(--font-body);
     color:var(--text);
-    background:radial-gradient(130% 95% at 50% 24%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
     background-attachment:fixed;
     display:flex; align-items:center; justify-content:center;
     padding:clamp(14px,3vh,28px) 16px;
@@ -112,14 +112,13 @@
     color:#f6efe0; margin:0 0 14px;
   }
   .again{
-    font-family:var(--font-body); font-size:13px; font-weight:600; letter-spacing:.03em;
-    color:#221700; cursor:pointer; -webkit-appearance:none; appearance:none;
-    padding:9px 20px; border-radius:999px; border:1px solid rgba(0,0,0,.25);
-    background:linear-gradient(180deg, #f0c451, #d8a431);
-    transition:transform .12s, filter .2s;
+    font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em;
+    color:#ffe9a8; cursor:pointer; -webkit-appearance:none; appearance:none;
+    padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45);
+    background:linear-gradient(145deg,#3a4150,#272c36); box-shadow:0 2px 6px rgba(0,0,0,0.4);
   }
-  .again:hover{ filter:brightness(1.06); }
-  .again:active{ transform:translateY(1px); }
+  .again:hover{ border-color:rgba(255,215,94,0.85); }
+  .again:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
 
   /* ---- Subtle Cancel chip, floating at bottom centre (out of flow so the board stays centred) ---- */
   .cancel{
@@ -136,7 +135,7 @@
     opacity:0; pointer-events:none;
     transition:opacity .2s ease, color .2s, border-color .2s, background .2s;
   }
-  .cancel.show{ opacity:.66; pointer-events:auto; }
+  .cancel.show{ opacity:1; pointer-events:auto; }
   .cancel.show:hover{ opacity:1; color:var(--text); border-color:rgba(255,215,94,.5); background:rgba(255,255,255,.07); }
   .cancel svg{ width:12px; height:12px; }
 

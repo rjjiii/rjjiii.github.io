@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Rabbit Rescue</title>
+<title>Rabbits &amp; Fox</title>
 <style>
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;}
   body{
-    background:radial-gradient(circle at 50% 40%, #2b303b 0%, #13151b 100%);
-    color:#f0e6cc; font-family:'Avenir Next','Segoe UI',system-ui,sans-serif;
+    background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    color:#e9e3d4; font-family:'Avenir Next','Segoe UI',system-ui,sans-serif;
     min-height:100%; -webkit-tap-highlight-color:transparent; overflow:hidden;
   }
   .table{ position:fixed; inset:0; overflow:hidden; }
@@ -45,12 +45,12 @@
   .ptok.num{ background:radial-gradient(circle at 38% 32%, #e7d8b4, #c2ac82); color:#3a2a16; }
   .ptok.playable{ cursor:pointer; animation:tokpulse 1.3s ease-in-out infinite; }
   @keyframes tokpulse{0%,100%{box-shadow:0 0 0 2.5px rgba(255,215,94,0.85),0 0 8px rgba(255,215,94,0.4);}50%{box-shadow:0 0 0 3px rgba(255,215,94,1),0 0 16px rgba(255,215,94,0.75);}}
-  .foxstack{ position:fixed; right:14px; bottom:14px; z-index:15; display:none; align-items:center; gap:5px; padding:4px 9px; border-radius:9px; background:linear-gradient(160deg,rgba(74,44,26,0.7),rgba(44,26,16,0.7)); border:1.5px solid rgba(210,124,51,0.6); box-shadow:0 2px 8px rgba(0,0,0,0.45); white-space:nowrap; }
-  .foxstack .fxlabel{ font-family:Georgia,serif; font-weight:700; font-size:15px; color:#e9a06a; margin-right:1px; }
-  .foxstack .fxtok{ width:26px;height:26px;border-radius:50%; display:inline-flex;align-items:center;justify-content:center; font-weight:800;font-size:13px; box-shadow:0 2px 3px rgba(0,0,0,0.35), inset 0 1px 2px rgba(255,255,255,0.35); border:1.5px solid rgba(0,0,0,0.15); }
-  .foxstack .fxtok.plus{ background:radial-gradient(circle at 38% 32%, #f0d680, #c99f37); color:#3a2a16; }
-  .foxstack .fxtok.num{ background:radial-gradient(circle at 38% 32%, #e7d8b4, #c2ac82); color:#3a2a16; }
-  .foxstack .fxmult{ font-family:Georgia,serif; font-weight:700; font-size:15px; color:#e9a06a; margin-left:1px; }
+  .foxstack{ position:fixed; right:14px; bottom:14px; z-index:15; display:none; align-items:center; gap:6px; padding:5px 10px; border-radius:11px; background:rgba(22,17,14,0.62); border:1px solid rgba(210,124,51,0.55); box-shadow:0 2px 8px rgba(0,0,0,0.45); }
+  .foxstack .fxlabel{ font-size:11px; font-weight:700; color:#e9a06a; letter-spacing:0.3px; }
+  .foxstack .fxtok{ width:18px;height:18px;border-radius:50%; display:inline-flex;align-items:center;justify-content:center; font-size:9px;font-weight:800;color:#3a2a16; border:1px solid rgba(0,0,0,0.18); }
+  .foxstack .fxtok.plus{ background:radial-gradient(circle at 38% 32%, #f0d680, #c99f37); }
+  .foxstack .fxtok.num{ background:radial-gradient(circle at 38% 32%, #e7d8b4, #c2ac82); }
+  .foxstack .fxmore{ font-size:10px;color:#e9a06a;font-weight:700; }
 
   /* dice */
   .dice{ display:flex; gap:7px; padding:5px; border-radius:13px; }
@@ -71,13 +71,14 @@
   .ptoken.glow{ cursor:pointer; box-shadow:0 0 0 2.5px rgba(255,215,94,0.95), 0 0 12px rgba(255,215,94,0.55); }
   .ptoken.used{ opacity:0.3; filter:grayscale(0.6); }
 
-  button{ font-family:inherit; font-size:14px; font-weight:700; padding:7px 16px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.5); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
-  button:hover{ background:linear-gradient(145deg,#444c5d,#2d333f); }
-  button:active{ transform:translateY(1px); }
+  button{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  button:hover{ border-color:rgba(255,215,94,0.85); }
+  button:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
+  :focus-visible{ outline:2px solid #ffd75e; outline-offset:3px; border-radius:6px; }
 
   .overlay,.banner{ position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:20; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
   .hidden{ display:none !important; }
-  .card{ background:linear-gradient(160deg,#2e333f,#1c2029); border:1.5px solid rgba(255,215,94,0.35); border-radius:18px; padding:26px 32px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.6); max-width:90vw; }
+  .card{ background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:26px 32px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.6); max-width:90vw; }
   .card h1{ font-family:'Iowan Old Style',Georgia,serif; font-weight:700; font-size:25px; margin:0 0 8px; color:#ffe9a8; letter-spacing:.5px; }
   .card p{ color:#c8bd9f; font-size:14px; margin:0 0 18px; line-height:1.55; }
   .pcounts{ display:flex; gap:10px; justify-content:center; }
@@ -96,11 +97,23 @@
   .flipglow{ animation:flippulse 1.5s ease-in-out infinite; }
   @keyframes flippulse{ 0%,100%{ opacity:0.45; } 50%{ opacity:1; } }
 
+  @media (prefers-reduced-motion:reduce){
+    .ptok.playable, .dice.ready, .selring, .tapglow, .ghostpulse, .flipglow{ animation:none !important; }
+  }
+
   /* portrait: keep the HUD compact under the board */
   @media (orientation:portrait){
     .hud{ flex-direction:row; flex-wrap:wrap; justify-content:center; gap:12px; }
     #boardsvg{ height:auto; width:min(calc(100vw - 100px), calc((100dvh - 210px)*0.8148)); }
   }
+  .deselect{ margin-top:2px; display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border-radius:999px;
+    font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.03em; color:#a59c86;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); cursor:pointer;
+    -webkit-appearance:none; appearance:none; opacity:0; pointer-events:none;
+    transition:opacity .2s ease, color .2s, border-color .2s, background .2s; }
+  .deselect.show{ opacity:1; pointer-events:auto; }
+  .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
+  @media (prefers-reduced-motion:reduce){ .deselect{ transition:none; } }
 </style>
 </head>
 <body>
@@ -133,6 +146,7 @@
     </svg>
     <div class="hud">
       <div class="status" id="status"></div>
+      <button class="deselect" id="deselect" type="button" aria-label="Deselect the current piece">✕ Deselect</button>
       <div class="tray"><div class="played" id="played"></div><div class="dice" id="dice"></div></div>
     </div>
   </div>
@@ -141,8 +155,8 @@
 
 <div class="overlay" id="setup">
   <div class="card">
-    <h1>Rabbit Rescue</h1>
-    <p>Run through the forest together. Move every rabbit up from the den, through the forest, and to the meadow before the fox slips past.<br><br>How many players?</p>
+    <h1>Rabbits &amp; Fox</h1>
+    <p>A cooperative dash through the forest. Move every rabbit from the den to the meadow before the fox slips out the far side.<br><br>How many players?</p>
     <div class="pcounts">
       <button class="pcount" data-n="1">1</button>
       <button class="pcount" data-n="2">2</button>
@@ -395,7 +409,7 @@ function endGame(win){
   gameOver=true; won=win; phase='gameover'; busy=false; renderAll();
   if(win) SND.win(); else SND.lose();
   document.getElementById('bannertitle').textContent = win?'The warren is safe!':'Outfoxed!';
-  document.getElementById('bannertext').textContent = win?'Every rabbit reached the meadow before the fox.':'The fox slipped out of the forest.';
+  document.getElementById('bannertext').textContent = win?'Every rabbit reached the meadow before the fox could escape.':'The fox slipped out of the forest while rabbits were still inside.';
   document.getElementById('banner').classList.remove('hidden');
 }
 
@@ -519,28 +533,25 @@ function drawRabbitShape(grp, idx, faceLeft){
   E('circle',{cx:21,cy:-15,r:1.7,fill:'#4c6339'},grp);   // dark-green nose
 }
 function drawFoxShape(grp){
-  const wood='#d27c33',hi='#ef9f5b',sh='#9a5418',inner='#7a3d18',tip='#f0ddc0';
-  // characteristic foxy swish: a bold S-curve sweeping up and back, tapering to a curled point
-  E('path',{d:'M -2 31 C -13 32 -23 26 -26 14 C -29 3 -27 -13 -18 -22 C -14 -27 -9 -30 -5 -31 C -10 -22 -13 -10 -12 2 C -11 13 -7 22 -1 27 C 1 29 0 30 -2 31 Z',fill:wood},grp);
-  // pale fox-tail tip
-  E('path',{d:'M -5 -31 C -10 -29 -13 -24 -13 -18 C -10 -21 -7 -26 -4 -30 Z',fill:tip,opacity:0.9},grp);
-  // faint shadow where the tail tucks behind the body
-  E('path',{d:'M -3 27 C -7 14 -5 -4 2 -10',fill:'none',stroke:inner,opacity:0.4,'stroke-width':1.6,'stroke-linecap':'round'},grp);
+  const wood='#d27c33',hi='#ef9f5b',sh='#9a5418',inner='#7a3d18';
+  // bushy tail as a swaying flame: thick swoosh at the base, tapering to a sharp point
+  E('path',{d:'M 0 33 C -10 33 -19 28 -23 17 C -26 7 -25 -9 -19 -16 C -16 -21 -12 -25 -9 -27 C -11 -19 -14 -9 -13 2 C -12 12 -8 20 -2 25 C 1 28 2 31 0 33 Z',fill:wood},grp);
+  // faint shadow marking the gap between tail and body
+  E('path',{d:'M -6 27 C -9 13 -7 -4 1 -10',fill:'none',stroke:inner,opacity:0.4,'stroke-width':1.6,'stroke-linecap':'round'},grp);
   // sharper pointed ears
   E('path',{d:'M -2.5 0 L 0 -19 L 3.5 0 Z',fill:wood,transform:'translate(4 -30) rotate(-13)'},grp);
   E('path',{d:'M -2.5 0 L 0 -19 L 3.5 0 Z',fill:wood,transform:'translate(11 -31) rotate(9)'},grp);
   E('path',{d:'M -1.2 -2 L 0 -14 L 1.7 -2 Z',fill:inner,opacity:0.6,transform:'translate(4 -30) rotate(-13)'},grp);
   E('path',{d:'M -1.2 -2 L 0 -14 L 1.7 -2 Z',fill:inner,opacity:0.6,transform:'translate(11 -31) rotate(9)'},grp);
-  // hind base on the ground
+  // base with an emphasized leading (front) foot
   E('ellipse',{cx:1,cy:34,rx:12.5,ry:4.2,fill:sh},grp);
   E('ellipse',{cx:1,cy:32.8,rx:11.5,ry:3.7,fill:wood},grp);
+  E('path',{d:'M 8 30 C 12 30 18 31 18 34.5 C 18 37 12 37 8 36 Z',fill:wood},grp);
+  E('line',{x1:0,y1:30,x2:0,y2:35,stroke:sh,'stroke-width':1.2,opacity:0.5},grp);
   // body arcing forward
   E('path',{d:'M -3 32 C -8 18 -6 -3 4 -10 C 9 -13 15 -11 17 -4 C 15 7 12 21 9 32 Z',fill:wood},grp);
-  // visible reaching foreleg + paw (in front of the chest)
-  E('path',{d:'M 9 0 C 14 7 18 16 21 24 C 22 27 23 29 24 31 C 22 34 16 34 13 31 C 11 22 8 11 6 3 Z',fill:wood},grp);
-  E('path',{d:'M 13 31 C 16 34 22 34 24 31',fill:'none',stroke:sh,'stroke-width':1.4,opacity:0.5,'stroke-linecap':'round'},grp);
-  E('line',{x1:17,y1:31,x2:17.5,y2:34,stroke:sh,'stroke-width':1.1,opacity:0.45},grp);
-  E('line',{x1:20.5,y1:30,x2:21,y2:33,stroke:sh,'stroke-width':1.1,opacity:0.45},grp);
+  // very subtle forepaw down the chest
+  E('path',{d:'M 12 -1 C 14.5 9 14.5 21 12.5 30',fill:'none',stroke:sh,opacity:0.38,'stroke-width':1.6,'stroke-linecap':'round'},grp);
   // large head + sharper, longer snout
   E('circle',{cx:8,cy:-19,r:15,fill:wood},grp);
   E('path',{d:'M 11 -24 L 37 -15 L 13 -7 Z',fill:wood},grp);
@@ -618,10 +629,10 @@ function renderFoxStack(){
   const el=document.getElementById('foxstack'); if(!el) return;
   if(!foxStack || foxStack.length===0){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='flex';
-  const n=foxStack.length, t=foxStack[0];
-  let html='<span class="fxlabel">Fox:</span>';
-  html+='<span class="fxtok '+(t.type==='plus'?'plus':'num')+'">'+(t.type==='plus'?'+1':t.value)+'</span>';
-  if(n>1) html+='<span class="fxmult">\u00d7'+n+'</span>';
+  let html='<span class="fxlabel">Fox\u2019s loot</span>';
+  const show=Math.min(foxStack.length,6);
+  for(let i=0;i<show;i++){ const t=foxStack[i]; html+='<span class="fxtok '+(t.type==='plus'?'plus':'num')+'">'+(t.type==='plus'?'+1':t.value)+'</span>'; }
+  if(foxStack.length>6) html+='<span class="fxmore">+'+(foxStack.length-6)+'</span>';
   el.innerHTML=html;
 }
 
@@ -649,7 +660,7 @@ function renderPlayed(){
   if(phase==='move' && vals[2]){ if(vals[2].used){ d.classList.add('used'); } else { d.onclick=function(){ useValue(2); }; if(selected!==null) d.classList.add('glow'); } }
   el.appendChild(d);
 }
-function renderControls(){ /* deselect handled by tapping the selected rabbit again */ }
+function renderControls(){ const _db=document.getElementById('deselect'); if(_db) _db.classList.toggle('show', selected!==null); }
 function updateStatus(msg){
   const el=document.getElementById('status');
   if(msg){ el.textContent=msg; return; }
@@ -657,14 +668,14 @@ function updateStatus(msg){
   if(phase==='fox'){ el.textContent = dice.length ? ('The fox rolls '+dice[0]+' and '+dice[1]+(foxBonus?' + a stolen +1\u2026':'\u2026')) : 'The fox stirs\u2026'; return; }
   const who='Player '+(turn+1);
   if(phase==='token'){
-    if(!handEmpty()) el.textContent=who+' \u2014 tap one of your glowing tokens.';
+    if(!handEmpty()) el.textContent=who+' \u2014 play one of your glowing tokens.';
     else if(!flippedThisTurn) el.textContent=who+' \u2014 no tokens: tap any glowing tile to flip it.';
     else el.textContent=who+' \u2014 tap the glowing dice to roll.';
   } else if(phase==='roll'){ el.textContent=who+' \u2014 tap the glowing dice to roll.'; }
   else if(phase==='rolling'){ el.textContent=who+' \u2014 rolling\u2026'; }
   else if(phase==='move'){ const ml=movesLeft+' move'+(movesLeft===1?'':'s')+' left';
     if(selected===null) el.textContent=who+' \u2014 tap a glowing rabbit. ('+ml+')';
-    else el.textContent=who+' \u2014 tap a die or space to move the rabbit. ('+ml+')';
+    else el.textContent=who+' \u2014 tap a die to move it. ('+ml+')';
   } else el.textContent='';
 }
 
@@ -676,6 +687,7 @@ function init(){
   buildStatic();
   const els=document.querySelectorAll('.pcount');
   for(let i=0;i<els.length;i++){ (function(b){ b.onclick=function(){ ac(); newGame(parseInt(b.getAttribute('data-n'),10)); }; })(els[i]); }
+  document.getElementById('deselect').onclick=function(){ if(selected!==null){ selected=null; renderAll(); } };
   document.getElementById('againbtn').onclick=function(){
     document.getElementById('banner').classList.add('hidden');
     document.getElementById('setup').classList.remove('hidden');

@@ -33,7 +33,7 @@
     min-height:100vh;
     font-family:var(--font-body);
     color:var(--text);
-    background:radial-gradient(130% 95% at 50% 24%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
     background-attachment:fixed;
     display:flex; flex-direction:column; align-items:center;
     padding:clamp(18px,4vw,40px) 16px;
@@ -212,7 +212,7 @@
     opacity:0; pointer-events:none;
     transition:opacity .2s ease, color .2s, border-color .2s, background .2s;
   }
-  .deselect.show{ opacity:.66; pointer-events:auto; }
+  .deselect.show{ opacity:1; pointer-events:auto; }
   .deselect.show:hover{ opacity:1; color:var(--text); border-color:rgba(255,215,94,.5); background:rgba(255,255,255,.07); }
   .deselect svg{ width:12px; height:12px; }
 
