@@ -29,6 +29,26 @@
   button{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
   button:hover{ border-color:rgba(255,215,94,0.85); }
   button:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
+  .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px;
+    border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36);
+    color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .fsbtn .fs-exit{ display:none; }
+  .fsbtn.fs-on .fs-enter{ display:none; }
+  .fsbtn.fs-on .fs-exit{ display:block; }
+  @keyframes pulseGlow{ 0%,100%{opacity:.22} 50%{opacity:.68} }
+  @keyframes pulseRing{ 0%,100%{opacity:.45} 50%{opacity:1.0} }
+  .pulseGlow{ animation:pulseGlow 1.5s ease-in-out infinite; }
+  .pulseRing{ animation:pulseRing 1.5s ease-in-out infinite; }
+  .deselect{ margin-top:2px; display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border-radius:999px;
+    font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.03em; color:#a59c86;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); cursor:pointer;
+    -webkit-appearance:none; appearance:none; opacity:0; pointer-events:none;
+    transition:opacity .2s ease, color .2s, border-color .2s, background .2s; }
+  .deselect.show{ opacity:1; pointer-events:auto; }
+  .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
+  @media (prefers-reduced-motion:reduce){ .pulseGlow, .pulseRing{ animation:none !important; } .deselect{ transition:none; } }
 </style>
 </head>
 <body>
@@ -52,10 +72,15 @@
       <g id="hitG"></g>
     </svg>
     <div class="status" id="status"></div>
+    <button class="deselect" id="deselect" type="button" aria-label="Deselect the current column">✕ Deselect</button>
   </div>
 </div>
 
 <div class="overlay" id="setup">
+      <button class="fsbtn" id="fsbtn" type="button" aria-label="Toggle fullscreen">
+        <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
   <div class="card">
     <h1>Connect Four</h1>
     <div class="sub">Four in a row</div>
@@ -126,8 +151,9 @@ function win(p){ phase='over'; winner=p; render(); showBanner(); }
 
 /* ===================== Drop + animation ===================== */
 function easeOutBounce(t){ const n1=7.5625, d1=2.75; if(t<1/d1) return n1*t*t; if(t<2/d1){ t-=1.5/d1; return n1*t*t+0.75; } if(t<2.5/d1){ t-=2.25/d1; return n1*t*t+0.9375; } t-=2.625/d1; return n1*t*t+0.984375; }
+let selected=-1;
 function drop(c){
-  if(busy || phase!=='play') return; const r=dropRow(board,c); if(r<0) return;
+  if(busy || phase!=='play') return; const r=dropRow(board,c); if(r<0) return; selected=-1;
   busy=true; phase='anim'; render();
   const cx=colX(c), y0=DROP_START_Y, y1=windowCY(r), dist=y1-y0;
   const gl=document.getElementById('ghostG'); clear(gl); const g=ghostMarble(gl, cx, y0, MARBLE_R, colorKey(turn));
@@ -180,27 +206,31 @@ function drawMarble(parent,x,y,r,key){
 }
 function ghostMarble(parent,x,y,r,key){ const grp=E('g',{},parent); drawMarble(grp,x,y,r,key); return grp; }
 
-function render(){
-  const marbleG=document.getElementById('marbleG'); clear(marbleG);
-  for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ if(board[c][r]) drawMarble(marbleG, colX(c), windowCY(r), MARBLE_R, colorKey(board[c][r])); }
-
+function drawFx(){
   const fx=document.getElementById('fxG'); clear(fx);
   if(phase==='play' && !busy){
-    for(let c=0;c<COLS;c++){ const dr=dropRow(board,c); if(dr<0) continue; const x=colX(c);
-      const grp=E('g',{opacity:0.5},fx); drawMarble(grp, x, IND_CY, MARBLE_R, colorKey(turn));
+    for(let c=0;c<COLS;c++){ const dr=dropRow(board,c); if(dr<0) continue; const x=colX(c); const sel=(c===selected);
+      const grp=E('g',{opacity:sel?0.95:0.42},fx); drawMarble(grp, x, IND_CY, MARBLE_R, colorKey(turn));
       const ly=windowCY(dr);
-      E('circle',{cx:x,cy:ly,r:MARBLE_R-3,fill:'none',stroke:'#ffd75e','stroke-width':3.5,opacity:0.95},fx);
-      E('circle',{cx:x,cy:ly,r:5.5,fill:'#ffd75e',opacity:0.95},fx);
+      if(sel) E('circle',{cx:x,cy:ly,r:MARBLE_R+7,fill:'url(#glowhalo)','class':'pulseGlow'},fx);
+      E('circle',{cx:x,cy:ly,r:MARBLE_R-3,fill:'none',stroke:'#ffd75e','stroke-width':sel?4.5:3.5,opacity:sel?1:0.55,'class':sel?'pulseRing':''},fx);
+      E('circle',{cx:x,cy:ly,r:5.5,fill:'#ffd75e',opacity:sel?1:0.55},fx);
     }
   }
   if(winLine){ for(let i=0;i<winLine.length;i++){ const c=winLine[i][0], r=winLine[i][1]; E('circle',{cx:colX(c),cy:windowCY(r),r:MARBLE_R+9,fill:'url(#glowhalo)'},fx); }
     const a=winLine[0], b=winLine[winLine.length-1]; E('line',{x1:colX(a[0]),y1:windowCY(a[1]),x2:colX(b[0]),y2:windowCY(b[1]),stroke:'#ffd75e','stroke-width':9,'stroke-linecap':'round',opacity:0.9},fx);
     for(let i=0;i<winLine.length;i++){ const c=winLine[i][0], r=winLine[i][1]; E('circle',{cx:colX(c),cy:windowCY(r),r:MARBLE_R+3,fill:'none',stroke:'#ffd75e','stroke-width':3.5,opacity:0.97},fx); }
   }
-
+  const _db=document.getElementById('deselect'); if(_db) _db.classList.toggle('show', phase==='play' && !busy && selected>=0);
+}
+function render(){
+  const marbleG=document.getElementById('marbleG'); clear(marbleG);
+  for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ if(board[c][r]) drawMarble(marbleG, colX(c), windowCY(r), MARBLE_R, colorKey(board[c][r])); }
+  drawFx();
   const hitG=document.getElementById('hitG'); clear(hitG);
   if(phase==='play' && !busy){ for(let c=0;c<COLS;c++){ if(dropRow(board,c)<0) continue;
     const h=E('rect',{x:bx(c),y:40,width:COL_SP,height:510,fill:'transparent',style:'cursor:pointer'},hitG);
+    h.onpointerdown=(function(cc){ return function(){ if(cc===selected){ drop(cc); } else { selected=cc; drawFx(); } }; })(c);
     h.onclick=(function(cc){ return function(){ drop(cc); }; })(c);
   } }
   updateStatus();
@@ -220,9 +250,28 @@ function showBanner(){
 function init(){
   buildStatic();
   document.getElementById('startbtn').onclick=function(){ ac(); newGame(); };
+  document.getElementById('deselect').onclick=function(){ selected=-1; drawFx(); };
   document.getElementById('againbtn').onclick=function(){ document.getElementById('banner').classList.add('hidden'); document.getElementById('setup').classList.remove('hidden'); };
 }
 init();
+
+/* ---- fullscreen: setup screen only; auto-exits when a game ends ---- */
+window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
+window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+(function(){
+  var b=document.getElementById("fsbtn");
+  if(b){
+    var sync=function(){ b.classList.toggle("fs-on", !!window.fsElement()); };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    b.onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+  }
+  var bn=document.getElementById("banner");
+  if(bn && window.MutationObserver){
+    new MutationObserver(function(){ if(!bn.classList.contains("hidden")) window.fsExit(); }).observe(bn,{attributes:true,attributeFilter:["class"]});
+  }
+})();
 </script>
 </body>
 </html>
