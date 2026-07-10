@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Bul</title>
+<title>Bul (Puluc)</title>
 <style>
   :root{
     --gold:#ffd75e; --text:#e9e3d4; --text-dim:#a59c86;
@@ -35,13 +35,31 @@
   .card h1{font-family:var(--font-display); font-size:28px; margin:0 0 4px; color:var(--gold);}
   .card .sub{font-size:13px; color:var(--text-dim); margin:0 0 16px; letter-spacing:0.5px;}
   .card p{font-size:14px; color:var(--text-dim); line-height:1.55; margin:0 0 20px; text-align:left;}
-  button{font-family:inherit; font-size:14px; font-weight:700; padding:10px 24px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.5); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4);}
-  button:hover{ filter:brightness(1.12); }
+  button{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  button:hover{ border-color:rgba(255,215,94,0.85); }
+  button:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
 
-  .kglow{ animation:kglowp 1.2s ease-in-out infinite; }
-  @keyframes kglowp{0%,100%{opacity:.85;}50%{opacity:.28;}}
-  .kpulse{ animation:kpulse 1.2s ease-in-out infinite; }
-  @keyframes kpulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .pulseGlow{ animation:pulseGlow 1.5s ease-in-out infinite; }
+  @keyframes pulseGlow{0%,100%{opacity:.22;}50%{opacity:.68;}}
+  .pulseRing{ animation:pulseRing 1.5s ease-in-out infinite; }
+  @keyframes pulseRing{0%,100%{opacity:.45;}50%{opacity:1.0;}}
+  @media (prefers-reduced-motion:reduce){ .pulseGlow, .pulseRing{ animation:none !important; } }
+  .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px;
+    border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36);
+    color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .fsbtn .fs-exit{ display:none; }
+  .fsbtn.fs-on .fs-enter{ display:none; }
+  .fsbtn.fs-on .fs-exit{ display:block; }
+  .deselect{ margin-top:6px; display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border-radius:999px;
+    font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.03em; color:#a59c86;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); cursor:pointer;
+    -webkit-appearance:none; appearance:none; opacity:0; pointer-events:none;
+    transition:opacity .2s ease, color .2s, border-color .2s, background .2s; }
+  .deselect.show{ opacity:1; pointer-events:auto; }
+  .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
+  @media (prefers-reduced-motion:reduce){ .deselect{ transition:none; } }
 </style>
 </head>
 <body>
@@ -53,7 +71,7 @@
         <linearGradient id="wood" x1="0" y1="0" x2="0.85" y2="1"><stop offset="0%" stop-color="#855f3a"/><stop offset="38%" stop-color="#5e4128"/><stop offset="100%" stop-color="#311e0d"/></linearGradient>
         <pattern id="grain" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(63)"><rect width="6.5" height="13" fill="rgba(0,0,0,0.11)"/><rect x="6.5" width="6.5" height="13" fill="rgba(255,240,210,0.03)"/></pattern>
         <filter id="psh" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.45"/></filter>
-        <radialGradient id="glowhalo" cx="50%" cy="50%" r="50%"><stop offset="35%" stop-color="#ffc846" stop-opacity="0.55"/><stop offset="100%" stop-color="#ffc846" stop-opacity="0"/></radialGradient>
+        <radialGradient id="glowhalo" cx="50%" cy="50%" r="50%"><stop offset="35%" stop-color="#ffc846" stop-opacity="0.7"/><stop offset="100%" stop-color="#ffc846" stop-opacity="0"/></radialGradient>
         <linearGradient id="kLight" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f3e6bf"/><stop offset="100%" stop-color="#cdb074"/></linearGradient>
         <linearGradient id="kDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4a3a26"/><stop offset="100%" stop-color="#241a10"/></linearGradient>
         <linearGradient id="sandstone" x1="0.05" y1="0" x2="0.95" y2="1"><stop offset="0" stop-color="#c2a079"/><stop offset="0.10" stop-color="#b06a44"/><stop offset="0.30" stop-color="#b87049"/><stop offset="0.40" stop-color="#dcc9a6"/><stop offset="0.47" stop-color="#b26a44"/><stop offset="0.62" stop-color="#a45d38"/><stop offset="0.72" stop-color="#cdb791"/><stop offset="0.80" stop-color="#b06a44"/><stop offset="1" stop-color="#9a5734"/></linearGradient>
@@ -64,18 +82,24 @@
       <g id="cityG"></g>
       <g id="trackG"></g>
       <g id="ghostG"></g>
+      <g id="selG"></g>
     </svg>
     <div class="hud">
       <div class="status" id="status"></div>
+      <button class="deselect" id="deselect" type="button" aria-label="Deselect the current stone">✕ Deselect</button>
     </div>
   </div>
 </div>
 
 <div class="overlay" id="setup">
+      <button class="fsbtn" id="fsbtn" type="button" aria-label="Toggle fullscreen">
+        <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
   <div class="card">
-    <h1>Bul</h1>
+    <h1>Bul <span style="font-size:15px;color:var(--text-dim);font-family:var(--font-body);">/ Puluc</span></h1>
     <div class="sub">A Maya running-fight game</div>
-    <p>Two sides race five stones in opposite directions across the same narrow lane. Land on an enemy stone to capture and carry it. Carry captives off the far side of the lane to remove them from the game. The last player with any stones remaining on the lane wins.</p>
+    <p>Two sides race five stones up the same narrow lane. Land on an enemy stone to capture it &mdash; it rides beneath you from then on. Carry your captives all the way to the enemy's city and they're destroyed for good, while your own stone heads home to go out again. Lose all five stones, captured or destroyed, and the lane falls.</p>
     <button id="startbtn">Start Game</button>
   </div>
 </div>
@@ -108,7 +132,7 @@ const COL={
   A:{base:'#d98841',hi:'#f3b478',sh:'#9a5420'},   // Sand (warm orange)
   B:{base:'#2c2c30',hi:'#56565c',sh:'#141417'}    // Black
 };
-const NAME={A:'Light', B:'Dark'};
+const NAME={A:'Sand', B:'Black'};
 // fixed (non-flickering) surface flecks that give the stones a matte, granular look
 const BASALT_FLECKS=[[-0.32,-0.18,0.16,'#777d84',0.5],[0.22,-0.05,0.12,'#3f4549',0.45],[-0.08,0.30,0.18,'#4d535a',0.42],[0.34,0.18,0.10,'#787e85',0.5],[0.05,-0.32,0.09,'#414750',0.4]];
 const SAND_FLECKS=[[-0.18,-0.22,0.16,'#dccaa9',0.30],[0.22,0.12,0.13,'#9a5734',0.24],[0.30,-0.26,0.10,'#e0d2b4',0.28]];
@@ -229,7 +253,7 @@ function openingRoll(){
   let a=rollKernels().value, b=rollKernels().value, tries=0;
   while(a===b && tries<20){ a=rollKernels().value; b=rollKernels().value; tries++; }
   turn = (a>b) ? 'A' : 'B';
-  document.getElementById('status').textContent = NAME[turn]+' goes first.';
+  document.getElementById('status').textContent = NAME.A+' throws '+a+', '+NAME.B+' throws '+b+' \u2014 '+NAME[turn]+' goes first.';
   setTimeout(function(){ phase='preroll'; renderAll(); }, 1700);
 }
 
@@ -259,7 +283,7 @@ function performMove(kind, moverId){
   const mover=pieceById(moverId); const color=mover.color; const roll=rollValue;
   if(kind==='enter' && !legal.enter) return;
   if(kind==='advance' && legal.advance.indexOf(moverId)<0) return;
-  busy=true; phase='animating';
+  busy=true; phase='animating'; selected=null;
   const colX=columnX(mover.col);
   let fromY, targetPos, homecoming=false;
   if(kind==='enter'){ fromY=cityCenterY(color); targetPos=(color==='A')?roll:(10-roll); }
@@ -398,7 +422,7 @@ function renderCities(){
       const x=columnX(p.col);
       const wrap=E('g',{},g);
       drawStone(wrap, x, cy, color, STONE_R, entryLegal);
-      if(entryLegal){ wrap.setAttribute('style','cursor:pointer'); wrap.onclick=(function(id){ return function(){ performMove('enter', id); }; })(p.id); }
+      if(entryLegal){ wrap.setAttribute('style','cursor:pointer'); wrap.onpointerdown=(function(id){ return function(){ if(selected&&selected.id===id){ performMove('enter', id); } else { selected={id:id,kind:'enter'}; drawSel(); } }; })(p.id); wrap.onclick=(function(id){ return function(){ performMove('enter', id); }; })(p.id); }
     });
   });
 }
@@ -416,7 +440,7 @@ function renderTrack(){
     const movable=(phase==='choose'&&turn===top.color&&legal.advance.indexOf(occId)>=0);
     const wrap=E('g',{},g);
     drawStone(wrap, x, y, top.color, STONE_R, movable);
-    if(movable){ wrap.setAttribute('style','cursor:pointer'); wrap.onclick=(function(id){ return function(){ performMove('advance', id); }; })(occId); }
+    if(movable){ wrap.setAttribute('style','cursor:pointer'); wrap.onpointerdown=(function(id){ return function(){ if(selected&&selected.id===id){ performMove('advance', id); } else { selected={id:id,kind:'advance'}; drawSel(); } }; })(occId); wrap.onclick=(function(id){ return function(){ performMove('advance', id); }; })(occId); }
   }
 }
 
@@ -431,7 +455,7 @@ function drawStrip(color, x, ys, tumbling){
   const ready = live && phase==='preroll' && !busy;
   const top=Math.min.apply(null,ys), bot=Math.max.apply(null,ys);
   if(ready){
-    E('rect',{x:x-21,y:top-KH/2-7,width:42,height:(bot-top)+KH+14,rx:15,fill:'url(#glowhalo)','class':'kglow'},g);
+    E('rect',{x:x-21,y:top-KH/2-7,width:42,height:(bot-top)+KH+14,rx:15,fill:'url(#glowhalo)','class':'pulseGlow'},g);
   }
   for(let i=0;i<4;i++){
     let dark;
@@ -444,12 +468,12 @@ function drawStrip(color, x, ys, tumbling){
       stroke: dark?'#7c5f30':'#33240f','stroke-width': dark?2.2:2.6,
       opacity:op,filter:'url(#psh)'},g);
     if(ready){   // crisp pulsing gold outline so the kernels-to-throw read clearly
-      E('rect',{x:x-KW/2,y:ys[i]-KH/2,width:KW,height:KH,rx:11,fill:'none',stroke:'#ffd75e','stroke-width':3.5,'class':'kpulse'},g);
+      E('rect',{x:x-KW/2,y:ys[i]-KH/2,width:KW,height:KH,rx:11,fill:'none',stroke:'#ffd75e','stroke-width':3.5,'class':'pulseRing'},g);
     }
   }
   if(ready){   // only the active player's strip can be tapped, so only one row rolls
     const hit=E('rect',{x:x-KW/2-8,y:top-KH/2-11,width:KW+16,height:(bot-top)+KH+22,fill:'transparent',style:'cursor:pointer'},g);
-    hit.onclick=throwKernels;
+    hit.onpointerdown=throwKernels;
   }
 }
 
@@ -467,20 +491,64 @@ function updateStatus(){
   }
 }
 
+let selected=null;
+function landingOf(id, kind){
+  const p=pieceById(id); const roll=rollValue; const cx=columnX(p.col);
+  if(kind==='enter'){ const tp=(p.color==='A')?roll:(10-roll); return {x:cx, y:rowY(tp)}; }
+  const np=(p.color==='A')?p.pos+roll:p.pos-roll;
+  const home=(p.color==='A'&&np>=10)||(p.color==='B'&&np<=0);
+  if(home){ const enemy=(p.color==='A')?'B':'A'; return {x:cx, y:cityCenterY(enemy)}; }
+  return {x:cx, y:rowY(np)};
+}
+function drawSel(){
+  const sg=document.getElementById('selG'); clear(sg);
+  if(selected && phase==='choose' && !busy){
+    const p=pieceById(selected.id); const cx=columnX(p.col);
+    const fromY = selected.kind==='enter' ? cityCenterY(p.color) : rowY(p.pos);
+    E('circle',{cx:cx,cy:fromY,r:STONE_R+4,fill:'none',stroke:'#ffd75e','stroke-width':3.5},sg);
+    const L=landingOf(selected.id, selected.kind);
+    E('circle',{cx:L.x,cy:L.y,r:STONE_R+9,fill:'url(#glowhalo)','class':'pulseGlow'},sg);
+    E('circle',{cx:L.x,cy:L.y,r:STONE_R-1,fill:'none',stroke:'#ffd75e','stroke-width':3,'class':'pulseRing'},sg);
+    E('circle',{cx:L.x,cy:L.y,r:5.5,fill:'#ffd75e','class':'pulseRing'},sg);
+    const h=E('circle',{cx:L.x,cy:L.y,r:STONE_R+6,fill:'transparent',style:'cursor:pointer'},sg);
+    h.onpointerdown=function(){ if(selected) performMove(selected.kind, selected.id); };
+    h.onclick=function(){ if(selected) performMove(selected.kind, selected.id); };
+  }
+  const _db=document.getElementById('deselect'); if(_db) _db.classList.toggle('show', phase==='choose' && !busy && selected!==null);
+}
 function renderAll(){
-  renderKernels(false); renderCities(); renderTrack(); updateStatus();
+  renderKernels(false); renderCities(); renderTrack(); drawSel(); updateStatus();
 }
 
 /* ============================ Init ============================ */
 function init(){
   buildStatic();
   document.getElementById('startbtn').onclick=function(){ ac(); newGame(); };
+  document.getElementById('deselect').onclick=function(){ selected=null; drawSel(); };
   document.getElementById('againbtn').onclick=function(){
     document.getElementById('banner').classList.add('hidden');
     document.getElementById('setup').classList.remove('hidden');
   };
 }
 init();
+
+/* ---- fullscreen: setup screen only; auto-exits when a game ends ---- */
+window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
+window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+(function(){
+  var b=document.getElementById("fsbtn");
+  if(b){
+    var sync=function(){ b.classList.toggle("fs-on", !!window.fsElement()); };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    b.onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+  }
+  var bn=document.getElementById("banner");
+  if(bn && window.MutationObserver){
+    new MutationObserver(function(){ if(!bn.classList.contains("hidden")) window.fsExit(); }).observe(bn,{attributes:true,attributeFilter:["class"]});
+  }
+})();
 </script>
 </body>
 </html>
