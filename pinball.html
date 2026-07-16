@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>Versus Pinball</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; user-select: none; }
+  body {
+    background: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+  }
+  #wrap {
+    position: relative;
+    box-shadow: 0 0 50px rgba(0,0,0,0.85);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #c9a66b;
+  }
+  canvas {
+    display: block;
+    background: transparent;
+  }
+  #ui {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  #score { display: none; }
+  #msg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    background: rgba(0,0,0,0.75);
+    padding: 12px 20px;
+    border-radius: 14px;
+    line-height: 1.4;
+    z-index: 5;
+    pointer-events: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .corner {
+    position: absolute;
+    pointer-events: all;
+    z-index: 10;
+  }
+  #tl {
+    top: 0; left: 0;
+    width: 50%; height: 28%;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+    background: rgba(52, 152, 219, 0.15);
+  }
+  #tr {
+    top: 0; right: 0;
+    width: 50%; height: 28%;
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+    background: rgba(52, 152, 219, 0.15);
+  }
+  #bl {
+    bottom: 0; left: 0;
+    width: 50%; height: 28%;
+    clip-path: polygon(0 0, 0 100%, 100% 100%);
+    background: rgba(231, 76, 60, 0.15);
+  }
+  #br {
+    bottom: 0; right: 0;
+    width: 50%; height: 28%;
+    clip-path: polygon(100% 0, 0 100%, 100% 100%);
+    background: rgba(231, 76, 60, 0.15);
+  }
+  .corner:active {
+    background: rgba(255, 220, 80, 0.45) !important;
+  }
+
+  /* ── Start screen ── */
+  #startScreen {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 30;
+    pointer-events: all;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+  }
+  #startScreen h1 {
+    font-size: 26px;
+    margin-bottom: 32px;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  .btn-row {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    align-items: center;
+  }
+  .mode-btn {
+    width: 118px;
+    height: 138px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    position: relative;
+    pointer-events: all;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      repeating-linear-gradient(
+        95deg,
+        #c9a66b 0px,
+        #b8955a 3px,
+        #d4b47a 6px,
+        #a67c45 10px,
+        #c9a66b 14px
+      );
+    box-shadow:
+      0 1px 0 rgba(255,240,200,0.45),
+      0 4px 10px rgba(0,0,0,0.5),
+      inset 0 2px 0 rgba(255,255,255,0.35),
+      inset 0 -3px 4px rgba(0,0,0,0.35),
+      inset 2px 0 3px rgba(255,255,255,0.12),
+      inset -2px 0 3px rgba(0,0,0,0.18);
+    transition: transform 0.1s;
+  }
+  .mode-btn:active {
+    transform: scale(0.96);
+  }
+  .mode-btn::before {
+    content: '';
+    position: absolute;
+    inset: 11px;
+    border-radius: 7px;
+    background: #0a6b0a;
+    box-shadow:
+      inset 0 4px 8px rgba(0,0,0,0.55),
+      inset 0 -2px 3px rgba(255,255,255,0.06),
+      inset 2px 0 4px rgba(0,0,0,0.25),
+      inset -2px 0 4px rgba(0,0,0,0.25);
+  }
+  .mode-btn span.num {
+    position: relative;
+    z-index: 2;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    color: #f8f8f8;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.55);
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+  }
+  .checker {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    z-index: 3;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .checker.red {
+    background: radial-gradient(circle at 35% 30%, #ff6b6b, #e74c3c 55%, #c0392b);
+    bottom: 18px;
+  }
+  .checker.blue {
+    background: radial-gradient(circle at 35% 30%, #5dade2, #3498db 55%, #1a5276);
+    top: 18px;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="520" height="860"></canvas>
+  <div id="ui">
+    <div id="score">0  —  0</div>
+    <div id="msg" style="display:none">BLUE TO SERVE<br>Drag to aim &amp; release</div>
+    <div class="corner" id="tl"></div>
+    <div class="corner" id="tr"></div>
+    <div class="corner" id="bl"></div>
+    <div class="corner" id="br"></div>
+  </div>
+  <div id="startScreen">
+    <h1>How many players?</h1>
+    <div class="btn-row">
+      <button class="mode-btn" id="btn1p">
+        <span class="num">1</span>
+        <div class="checker red"></div>
+      </button>
+      <button class="mode-btn" id="btn2p">
+        <span class="num">2</span>
+        <div class="checker blue"></div>
+        <div class="checker red"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+const msgEl = document.getElementById('msg');
+const scoreEl = document.getElementById('score');
+const startScreen = document.getElementById('startScreen');
+
+// ── Physics ──
+const G = 0.20;
+const FRICTION = 0.987;
+const REST = 0.74;
+const HILL = 0.078;
+const FLIP_OMEGA = 0.24;
+const RETURN_OMEGA = 0.20;
+
+// ── PLAYFIELD POLYGON ──
+const fieldPoly = [
+  {x: 210, y: 72},
+  {x: 310, y: 72},
+  {x: 492, y: 195},
+  {x: 492, y: 665},
+  {x: 310, y: 788},
+  {x: 210, y: 788},
+  {x: 28,  y: 665},
+  {x: 28,  y: 195}
+];
+
+// Flippers – dual timers per flipper
+const flippers = {
+  tl: { px: 145, py: 110, len: 95, rest: -0.25, act: 0.80, ang: -0.25, prevAng: -0.25, omega: 0, on: false, team: 'blue', contactUntil: 0, cooldownUntil: 0 },
+  tr: { px: 375, py: 110, len: 95, rest:  3.39, act: 2.34, ang:  3.39, prevAng:  3.39, omega: 0, on: false, team: 'blue', contactUntil: 0, cooldownUntil: 0 },
+  bl: { px: 145, py: 745, len: 95, rest:  0.25, act: -0.80, ang:  0.25, prevAng:  0.25, omega: 0, on: false, team: 'red', contactUntil: 0, cooldownUntil: 0 },
+  br: { px: 375, py: 745, len: 95, rest: -3.39, act: -2.34, ang: -3.39, prevAng: -3.39, omega: 0, on: false, team: 'red', contactUntil: 0, cooldownUntil: 0 }
+};
+
+// Pegs
+const pegs = [
+  {x:140,y:325,r:10,c:'#3498db'}, {x:195,y:200,r:15,c:'#3498db'},
+  {x:325,y:200,r:15,c:'#3498db'}, {x:450,y:325,r:10,c:'#3498db'},
+  {x:70,y:325,r:10,c:'#3498db'}, {x:380,y:325,r:10,c:'#3498db'},
+  {x:210,y:325,r:10,c:'#3498db'}, {x:310,y:325,r:10,c:'#3498db'},
+  {x:260,y:395,r:15,c:'#3498db'},
+  {x:140,y:535,r:10,c:'#e74c3c'}, {x:195,y:660,r:15,c:'#e74c3c'},
+  {x:325,y:660,r:15,c:'#e74c3c'}, {x:450,y:535,r:10,c:'#e74c3c'},
+  {x:70,y:535,r:10,c:'#e74c3c'},  {x:380,y:535,r:10,c:'#e74c3c'},
+  {x:210,y:535,r:10,c:'#e74c3c'}, {x:310,y:535,r:10,c:'#e74c3c'},
+  {x:260,y:465,r:15,c:'#e74c3c'}
+];
+
+let score = { blue: 0, red: 0 };
+let ball = null;
+let serving = true;
+let serveTeam = 'blue';
+let serveFlippersEnabled = false;
+
+// ── 1P / 2P mode ──
+let vsCPU = false;
+let humanTeam = 'red';
+
+// ── CPU countdown (3 s metallic timer) ──
+let cpuCountdownStart = 0;
+const COUNTDOWN_MS = 3000;
+
+// ── Serve aim state ──
+let aiming = false;
+let aimStartX = 0, aimStartY = 0;
+let aimCurX = 0, aimCurY = 0;
+const MAX_AIM_DIST = 150;
+const MIN_AIM_DIST = 28;
+
+function drawGreenField() {
+  ctx.beginPath();
+  ctx.moveTo(fieldPoly[0].x, fieldPoly[0].y);
+  for (let i = 1; i < fieldPoly.length; i++) {
+    ctx.lineTo(fieldPoly[i].x, fieldPoly[i].y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#0a6b0a';
+  ctx.fill();
+}
+
+function drawHillRings() {
+  const cx = W / 2, cy = H / 2;
+  for (let i = 8; i >= 0; i--) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 35 + i * 36, 0, Math.PI * 2);
+    ctx.strokeStyle = i % 2 === 0 ? 'rgba(15,80,15,0.5)' : 'rgba(10,60,10,0.4)';
+    ctx.lineWidth = 16;
+    ctx.stroke();
+  }
+}
+
+function drawBrownBoard() {
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  ctx.moveTo(fieldPoly[0].x, fieldPoly[0].y);
+  for (let i = 1; i < fieldPoly.length; i++) {
+    ctx.lineTo(fieldPoly[i].x, fieldPoly[i].y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#c9a66b';
+  ctx.fill('evenodd');
+}
+
+function drawWoodgrain() {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  ctx.moveTo(fieldPoly[0].x, fieldPoly[0].y);
+  for (let i = 1; i < fieldPoly.length; i++) {
+    ctx.lineTo(fieldPoly[i].x, fieldPoly[i].y);
+  }
+  ctx.closePath();
+  ctx.clip('evenodd');
+
+  ctx.strokeStyle = 'rgba(140, 85, 40, 0.22)';
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = 'round';
+  for (let x = 3; x < W; x += 6) {
+    ctx.beginPath();
+    const wobble = Math.sin(x * 0.035) * 5 + Math.cos(x * 0.02) * 3;
+    ctx.moveTo(x + wobble, 0);
+    ctx.lineTo(x - wobble * 0.7, H);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = 'rgba(110, 60, 25, 0.18)';
+  ctx.lineWidth = 1.8;
+  for (let x = 10; x < W; x += 23) {
+    ctx.beginPath();
+    const wobble = Math.cos(x * 0.028) * 8;
+    ctx.moveTo(x + wobble, 0);
+    ctx.lineTo(x - wobble * 0.5, H);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = 'rgba(210, 160, 90, 0.12)';
+  ctx.lineWidth = 1.1;
+  for (let x = 18; x < W; x += 31) {
+    ctx.beginPath();
+    const wobble = Math.sin(x * 0.04) * 4;
+    ctx.moveTo(x + wobble, 0);
+    ctx.lineTo(x - wobble * 0.6, H);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawRecessedEdge() {
+  ctx.beginPath();
+  ctx.moveTo(fieldPoly[0].x, fieldPoly[0].y);
+  for (let i = 1; i < fieldPoly.length; i++) {
+    ctx.lineTo(fieldPoly[i].x, fieldPoly[i].y);
+  }
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(fieldPoly[0].x, fieldPoly[0].y);
+  for (let i = 1; i < fieldPoly.length; i++) {
+    ctx.lineTo(fieldPoly[i].x, fieldPoly[i].y);
+  }
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+}
+
+function drawDrains() {
+  ctx.fillStyle = '#111';
+
+  ctx.beginPath();
+  ctx.moveTo(200, 0);
+  ctx.lineTo(320, 0);
+  ctx.lineTo(330, 82);
+  ctx.lineTo(190, 82);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(200, H);
+  ctx.lineTo(320, H);
+  ctx.lineTo(330, 778);
+  ctx.lineTo(190, 778);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawWhiteMarkings() {
+  const cx = W / 2, cy = H / 2;
+
+  ctx.strokeStyle = '#f8f8f8';
+  ctx.fillStyle = '#f8f8f8';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(55, cy);
+  ctx.lineTo(W - 55, cy);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 62, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.lineWidth = 6;
+  ctx.strokeRect(cx - 70, 48, 140, 36);
+  ctx.strokeRect(cx - 70, H - 84, 140, 36);
+
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(cx, 125, 50, 0.2 * Math.PI, 0.8 * Math.PI);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, H - 125, 50, 1.2 * Math.PI, 1.8 * Math.PI);
+  ctx.stroke();
+}
+
+function drawScores() {
+  const cx = W / 2;
+  const cy = H / 2;
+  const yOffset = 38;
+
+  ctx.save();
+  ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.fillStyle = 'rgba(52, 152, 219, 0.55)';
+  ctx.fillText(String(score.blue), cx - 50, cy - yOffset);
+
+  ctx.fillStyle = 'rgba(231, 76, 60, 0.55)';
+  ctx.fillText(String(score.red), cx + 50, cy - yOffset);
+
+  ctx.translate(cx, cy + yOffset);
+  ctx.rotate(Math.PI);
+
+  ctx.fillStyle = 'rgba(52, 152, 219, 0.55)';
+  ctx.fillText(String(score.blue), 50, 0);
+
+  ctx.fillStyle = 'rgba(231, 76, 60, 0.55)';
+  ctx.fillText(String(score.red), -50, 0);
+
+  ctx.restore();
+}
+
+function drawPegs() {
+  for (const p of pegs) {
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.arc(p.x + 2, p.y + 3, p.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    const g = ctx.createRadialGradient(p.x - 3, p.y - 3, 1, p.x, p.y, p.r);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.3, p.c);
+    g.addColorStop(1, shade(p.c, -45));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function shade(hex, a) {
+  let r = Math.max(0, Math.min(255, parseInt(hex.slice(1,3),16) + a));
+  let g = Math.max(0, Math.min(255, parseInt(hex.slice(3,5),16) + a));
+  let b = Math.max(0, Math.min(255, parseInt(hex.slice(5,7),16) + a));
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawFlipper(f) {
+  const tx = f.px + Math.cos(f.ang) * f.len;
+  const ty = f.py + Math.sin(f.ang) * f.len;
+
+  const mainColor = f.team === 'blue' ? '#3498db' : '#e74c3c';
+  const darkColor = f.team === 'blue' ? '#1a5276' : '#922b21';
+
+  const locked = !serveFlippersEnabled && f.team === serveTeam;
+  ctx.globalAlpha = locked ? 0.35 : 1;
+
+  ctx.strokeStyle = mainColor;
+  ctx.lineWidth = 15;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(f.px, f.py);
+  ctx.lineTo(tx, ty);
+  ctx.stroke();
+
+  ctx.strokeStyle = darkColor;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(f.px, f.py);
+  ctx.lineTo(tx, ty);
+  ctx.stroke();
+
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(f.px, f.py, 6.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+}
+
+function drawBall() {
+  if (!ball) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  ctx.beginPath();
+  ctx.ellipse(ball.x + 3, ball.y + 5, ball.r * 0.92, ball.r * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const g = ctx.createRadialGradient(
+    ball.x - ball.r * 0.38, ball.y - ball.r * 0.42, 2,
+    ball.x, ball.y, ball.r * 1.15
+  );
+  g.addColorStop(0, '#f2f2f2');
+  g.addColorStop(0.28, '#c0c0c0');
+  g.addColorStop(0.7, '#7a7a7a');
+  g.addColorStop(1, '#3a3a3a');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.78)';
+  ctx.beginPath();
+  ctx.arc(ball.x - 5, ball.y - 6, 4.2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawAimPreview() {
+  if (!aiming || !ball) return;
+
+  const dx = aimStartX - aimCurX;
+  const dy = aimStartY - aimCurY;
+  const dist = Math.hypot(dx, dy);
+
+  if (dist < 8) return;
+
+  const power = Math.min(dist, MAX_AIM_DIST) / MAX_AIM_DIST;
+  const len = Math.hypot(dx, dy) || 1;
+  const dirX = dx / len;
+  const dirY = dy / len;
+
+  const lineLen = 40 + power * 110;
+
+  const r = 255;
+  const g = Math.floor(220 - power * 140);
+  const b = Math.floor(40 - power * 40);
+  const col = `rgb(${r},${g},${Math.max(0,b)})`;
+
+  ctx.save();
+  ctx.strokeStyle = col;
+  ctx.fillStyle = col;
+  ctx.lineWidth = 4 + power * 3;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.85;
+
+  ctx.beginPath();
+  ctx.moveTo(ball.x, ball.y);
+  ctx.lineTo(ball.x + dirX * lineLen, ball.y + dirY * lineLen);
+  ctx.stroke();
+
+  const ax = ball.x + dirX * lineLen;
+  const ay = ball.y + dirY * lineLen;
+  const ah = 12 + power * 6;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(ax - dirX * ah + dirY * ah * 0.5, ay - dirY * ah - dirX * ah * 0.5);
+  ctx.lineTo(ax - dirX * ah - dirY * ah * 0.5, ay - dirY * ah + dirX * ah * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 0.35 + power * 0.4;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r + 8 + power * 18, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// ── Metallic 3-second countdown timer (chrome matched to pinball) ──
+function drawCountdown(progress) {
+  const cx = W / 2;
+  const cy = H / 2;
+  const outerR = 52;
+  const innerR = 40;
+
+  ctx.save();
+
+  // Soft elliptical drop shadow (same treatment as ball)
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  ctx.beginPath();
+  ctx.ellipse(cx + 3, cy + 5, outerR * 0.95, outerR * 0.55, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Metallic outer ring – same gradient language as the pinball
+  const metal = ctx.createRadialGradient(
+    cx - outerR * 0.38, cy - outerR * 0.42, 2,
+    cx, cy, outerR * 1.15
+  );
+  metal.addColorStop(0, '#f2f2f2');
+  metal.addColorStop(0.28, '#c0c0c0');
+  metal.addColorStop(0.7, '#7a7a7a');
+  metal.addColorStop(1, '#3a3a3a');
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.fillStyle = metal;
+  ctx.fill();
+
+  // Specular highlight blob (same as ball)
+  ctx.fillStyle = 'rgba(255,255,255,0.78)';
+  ctx.beginPath();
+  ctx.arc(cx - 14, cy - 16, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Thin dark outer rim
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  // White face
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fill();
+
+  // Inner bevel
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Tick hashes – wiped by the sweeping hand
+  const totalTicks = 24;
+  const wiped = Math.floor(progress * totalTicks);
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < totalTicks; i++) {
+    if (i < wiped) continue;
+    const a = -Math.PI / 2 + (i / totalTicks) * Math.PI * 2;
+    const r1 = innerR - 3;
+    const r2 = innerR - (i % 3 === 0 ? 11 : 7);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+    ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+    ctx.stroke();
+  }
+
+  // Red triangular hand
+  const handAngle = -Math.PI / 2 + progress * Math.PI * 2;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(handAngle);
+
+  ctx.beginPath();
+  ctx.moveTo(0, 4);
+  ctx.lineTo(innerR - 6, 0);
+  ctx.lineTo(0, -4);
+  ctx.closePath();
+  ctx.fillStyle = '#e74c3c';
+  ctx.fill();
+
+  // Center pivot
+  ctx.beginPath();
+  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#c0392b';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fill();
+
+  ctx.restore();
+  ctx.restore();
+}
+
+function segmentCollision(cx, cy, r, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len2 = dx * dx + dy * dy || 1;
+  let t = ((cx - x1) * dx + (cy - y1) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const px = x1 + t * dx;
+  const py = y1 + t * dy;
+  const dist = Math.hypot(cx - px, cy - py);
+  if (dist >= r) return null;
+  const nx = (cx - px) / (dist || 1);
+  const ny = (cy - py) / (dist || 1);
+  return { nx, ny, dist, px, py };
+}
+
+function resolveFlipper(f) {
+  if (!ball) return;
+  if (!serveFlippersEnabled && f.team === serveTeam) return;
+
+  const SAMPLES = 4;
+  let hit = null;
+
+  for (let s = 0; s <= SAMPLES; s++) {
+    const t = s / SAMPLES;
+    const ang = f.prevAng + (f.ang - f.prevAng) * t;
+    const tx = f.px + Math.cos(ang) * f.len;
+    const ty = f.py + Math.sin(ang) * f.len;
+    const candidate = segmentCollision(ball.x, ball.y, ball.r + 3, f.px, f.py, tx, ty);
+    if (candidate) {
+      hit = candidate;
+      break;
+    }
+  }
+  if (!hit) return;
+
+  const overlap = (ball.r + 3) - hit.dist;
+  ball.x += hit.nx * overlap;
+  ball.y += hit.ny * overlap;
+
+  const rx = hit.px - f.px;
+  const ry = hit.py - f.py;
+  const fvx = -f.omega * ry;
+  const fvy =  f.omega * rx;
+
+  const rvx = ball.vx - fvx;
+  const rvy = ball.vy - fvy;
+  const vn = rvx * hit.nx + rvy * hit.ny;
+
+  if (vn < 0) {
+    ball.vx -= (1 + REST) * vn * hit.nx;
+    ball.vy -= (1 + REST) * vn * hit.ny;
+  }
+}
+
+function updateFlippers() {
+  for (const k in flippers) {
+    const f = flippers[k];
+    let target, maxOmega;
+
+    f.prevAng = f.ang;
+
+    if (!serveFlippersEnabled && f.team === serveTeam) {
+      f.on = false;
+      target = f.rest;
+      maxOmega = RETURN_OMEGA;
+    } else {
+      target = f.on ? f.act : f.rest;
+      maxOmega = f.on ? FLIP_OMEGA : RETURN_OMEGA;
+    }
+
+    const diff = target - f.ang;
+    const step = Math.sign(diff) * Math.min(Math.abs(diff), maxOmega);
+    f.omega = step;
+    f.ang += step;
+
+    if (Math.abs(f.ang - target) < 0.0005) {
+      f.ang = target;
+      f.omega = 0;
+    }
+  }
+}
+
+function resolveWalls() {
+  for (let i = 0; i < fieldPoly.length; i++) {
+    const a = fieldPoly[i];
+    const b = fieldPoly[(i + 1) % fieldPoly.length];
+
+    const isTopEdge    = (a.y < 100 && b.y < 100);
+    const isBottomEdge = (a.y > H - 100 && b.y > H - 100);
+    const inGoalX      = Math.abs((a.x + b.x) / 2 - W / 2) < 90;
+
+    if ((isTopEdge || isBottomEdge) && inGoalX) continue;
+
+    const hit = segmentCollision(ball.x, ball.y, ball.r, a.x, a.y, b.x, b.y);
+    if (hit) {
+      const overlap = ball.r - hit.dist + 0.5;
+      ball.x += hit.nx * overlap;
+      ball.y += hit.ny * overlap;
+      const vn = ball.vx * hit.nx + ball.vy * hit.ny;
+      if (vn < 0) {
+        ball.vx -= (1 + REST) * vn * hit.nx;
+        ball.vy -= (1 + REST) * vn * hit.ny;
+      }
+    }
+  }
+}
+
+function containBall() {
+  let closestDist = Infinity;
+  let closestNx = 0, closestNy = 0, closestPx = 0, closestPy = 0;
+  let outside = false;
+
+  for (let i = 0; i < fieldPoly.length; i++) {
+    const a = fieldPoly[i];
+    const b = fieldPoly[(i + 1) % fieldPoly.length];
+
+    const isTopEdge    = (a.y < 100 && b.y < 100);
+    const isBottomEdge = (a.y > H - 100 && b.y > H - 100);
+    const inGoalX      = Math.abs((a.x + b.x) / 2 - W / 2) < 90;
+    if ((isTopEdge || isBottomEdge) && inGoalX) continue;
+
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy || 1;
+    let t = ((ball.x - a.x) * dx + (ball.y - a.y) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const px = a.x + t * dx;
+    const py = a.y + t * dy;
+    const dist = Math.hypot(ball.x - px, ball.y - py);
+
+    const edgeLen = Math.hypot(dx, dy) || 1;
+    const nx =  dy / edgeLen;
+    const ny = -dx / edgeLen;
+
+    const signed = (ball.x - px) * nx + (ball.y - py) * ny;
+    if (signed > 0) outside = true;
+
+    if (dist < closestDist) {
+      closestDist = dist;
+      closestNx = nx;
+      closestNy = ny;
+      closestPx = px;
+      closestPy = py;
+    }
+  }
+
+  if (outside || closestDist < ball.r) {
+    const targetDist = ball.r + 0.5;
+    ball.x = closestPx - closestNx * targetDist;
+    ball.y = closestPy - closestNy * targetDist;
+
+    const vn = ball.vx * closestNx + ball.vy * closestNy;
+    if (vn > 0) {
+      ball.vx -= vn * closestNx * 1.1;
+      ball.vy -= vn * closestNy * 1.1;
+    }
+  }
+}
+
+function updateBall() {
+  if (!ball || serving) return;
+
+  if (!serveFlippersEnabled) {
+    if (serveTeam === 'blue' && ball.y > H / 2) serveFlippersEnabled = true;
+    if (serveTeam === 'red'  && ball.y < H / 2) serveFlippersEnabled = true;
+  }
+
+  const dx = ball.x - W / 2;
+  const dy = ball.y - H / 2;
+  const d = Math.hypot(dx, dy) || 1;
+  ball.vx += (dx / d) * HILL;
+  ball.vy += (dy / d) * HILL;
+
+  ball.vy += (ball.y < H / 2 ? -G * 0.6 : G);
+
+  ball.vx *= FRICTION;
+  ball.vy *= FRICTION;
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  for (const p of pegs) {
+    const dist = Math.hypot(ball.x - p.x, ball.y - p.y);
+    if (dist < ball.r + p.r) {
+      const nx = (ball.x - p.x) / dist;
+      const ny = (ball.y - p.y) / dist;
+      const overlap = ball.r + p.r - dist;
+      ball.x += nx * overlap;
+      ball.y += ny * overlap;
+      const vn = ball.vx * nx + ball.vy * ny;
+      if (vn < 0) {
+        ball.vx -= (1 + 0.82) * vn * nx;
+        ball.vy -= (1 + 0.82) * vn * ny;
+      }
+    }
+  }
+
+  for (const k in flippers) resolveFlipper(flippers[k]);
+
+  resolveWalls();
+  resolveWalls();
+
+  containBall();
+
+  const gw = 65;
+  if (ball.y - ball.r < 55 && Math.abs(ball.x - W / 2) < gw) {
+    score.red++;
+    updateScore();
+    startServe('red');
+    return;
+  }
+  if (ball.y + ball.r > H - 55 && Math.abs(ball.x - W / 2) < gw) {
+    score.blue++;
+    updateScore();
+    startServe('blue');
+    return;
+  }
+}
+
+function updateScore() {
+  scoreEl.textContent = `${score.blue}  —  ${score.red}`;
+}
+
+// Dual-timer CPU (per flipper)
+function updateCPU() {
+  if (!vsCPU || !ball || serving) return;
+
+  const now = performance.now();
+  const cpuTeam = (humanTeam === 'red') ? 'blue' : 'red';
+
+  for (const id in flippers) {
+    const f = flippers[id];
+    if (f.team !== cpuTeam) continue;
+
+    const rtx = f.px + Math.cos(f.rest) * f.len;
+    const rty = f.py + Math.sin(f.rest) * f.len;
+    const near = !!segmentCollision(ball.x, ball.y, ball.r + 22, f.px, f.py, rtx, rty);
+
+    if (near && now > f.cooldownUntil && now > f.contactUntil) {
+      f.contactUntil = now + 120;
+    }
+
+    if (now < f.contactUntil) {
+      f.on = true;
+    } else {
+      if (f.contactUntil > 0 && now >= f.contactUntil) {
+        f.cooldownUntil = now + 1600;
+        f.contactUntil = 0;
+      }
+      f.on = false;
+    }
+  }
+}
+
+function autoServe() {
+  if (!serving || !ball) return;
+
+  const toward = serveTeam === 'blue' ? 1 : -1;
+  const angle = (Math.random() - 0.5) * 0.85;
+  const dirX = Math.sin(angle);
+  const dirY = Math.cos(angle) * toward;
+
+  const power = 0.48 + Math.random() * 0.42;
+  const speed = 7.5 + power * 11.5;
+
+  ball.vx = dirX * speed;
+  ball.vy = dirY * speed;
+
+  serving = false;
+  msgEl.style.display = 'none';
+  cpuCountdownStart = 0;
+}
+
+function startServe(team) {
+  serving = true;
+  serveTeam = team;
+  serveFlippersEnabled = false;
+  aiming = false;
+  cpuCountdownStart = 0;
+
+  for (const k in flippers) {
+    if (flippers[k].team === team) {
+      flippers[k].on = false;
+      flippers[k].ang = flippers[k].rest;
+      flippers[k].prevAng = flippers[k].rest;
+      flippers[k].omega = 0;
+      flippers[k].contactUntil = 0;
+      flippers[k].cooldownUntil = 0;
+    }
+  }
+
+  const y = team === 'blue' ? 210 : 650;
+  ball = {
+    x: W / 2,
+    y,
+    r: 13,
+    vx: 0,
+    vy: 0
+  };
+
+  const isCPUServe = vsCPU && team !== humanTeam;
+
+  msgEl.style.display = 'block';
+  if (isCPUServe) {
+    msgEl.style.display = 'none';
+    cpuCountdownStart = performance.now();
+  } else {
+    msgEl.innerHTML = (team === 'blue' ? 'BLUE' : 'RED') + ' TO SERVE<br>Drag to aim &amp; release';
+  }
+}
+
+function setFlip(id, state) {
+  const f = flippers[id];
+  if (!f) return;
+  if (vsCPU && f.team !== humanTeam) return;
+  if (!serveFlippersEnabled && f.team === serveTeam) return;
+  f.on = state;
+}
+
+function getCanvasPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+['tl', 'tr', 'bl', 'br'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    setFlip(id, true);
+  });
+  el.addEventListener('pointerup', e => { e.preventDefault(); setFlip(id, false); });
+  el.addEventListener('pointerleave', e => { e.preventDefault(); setFlip(id, false); });
+  el.addEventListener('pointercancel', e => { e.preventDefault(); setFlip(id, false); });
+});
+
+window.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  if (e.key === 'q' || e.key === 'Q') setFlip('tl', true);
+  if (e.key === 'e' || e.key === 'E') setFlip('tr', true);
+  if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft')  setFlip('bl', true);
+  if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') setFlip('br', true);
+});
+window.addEventListener('keyup', e => {
+  if (e.key === 'q' || e.key === 'Q') setFlip('tl', false);
+  if (e.key === 'e' || e.key === 'E') setFlip('tr', false);
+  if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft')  setFlip('bl', false);
+  if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') setFlip('br', false);
+});
+
+canvas.addEventListener('pointerdown', e => {
+  if (!serving || !ball) return;
+  if (vsCPU && serveTeam !== humanTeam) return;
+  e.preventDefault();
+  const pos = getCanvasPos(e);
+  aiming = true;
+  aimStartX = pos.x;
+  aimStartY = pos.y;
+  aimCurX = pos.x;
+  aimCurY = pos.y;
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (!aiming) return;
+  e.preventDefault();
+  const pos = getCanvasPos(e);
+  aimCurX = pos.x;
+  aimCurY = pos.y;
+});
+
+function endAim(e) {
+  if (!aiming || !ball) return;
+  e.preventDefault();
+  aiming = false;
+
+  const dx = aimStartX - aimCurX;
+  const dy = aimStartY - aimCurY;
+  const dist = Math.hypot(dx, dy);
+
+  if (dist < MIN_AIM_DIST) return;
+
+  const power = Math.min(dist, MAX_AIM_DIST) / MAX_AIM_DIST;
+  const speed = 7.5 + power * 11.5;
+
+  const len = dist || 1;
+  ball.vx = (dx / len) * speed;
+  ball.vy = (dy / len) * speed;
+
+  serving = false;
+  msgEl.style.display = 'none';
+}
+
+canvas.addEventListener('pointerup', endAim);
+canvas.addEventListener('pointercancel', endAim);
+
+function beginGame(onePlayer) {
+  vsCPU = onePlayer;
+  humanTeam = 'red';
+  startScreen.style.display = 'none';
+  score = { blue: 0, red: 0 };
+  updateScore();
+  startServe('blue');
+}
+
+document.getElementById('btn1p').addEventListener('click', () => beginGame(true));
+document.getElementById('btn2p').addEventListener('click', () => beginGame(false));
+
+function loop() {
+  drawGreenField();
+  drawHillRings();
+  drawBrownBoard();
+  drawWoodgrain();
+  drawRecessedEdge();
+  drawDrains();
+  drawWhiteMarkings();
+
+  drawScores();
+  drawPegs();
+  for (const k in flippers) drawFlipper(flippers[k]);
+  drawBall();
+  drawAimPreview();
+
+  // CPU countdown timer
+  if (cpuCountdownStart > 0) {
+    const now = performance.now();
+    const progress = Math.min(1, (now - cpuCountdownStart) / COUNTDOWN_MS);
+    drawCountdown(progress);
+    if (progress >= 1) {
+      autoServe();
+    }
+  }
+
+  updateCPU();
+  updateFlippers();
+  updateBall();
+
+  requestAnimationFrame(loop);
+}
+
+// Start render loop (game waits for mode select)
+loop();
+</script>
+</body>
+</html>
