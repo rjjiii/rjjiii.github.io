@@ -1,0 +1,3946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>Versus Pinball</title>
+<style>
+  :root {
+    --font-display: 'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
+    --font-body: 'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+    --text: #e9e3d4;
+    --text-dim: #a59c86;
+    --gold: #ffd75e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; user-select: none; }
+  :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 6px; }
+  body {
+    background: radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: var(--font-body);
+    color: var(--text);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #wrap {
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 0 50px rgba(0,0,0,0.85);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #c9a66b;
+  }
+  /* Flipper taps also land in the empty space beside the cabinet. These are
+     four viewport quadrants sitting behind #wrap — the parts over the table
+     are covered by the cabinet, so only the margins are ever exposed, and the
+     quadrant split lines up with the table's own midlines because it's
+     centred. The tint concentrates near the table and fades out to the screen
+     edge, which also makes it scale sensibly with how much margin there is. */
+  .margin-zone {
+    position: fixed;
+    width: 50%;
+    height: 50%;
+    z-index: 1;
+    pointer-events: all;
+  }
+  #mtl { top: 0; left: 0;  background: linear-gradient(to left,  rgba(74,140,189,0.13), rgba(74,140,189,0)); }
+  #mtr { top: 0; right: 0; background: linear-gradient(to right, rgba(74,140,189,0.13), rgba(74,140,189,0)); }
+  #mbl { bottom: 0; left: 0;  background: linear-gradient(to left,  rgba(221,90,63,0.13), rgba(221,90,63,0)); }
+  #mbr { bottom: 0; right: 0; background: linear-gradient(to right, rgba(221,90,63,0.13), rgba(221,90,63,0)); }
+  #mtl:active, #mbl:active { background: linear-gradient(to left,  rgba(255,215,94,0.42), rgba(255,215,94,0)); }
+  #mtr:active, #mbr:active { background: linear-gradient(to right, rgba(255,215,94,0.42), rgba(255,215,94,0)); }
+  canvas {
+    display: block;
+    background: transparent;
+  }
+  #ui {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  #score { display: none; }
+  #msg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #d9cfb6;
+    font-size: 15px;
+    letter-spacing: 0.03em;
+    text-align: center;
+    background: linear-gradient(160deg,#2c2620,#1c1813);
+    border: 1px solid rgba(255,225,170,.18);
+    padding: 12px 20px;
+    border-radius: 14px;
+    line-height: 1.5;
+    z-index: 5;
+    pointer-events: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,.55);
+  }
+  #msg b { color: #ffe9a8; font-weight: 700; }
+  .corner {
+    position: absolute;
+    pointer-events: all;
+    z-index: 10;
+  }
+  #tl {
+    top: 0; left: 0;
+    width: 50%; height: 28%;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+    background: rgba(74, 140, 189, 0.15);
+  }
+  #tr {
+    top: 0; right: 0;
+    width: 50%; height: 28%;
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+    background: rgba(74, 140, 189, 0.15);
+  }
+  #bl {
+    bottom: 0; left: 0;
+    width: 50%; height: 28%;
+    clip-path: polygon(0 0, 0 100%, 100% 100%);
+    background: rgba(221, 90, 63, 0.15);
+  }
+  #br {
+    bottom: 0; right: 0;
+    width: 50%; height: 28%;
+    clip-path: polygon(100% 0, 0 100%, 100% 100%);
+    background: rgba(221, 90, 63, 0.15);
+  }
+  .corner:active {
+    background: rgba(255, 215, 94, 0.45) !important;
+  }
+
+  /* ── Overlays: canon scrim + card ── */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10,12,16,0.82);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 30;
+    pointer-events: all;
+    color: var(--text);
+    text-align: center;
+    padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .card {
+    background: linear-gradient(160deg,#2c2620,#1c1813);
+    border: 1px solid rgba(255,225,170,.18);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.6);
+    padding: 24px clamp(14px, 4vw, 28px);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    margin: auto;
+  }
+  .card h1 {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #f1ead8;
+    margin-bottom: 4px;
+  }
+  .card .sub {
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #b9a978;
+    margin-bottom: 20px;
+  }
+  .card .lbl {
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .card .row { margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  /* ── The one button style (cabinet buttons are the deliberate exception) ── */
+  button:not(.cab-btn) {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 9px 22px;
+    border-radius: 9px;
+    border: 1.5px solid rgba(255,215,94,0.45);
+    background: linear-gradient(145deg,#3a4150,#272c36);
+    color: #ffe9a8;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  button:not(.cab-btn):hover { border-color: rgba(255,215,94,0.85); }
+  button:not(.cab-btn):disabled { opacity: 0.32; cursor: default; border-color: rgba(255,215,94,0.25); }
+
+  .stepper {
+    width: 44px; height: 44px; padding: 0 !important;
+    border-radius: 11px !important;
+    font-size: 22px !important;
+    line-height: 1;
+  }
+  .pointsRow { display: flex; align-items: center; gap: 18px; margin-top: 8px; }
+  #pointsDisplay {
+    font-family: var(--font-display);
+    font-size: 34px; font-weight: 700; color: #f4ecd9;
+    min-width: 54px; text-align: center;
+  }
+
+  .fsbtn {
+    position: absolute; bottom: 16px; right: 16px; z-index: 5;
+    width: 44px; height: 44px; padding: 0 !important;
+    border-radius: 11px !important;
+  }
+  .fsbtn svg {
+    position: absolute; top: 50%; left: 50%;
+    -webkit-transform: translate(-50%,-50%); transform: translate(-50%,-50%);
+    width: 24px; height: 24px; display: block;
+  }
+  .fsbtn .fs-exit { display: none; }
+  .fsbtn.fs-on .fs-enter { display: none; }
+  .fsbtn.fs-on .fs-exit { display: block; }
+  .btn-row {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: center;
+  }
+  #tableRow {
+    display: grid;
+    grid-template-columns: repeat(2, 104px);
+    gap: 14px;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 18px;
+  }
+  #victorySubtitle {
+    font-family: var(--font-display);
+    font-size: 24px;
+    color: #d9cfb6;
+    margin-top: 6px;
+  }
+  .cab-btn {
+    width: 104px;
+    height: 122px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    position: relative;
+    pointer-events: all;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      repeating-linear-gradient(
+        95deg,
+        #c9a66b 0px,
+        #b8955a 3px,
+        #d4b47a 6px,
+        #a67c45 10px,
+        #c9a66b 14px
+      );
+    box-shadow:
+      0 1px 0 rgba(255,240,200,0.45),
+      0 4px 10px rgba(0,0,0,0.5),
+      inset 0 2px 0 rgba(255,255,255,0.35),
+      inset 0 -3px 4px rgba(0,0,0,0.35),
+      inset 2px 0 3px rgba(255,255,255,0.12),
+      inset -2px 0 3px rgba(0,0,0,0.18);
+    transition: transform 0.1s, box-shadow 0.15s;
+  }
+  .cab-btn:active {
+    transform: scale(0.96);
+  }
+  .cab-btn.selected {
+    transform: scale(1.05);
+    box-shadow:
+      0 0 0 4px var(--gold),
+      0 0 20px 5px rgba(255,215,94,0.7),
+      0 4px 10px rgba(0,0,0,0.5),
+      inset 0 2px 0 rgba(255,255,255,0.35),
+      inset 0 -3px 4px rgba(0,0,0,0.35),
+      inset 2px 0 3px rgba(255,255,255,0.12),
+      inset -2px 0 3px rgba(0,0,0,0.18);
+  }
+  .cab-btn::before {
+    content: '';
+    position: absolute;
+    inset: 11px;
+    border-radius: 7px;
+    background: radial-gradient(circle at 50% 30%, #437c39 0%, #2a5626 45%, #153014 100%);
+    box-shadow:
+      inset 0 4px 8px rgba(0,0,0,0.55),
+      inset 0 -2px 3px rgba(255,255,255,0.06),
+      inset 2px 0 4px rgba(0,0,0,0.25),
+      inset -2px 0 4px rgba(0,0,0,0.25);
+  }
+  .mode-btn span.num {
+    position: relative;
+    z-index: 2;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 46px;
+    font-weight: 800;
+    color: #f8f8f8;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.55);
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+  }
+  .checker {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    z-index: 3;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .checker.red {
+    background: radial-gradient(circle at 35% 30%, #f08a72, #dd5a3f 55%, #b04833);
+    bottom: 15px;
+  }
+  .checker.blue {
+    background: radial-gradient(circle at 35% 30%, #7cb0d3, #4a8cbd 55%, #2b5675);
+    top: 15px;
+  }
+
+  .table-btn canvas {
+    position: relative;
+    z-index: 2;
+    width: 82px;
+    height: 100px;
+    border-radius: 7px;
+  }
+</style>
+</head>
+<body>
+<div class="margin-zone" id="mtl"></div>
+<div class="margin-zone" id="mtr"></div>
+<div class="margin-zone" id="mbl"></div>
+<div class="margin-zone" id="mbr"></div>
+<div id="wrap">
+  <canvas id="c" width="520" height="860"></canvas>
+  <div id="ui">
+    <div id="score">0  —  0</div>
+    <div id="msg" style="display:none">BLUE TO SERVE<br>Drag to aim &amp; release</div>
+    <div class="corner" id="tl"></div>
+    <div class="corner" id="tr"></div>
+    <div class="corner" id="bl"></div>
+    <div class="corner" id="br"></div>
+  </div>
+
+  <!-- Player select -->
+  <div id="startScreen" class="overlay" style="display:flex;">
+    <button class="fsbtn" id="fullscreenBtn" type="button">
+      <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="card">
+      <h1>Pinball</h1>
+      <div class="sub">How many players?</div>
+      <div class="btn-row">
+        <button class="cab-btn mode-btn" id="btn1p">
+          <span class="num">1</span>
+          <div class="checker red"></div>
+        </button>
+        <button class="cab-btn mode-btn" id="btn2p">
+          <span class="num">2</span>
+          <div class="checker blue"></div>
+          <div class="checker red"></div>
+        </button>
+      </div>
+      <div class="lbl" style="margin-top: 26px;">Points to win</div>
+      <div class="pointsRow">
+        <button class="stepper" id="pointsDown" type="button">−</button>
+        <span id="pointsDisplay">10</span>
+        <button class="stepper" id="pointsUp" type="button">+</button>
+      </div>
+      <div class="row">
+        <button id="startChooseTableBtn" type="button">Change table</button>
+        <button id="startGameBtn" type="button">Start Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table select -->
+  <div id="tableScreen" class="overlay" style="display:none;">
+    <div class="card">
+      <h1>Choose Table</h1>
+      <div id="tableRow"></div>
+      <div class="row">
+        <button id="tableBackBtn" type="button">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Victory -->
+  <div id="victoryScreen" class="overlay" style="display: none; z-index: 50;">
+    <div class="card">
+      <h1 id="victoryTitle"></h1>
+      <div id="victorySubtitle"></div>
+      <div class="row">
+        <button id="rematchBtn" type="button">Play Rematch</button>
+        <button id="chooseTableBtn" type="button">Choose Table</button>
+        <button id="homeBtn" type="button">Return to Menu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W = canvas.width;
+let H = canvas.height;
+const msgEl = document.getElementById('msg');
+const scoreEl = document.getElementById('score');
+const startScreen = document.getElementById('startScreen');
+const tableScreen = document.getElementById('tableScreen');
+const wrap = document.getElementById('wrap');
+
+// ── Physics ──
+const G = 0.20;
+const FRICTION = 0.987;
+const REST = 0.74;
+const HILL = 0.078;
+const FLIP_OMEGA = 0.24;
+const RETURN_OMEGA = 0.20;
+
+// ── STRIKER / RTS TUNING ──
+// Everything gameplay-relevant for the striker layer lives here.
+const BASE_GAUGE_RATE = 0.00055; // gauge fill per frame (≈30s per tier at rest)
+const GAUGE_AWAY_MULT = 2;       // fill multiplier while the ball is on the opponent's half
+const PEG_BUMP    = 0.12;        // gauge bonus to the ball's owner on a peg hit
+const SQUISH_BUMP = 0.18;        // gauge bonus for squishing an enemy striker
+const GOAL_BUMP   = 0.25;        // gauge bonus for scoring a goal
+const MAX_TIER = 5;
+const MAX_STRIKERS_PER_TEAM = 8; // safety cap; generation is serial so rarely reached
+
+const AVOID_R = 38;              // peg avoidance radius: strikers start curving away here
+const STUN_MS = 2000;            // knock-down time from a fast friendly ball
+const BALL_FAST = 2.2;           // at or above this speed an enemy ball squishes; below it, any ball is kickable
+const STUN_FAST = 4.5;           // friendly balls need real pace to bowl their own man over;
+                                 // merely brisk ones (like a ball rolling back downhill) body-block off him
+const KICK_COOLDOWN_MS = 650;    // per-striker time between kicks (dribble cadence)
+const KICK_RANGE_PAD = 4;        // kicks reach a little beyond touching
+const CHASE_R = 150;             // strikers chase a kickable ball inside this radius
+const PUNT_RANGE = 88;           // deploy-punt reach from the pocket (the "keeper save")
+const POCKET_TAP_R = 42;         // generous tap target for mobile
+
+const DRIBBLE_KICK = 3.1;        // little tap-along kicks while walking the ball up
+const DRIBBLE_TIER_ADD = 0.15;   // per-tier bonus on dribble taps
+const SHOT_RANGE = 235;          // inside this range of the goal mouth, shoot for real
+const SPAWN_BALL_R = 11;         // striker-spawned pinballs run a touch smaller
+// The midline ridge rolls small taps straight back, so uphill dribbles
+// scale with distance to the crest. Coefficients are measured from the
+// live terrain: min crest speed ≈ dist × perPx (friction makes it linear).
+const UPHILL_RED = 0.0362;       // red climbs the steeper face (full G)
+const UPHILL_BLUE = 0.0320;      // blue's face is the gentler 0.6·G side
+const UPHILL_MARGIN = 1.12;      // crest with a little left over, not exactly zero
+const UPHILL_MAX = 14;           // cap the clearing kick (punts run 12–16 for scale)
+
+const TEAM_COLORS = { blue: '#4a8cbd', red: '#dd5a3f' };
+// Kit + colorways lifted from the team reference art: every tier is a
+// bipedal figure in the team's striped jersey and brown boots; tiers are
+// told apart by their heads and tails, in each team's own animal colors
+// (red fields the fox-red wolf, black horse, and dark spotted gator;
+// blue the grey wolf, pale wood horse, and bone-pale gator).
+const KIT_BASE = '#f4ecd9';
+const BOOT_C = '#5a3a22';
+const ANIMAL = {
+  red: {
+    skin: '#e8c39e', hair: '#241f1c',
+    t2: '#a35435', t3: '#c07840', t4: '#2b2624', t5: '#4a5130',
+    mane: '#463d38', spots: '#cdc06a'
+  },
+  blue: {
+    skin: '#ecd2b4', hair: '#c9a05a',
+    t2: '#d6bd94', t3: '#8f8f88', t4: '#cfb992', t5: '#c6bd97',
+    mane: '#8a7452', spots: '#8f8a68'
+  }
+};
+const TIER_NAMES  = ['—', 'Striker', 'Pitbull', 'Wolf', 'Horse', 'Gator'];
+const TIER_R     = [0, 9, 10.5, 11.5, 13, 16];        // body collision radius
+const TIER_SPEED = [0, 0.62, 0.66, 0.78, 0.85, 0.60]; // walk speed px/frame (the gator is a tank)
+const TIER_KICK  = [0, 5.2, 5.6, 6.0, 6.6, 7.4];      // shot strength inside SHOT_RANGE
+
+// ── PLAYFIELD POLYGON ──
+const fieldPoly = [
+  {x: 210, y: 72}, {x: 310, y: 72}, {x: 492, y: 195}, {x: 492, y: 665},
+  {x: 310, y: 788}, {x: 210, y: 788}, {x: 28, y: 665}, {x: 28, y: 195}
+];
+
+// ── TERRAIN: a ridge cresting along the midline ──
+// ridgeFactor(y) is 0 exactly on the midline and ramps linearly to ±1 at the
+// far ends of the field. All slope forces scale with it, so the crest itself
+// is perfectly neutral — a ball placed on the midline stays put until hit.
+const FIELD_HALF_SPAN_Y = Math.max(...fieldPoly.map(p => p.y)) - H / 2;
+
+function ridgeFactor(y) {
+  return Math.max(-1, Math.min(1, (y - H / 2) / FIELD_HALF_SPAN_Y));
+}
+
+function applyTerrain(b) {
+  const t = ridgeFactor(b.y);
+
+  // Sideways spread (the old center "hill" dome), faded to zero at the crest
+  // so it can't drag midline balls into the walls:
+  const dx = b.x - W / 2;
+  const dy = b.y - H / 2;
+  const d = Math.hypot(dx, dy) || 1;
+  const spread = HILL * Math.abs(t);
+  b.vx += (dx / d) * spread;
+  b.vy += (dy / d) * spread;
+
+  // Downhill pull toward each goal, same edge strength and blue/red
+  // asymmetry as before (gentler on blue's half), but ramping from zero
+  // at the midline instead of switching on at full force:
+  b.vy += t * (t < 0 ? G * 0.6 : G);
+}
+
+// ── 4 TABLES ──
+const tables = [
+  // Table 0: Classic (default)
+  {
+    id: 0,
+    name: "Classic",
+    flippers: {
+      tl: { px: 145, py: 110, len: 95, rest: -0.25, act: 0.80, team: 'blue', side: 'left' },
+      tr: { px: 375, py: 110, len: 95, rest:  3.39, act: 2.34, team: 'blue', side: 'right' },
+      bl: { px: 145, py: 745, len: 95, rest:  0.25, act: -0.80, team: 'red', side: 'left' },
+      br: { px: 375, py: 745, len: 95, rest: -3.39, act: -2.34, team: 'red', side: 'right' }
+    },
+    pegs: [
+      {x:140,y:325,r:10,c:'#4a8cbd'}, {x:195,y:200,r:15,c:'#4a8cbd'},
+      {x:325,y:200,r:15,c:'#4a8cbd'}, {x:450,y:325,r:10,c:'#4a8cbd'},
+      {x:70,y:325,r:10,c:'#4a8cbd'}, {x:380,y:325,r:10,c:'#4a8cbd'},
+      {x:210,y:325,r:10,c:'#4a8cbd'}, {x:310,y:325,r:10,c:'#4a8cbd'},
+      {x:260,y:395,r:15,c:'#4a8cbd'},
+      {x:140,y:535,r:10,c:'#dd5a3f'}, {x:195,y:660,r:15,c:'#dd5a3f'},
+      {x:325,y:660,r:15,c:'#dd5a3f'}, {x:450,y:535,r:10,c:'#dd5a3f'},
+      {x:70,y:535,r:10,c:'#dd5a3f'}, {x:380,y:535,r:10,c:'#dd5a3f'},
+      {x:210,y:535,r:10,c:'#dd5a3f'}, {x:310,y:535,r:10,c:'#dd5a3f'},
+      {x:260,y:465,r:15,c:'#dd5a3f'}
+    ],
+    balls: []
+  },
+  // Table 1: Wide
+  {
+    id: 1,
+    name: "Wide",
+    flippers: {
+      tl: { px: 130, py: 105, len: 100, rest: -0.30, act: 0.85, team: 'blue', side: 'left' },
+      tr: { px: 390, py: 105, len: 100, rest:  3.44, act: 2.30, team: 'blue', side: 'right' },
+      bl: { px: 130, py: 750, len: 100, rest:  0.30, act: -0.85, team: 'red', side: 'left' },
+      br: { px: 390, py: 750, len: 100, rest: -3.44, act: -2.30, team: 'red', side: 'right' }
+    },
+    pegs: [
+      {x:80,y:280,r:12,c:'#4a8cbd'}, {x:160,y:220,r:13,c:'#4a8cbd'},
+      {x:440,y:220,r:13,c:'#4a8cbd'}, {x:440,y:280,r:12,c:'#4a8cbd'},
+      {x:60,y:340,r:10,c:'#4a8cbd'}, {x:460,y:340,r:10,c:'#4a8cbd'},
+      {x:200,y:310,r:11,c:'#4a8cbd'}, {x:320,y:310,r:11,c:'#4a8cbd'},
+      {x:260,y:380,r:15,c:'#4a8cbd'},
+      {x:80,y:560,r:12,c:'#dd5a3f'}, {x:160,y:620,r:13,c:'#dd5a3f'},
+      {x:440,y:620,r:13,c:'#dd5a3f'}, {x:440,y:560,r:12,c:'#dd5a3f'},
+      {x:60,y:540,r:10,c:'#dd5a3f'}, {x:460,y:540,r:10,c:'#dd5a3f'},
+      {x:200,y:590,r:11,c:'#dd5a3f'}, {x:320,y:590,r:11,c:'#dd5a3f'},
+      {x:260,y:500,r:15,c:'#dd5a3f'}
+    ],
+    balls: [
+      {x: 260, r: 13}
+    ]
+  },
+  // Table 2: Narrow — physics test bed: no pegs, one ball resting on the midline
+  {
+    id: 2,
+    name: "Narrow",
+    flippers: {
+      tl: { px: 145, py: 110, len: 95, rest: -0.25, act: 0.80, team: 'blue', side: 'left' },
+      tr: { px: 375, py: 110, len: 95, rest:  3.39, act: 2.34, team: 'blue', side: 'right' },
+      bl: { px: 145, py: 745, len: 95, rest:  0.25, act: -0.80, team: 'red', side: 'left' },
+      br: { px: 375, py: 745, len: 95, rest: -3.39, act: -2.34, team: 'red', side: 'right' }
+    },
+    pegs: [],
+    balls: [
+      {x: 260, r: 13}
+    ]
+  },
+  // Table 3: Sixer — flipper test bed: the standard four plus a shorter
+  // mid-field flipper on each team's attacking wing (blue right, red left),
+  // placed rotationally symmetric so neither side has an edge. The extras
+  // fire together with the standard flipper on the same control.
+  {
+    id: 3,
+    name: "Sixer",
+    flippers: {
+      tl: { px: 130, py: 105, len: 100, rest: -0.30, act: 0.85, team: 'blue', side: 'left' },
+      tr: { px: 390, py: 105, len: 100, rest:  3.44, act: 2.30, team: 'blue', side: 'right' },
+      mr: { px: 460, py: 300, len: 80,  rest:  3.39, act: 2.34, team: 'blue', side: 'right' },
+      bl: { px: 130, py: 750, len: 100, rest:  0.30, act: -0.85, team: 'red', side: 'left' },
+      ml: { px: 60,  py: 560, len: 80,  rest:  0.25, act: -0.80, team: 'red', side: 'left' },
+      br: { px: 390, py: 750, len: 100, rest: -3.44, act: -2.30, team: 'red', side: 'right' }
+    },
+    pegs: [],
+    balls: []
+  }
+];
+
+let currentTable = tables[0];
+let selectedTable = tables[0]; // menu selection state, applied when Start Game is pressed
+let pegs = [];
+let flippers = {};
+let tableBalls = [];
+
+let score = { blue: 0, red: 0 };
+let ball = null;
+// Multiball rally tail: after the main ball scores, the serve is deferred
+// while table balls are still in play. pendingServe holds who serves next.
+let pendingServe = null;
+let lastLivelyTime = 0;
+let serving = true;
+let serveTeam = 'blue';
+let serveFlippersEnabled = false;
+
+let vsCPU = true;
+let humanTeam = 'red';
+
+let cpuCountdownStart = 0;
+const COUNTDOWN_MS = 3000;
+
+let aiming = false;
+let aimStartX = 0, aimStartY = 0;
+let aimCurX = 0, aimCurY = 0;
+const MAX_AIM_DIST = 150;
+const MIN_AIM_DIST = 28;
+
+let pointsToWin = 10;
+let gameOver = false;
+
+// ── STRIKER / RTS STATE ──
+// One pocket per team: a single unit that upgrades in place. `tier` is what
+// you'd get if you deployed right now (0 = nothing yet), `charge` is the
+// 0..1 pie toward the NEXT tier. No banking — deploying empties the pocket.
+let pockets = { blue: { tier: 0, charge: 0 }, red: { tier: 0, charge: 0 } };
+let strikers = [];   // live units on the field (both teams mixed)
+let confetti = [];   // pixel-shatter bits from squishes
+let cpuNextDeployTier = 2; // CPU commander's current "hold out until" tier
+let lastFrameMs = performance.now();
+
+// ── SOUND ──
+let audioCtx;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+// When true, the physics functions run silently: no sounds, no peg flashes.
+// Used by CPU serve rollouts, which step the real physics on cloned balls.
+let physicsQuiet = false;
+
+function playSound(type, power = 1) {
+  if (physicsQuiet) return;
+  if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+
+    if (type === 'flipper') {
+      // Solenoid-style CHOCK: a dry low-mid thump with a fast downward
+      // pitch snap (mimics the coil/stop mechanism) plus a brief noise
+      // click for the mechanical edge. Short and dry, no ring.
+      const now = audioCtx.currentTime;
+      const clamp = Math.max(0.4, Math.min(1.6, power));
+
+      const noiseDur = 0.015;
+      const bufferSize = Math.ceil(audioCtx.sampleRate * noiseDur);
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.value = 2000;
+      noiseFilter.Q.value = 0.9;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.3 * clamp, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(now);
+      noise.stop(now + noiseDur);
+
+      const bodyOsc = audioCtx.createOscillator();
+      bodyOsc.type = 'square';
+      bodyOsc.frequency.setValueAtTime(240 + clamp * 40, now);
+      bodyOsc.frequency.exponentialRampToValueAtTime(110, now + 0.05);
+      const bodyFilter = audioCtx.createBiquadFilter();
+      bodyFilter.type = 'lowpass';
+      bodyFilter.frequency.value = 700;
+      const bodyGain = audioCtx.createGain();
+      const bodyDecay = 0.09;
+      bodyGain.gain.setValueAtTime(0.4 * clamp, now);
+      bodyGain.gain.exponentialRampToValueAtTime(0.001, now + bodyDecay);
+      bodyOsc.connect(bodyFilter);
+      bodyFilter.connect(bodyGain);
+      bodyGain.connect(audioCtx.destination);
+      bodyOsc.start(now);
+      bodyOsc.stop(now + bodyDecay + 0.02);
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'peg') {
+      // Metallic bumper clank: short noise "hit" transient + a handful of
+      // inharmonic partials (non-integer frequency ratios, like a struck
+      // bit of metal) that ring out and decay at different rates.
+      const now = audioCtx.currentTime;
+      const baseFreq = 480 + Math.random() * 60;
+
+      // Noise transient for the initial metallic "tick" of impact
+      const noiseDur = 0.02;
+      const bufferSize = Math.ceil(audioCtx.sampleRate * noiseDur);
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'highpass';
+      noiseFilter.frequency.value = 2500;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.35 * power, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(now);
+      noise.stop(now + noiseDur);
+
+      // Inharmonic partials ringing out, like a struck metal bar/bell
+      const partials = [
+        { ratio: 1.0,  gain: 0.22 * power, decay: 0.16 },
+        { ratio: 2.37, gain: 0.14 * power, decay: 0.11 },
+        { ratio: 3.82, gain: 0.09 * power, decay: 0.07 },
+        { ratio: 5.4,  gain: 0.05 * power, decay: 0.05 }
+      ];
+      for (const part of partials) {
+        const pOsc = audioCtx.createOscillator();
+        pOsc.type = 'triangle';
+        pOsc.frequency.value = baseFreq * part.ratio;
+        const pGain = audioCtx.createGain();
+        pGain.gain.setValueAtTime(part.gain, now);
+        pGain.gain.exponentialRampToValueAtTime(0.001, now + part.decay);
+        pOsc.connect(pGain);
+        pGain.connect(audioCtx.destination);
+        pOsc.start(now);
+        pOsc.stop(now + part.decay + 0.02);
+      }
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'ballClick') {
+      // Steel-on-steel click, Newton's-cradle style: a very short bright
+      // noise tick plus a couple of high inharmonic partials that die fast.
+      const now = audioCtx.currentTime;
+      const baseFreq = 2200 + Math.random() * 400;
+
+      const noiseDur = 0.012;
+      const bufferSize = Math.ceil(audioCtx.sampleRate * noiseDur);
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'highpass';
+      noiseFilter.frequency.value = 4000;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.4 * power, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(now);
+      noise.stop(now + noiseDur);
+
+      const partials = [
+        { ratio: 1.0,  gain: 0.16 * power, decay: 0.05 },
+        { ratio: 1.83, gain: 0.10 * power, decay: 0.035 },
+        { ratio: 2.61, gain: 0.06 * power, decay: 0.025 }
+      ];
+      for (const part of partials) {
+        const pOsc = audioCtx.createOscillator();
+        pOsc.type = 'sine';
+        pOsc.frequency.value = baseFreq * part.ratio;
+        const pGain = audioCtx.createGain();
+        pGain.gain.setValueAtTime(part.gain, now);
+        pGain.gain.exponentialRampToValueAtTime(0.001, now + part.decay);
+        pOsc.connect(pGain);
+        pGain.connect(audioCtx.destination);
+        pOsc.start(now);
+        pOsc.stop(now + part.decay + 0.02);
+      }
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'wall' || type === 'wood') {
+      // Woodblock-style THOCK: a duller, lower noise knock plus a soft sine
+      // body layered with a quick sub-thump for weight. Kept low-passed and
+      // low-pitched throughout so it reads as solid wood rather than the
+      // clearer pitched "ping" of a struck bar (which reads as glockenspiel).
+      const now = audioCtx.currentTime;
+      const baseFreq = 150 + Math.random() * 18;
+
+      // Dull knock (softer, lower-centered than the bumper's bright click)
+      const noiseDur = 0.022;
+      const bufferSize = Math.ceil(audioCtx.sampleRate * noiseDur);
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.value = 750;
+      noiseFilter.Q.value = 0.6;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.22 * power, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(now);
+      noise.stop(now + noiseDur);
+
+      // Main body tone: sine (rounder, no bright harmonics), heavily
+      // low-passed so the pitch stays vague rather than clearly tuned.
+      const bodyOsc = audioCtx.createOscillator();
+      bodyOsc.type = 'sine';
+      bodyOsc.frequency.value = baseFreq;
+      const bodyFilter = audioCtx.createBiquadFilter();
+      bodyFilter.type = 'lowpass';
+      bodyFilter.frequency.value = 420;
+      const bodyGain = audioCtx.createGain();
+      const bodyDecay = 0.15;
+      bodyGain.gain.setValueAtTime(0.34 * power, now);
+      bodyGain.gain.exponentialRampToValueAtTime(0.001, now + bodyDecay);
+      bodyOsc.connect(bodyFilter);
+      bodyFilter.connect(bodyGain);
+      bodyGain.connect(audioCtx.destination);
+      bodyOsc.start(now);
+      bodyOsc.stop(now + bodyDecay + 0.02);
+
+      // Sub-thump layer for weight/solidity, decays faster than the body
+      const subOsc = audioCtx.createOscillator();
+      subOsc.type = 'sine';
+      subOsc.frequency.value = baseFreq * 0.55;
+      const subGain = audioCtx.createGain();
+      const subDecay = 0.07;
+      subGain.gain.setValueAtTime(0.28 * power, now);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + subDecay);
+      subOsc.connect(subGain);
+      subGain.connect(audioCtx.destination);
+      subOsc.start(now);
+      subOsc.stop(now + subDecay + 0.02);
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'goal') {
+      // Warm bell: sine partials at near-harmonic ratios (touch of
+      // inharmonicity for shimmer/warmth, not the harsh clank ratios used
+      // for the metal bumpers) with a soft attack ramp — starting a tone
+      // at full volume causes an audible click, which was the main source
+      // of the old buzzer's harshness — and a long, gentle natural decay.
+      const now = audioCtx.currentTime;
+      const baseFreq = 392;
+      const partials = [
+        { ratio: 1.0,   gain: 0.34, decay: 1.3, detune: -3 },
+        { ratio: 1.0,   gain: 0.30, decay: 1.3, detune: 3 },
+        { ratio: 2.005, gain: 0.13, decay: 0.85 },
+        { ratio: 3.0,   gain: 0.06, decay: 0.5 },
+        { ratio: 4.0,   gain: 0.028, decay: 0.32 }
+      ];
+      for (const part of partials) {
+        const pOsc = audioCtx.createOscillator();
+        pOsc.type = 'sine';
+        pOsc.frequency.value = baseFreq * part.ratio;
+        if (part.detune) pOsc.detune.value = part.detune;
+        const pFilter = audioCtx.createBiquadFilter();
+        pFilter.type = 'lowpass';
+        pFilter.frequency.value = 2100;
+        const pGain = audioCtx.createGain();
+        pGain.gain.setValueAtTime(0, now);
+        pGain.gain.linearRampToValueAtTime(part.gain, now + 0.014);
+        pGain.gain.exponentialRampToValueAtTime(0.001, now + part.decay);
+        pOsc.connect(pFilter);
+        pFilter.connect(pGain);
+        pGain.connect(audioCtx.destination);
+        pOsc.start(now);
+        pOsc.stop(now + part.decay + 0.05);
+      }
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'serve') {
+      // Spring release "boing": pitch settles downward while a vibrato
+      // (frequency-modulated by a decaying LFO) rings out and dies away,
+      // like a stretched spring snapping back and settling.
+      const now = audioCtx.currentTime;
+      const clamp = Math.max(0.2, Math.min(1.4, power));
+      const dur = 0.42;
+
+      const mainOsc = audioCtx.createOscillator();
+      mainOsc.type = 'sine';
+      const mainFreq = 170 + clamp * 170;
+      mainOsc.frequency.setValueAtTime(mainFreq, now);
+      mainOsc.frequency.exponentialRampToValueAtTime(mainFreq * 0.72, now + dur);
+
+      const lfo = audioCtx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = 24;
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.setValueAtTime(mainFreq * 0.4 * clamp, now);
+      lfoGain.gain.exponentialRampToValueAtTime(0.5, now + dur);
+      lfo.connect(lfoGain);
+      lfoGain.connect(mainOsc.frequency);
+
+      const mainGain = audioCtx.createGain();
+      mainGain.gain.setValueAtTime(0.3 * clamp, now);
+      mainGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+      mainOsc.connect(mainGain);
+      mainGain.connect(audioCtx.destination);
+      lfo.start(now);
+      mainOsc.start(now);
+      lfo.stop(now + dur);
+      mainOsc.stop(now + dur);
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'countdown') {
+      // Mechanical stopwatch tick: short filtered noise burst + a tiny
+      // high tone for the click transient (like a 60 Minutes-style tick).
+      const now = audioCtx.currentTime;
+      const noiseDur = 0.045;
+      const bufferSize = Math.ceil(audioCtx.sampleRate * noiseDur);
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.value = 3200 + (power - 1) * 900;
+      noiseFilter.Q.value = 1.2;
+
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.5 * power, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(now);
+      noise.stop(now + noiseDur);
+
+      // High click transient
+      const clickOsc = audioCtx.createOscillator();
+      clickOsc.type = 'square';
+      clickOsc.frequency.value = 2200 + (power - 1) * 500;
+      const clickGain = audioCtx.createGain();
+      clickGain.gain.setValueAtTime(0.15 * power, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+      clickOsc.connect(clickGain);
+      clickGain.connect(audioCtx.destination);
+      clickOsc.start(now);
+      clickOsc.stop(now + 0.02);
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'squish') {
+      // Cartoon pixel-splat: a wet noise burst swept downward, a saw that
+      // falls through an octave, and a low plop for body. Reads as a little
+      // figure bursting into confetti, not anything grisly.
+      const now = audioCtx.currentTime;
+      const clamp = Math.max(0.5, Math.min(1.6, power));
+
+      const noiseDur = 0.14;
+      const bufferSize = Math.ceil(audioCtx.sampleRate * noiseDur);
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'lowpass';
+      noiseFilter.frequency.setValueAtTime(1700, now);
+      noiseFilter.frequency.exponentialRampToValueAtTime(220, now + noiseDur);
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.3 * clamp, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(now);
+      noise.stop(now + noiseDur);
+
+      const dropOsc = audioCtx.createOscillator();
+      dropOsc.type = 'sawtooth';
+      dropOsc.frequency.setValueAtTime(330, now);
+      dropOsc.frequency.exponentialRampToValueAtTime(72, now + 0.16);
+      const dropFilter = audioCtx.createBiquadFilter();
+      dropFilter.type = 'lowpass';
+      dropFilter.frequency.value = 850;
+      const dropGain = audioCtx.createGain();
+      dropGain.gain.setValueAtTime(0.16 * clamp, now);
+      dropGain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+      dropOsc.connect(dropFilter);
+      dropFilter.connect(dropGain);
+      dropGain.connect(audioCtx.destination);
+      dropOsc.start(now);
+      dropOsc.stop(now + 0.18);
+
+      const plopOsc = audioCtx.createOscillator();
+      plopOsc.type = 'sine';
+      plopOsc.frequency.setValueAtTime(150, now);
+      plopOsc.frequency.exponentialRampToValueAtTime(55, now + 0.11);
+      const plopGain = audioCtx.createGain();
+      plopGain.gain.setValueAtTime(0.24 * clamp, now);
+      plopGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      plopOsc.connect(plopGain);
+      plopGain.connect(audioCtx.destination);
+      plopOsc.start(now);
+      plopOsc.stop(now + 0.13);
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'deploy') {
+      // Keeper steps onto the pitch: a short upward chirp plus a crisp
+      // click on top — bright, quick, unmistakably "go".
+      const now = audioCtx.currentTime;
+
+      const chirpOsc = audioCtx.createOscillator();
+      chirpOsc.type = 'sine';
+      chirpOsc.frequency.setValueAtTime(430, now);
+      chirpOsc.frequency.exponentialRampToValueAtTime(820, now + 0.09);
+      const chirpGain = audioCtx.createGain();
+      chirpGain.gain.setValueAtTime(0, now);
+      chirpGain.gain.linearRampToValueAtTime(0.2, now + 0.008);
+      chirpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+      chirpOsc.connect(chirpGain);
+      chirpGain.connect(audioCtx.destination);
+      chirpOsc.start(now);
+      chirpOsc.stop(now + 0.14);
+
+      const noiseDur = 0.012;
+      const bufferSize = Math.ceil(audioCtx.sampleRate * noiseDur);
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.value = 3200;
+      noiseFilter.Q.value = 1.0;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.16, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(now);
+      noise.stop(now + noiseDur);
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'tierUp') {
+      // Gauge rollover: two tiny ascending blips, pitched up per tier via
+      // `power`. Deliberately quiet — it can fire five times back-to-back
+      // while a pocket charges.
+      const now = audioCtx.currentTime;
+      const base = 430 * Math.max(0.7, Math.min(1.4, power));
+      const blips = [
+        { freq: base,       at: 0 },
+        { freq: base * 1.5, at: 0.07 }
+      ];
+      for (const bl of blips) {
+        const bOsc = audioCtx.createOscillator();
+        bOsc.type = 'sine';
+        bOsc.frequency.value = bl.freq;
+        const bGain = audioCtx.createGain();
+        bGain.gain.setValueAtTime(0, now + bl.at);
+        bGain.gain.linearRampToValueAtTime(0.11, now + bl.at + 0.008);
+        bGain.gain.exponentialRampToValueAtTime(0.001, now + bl.at + 0.07);
+        bOsc.connect(bGain);
+        bGain.connect(audioCtx.destination);
+        bOsc.start(now + bl.at);
+        bOsc.stop(now + bl.at + 0.08);
+      }
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'uiSelect') {
+      // Low thump for radio-style menu selectors (player count, table
+      // choice, points stepper): soft, dry, low, no ring -- confirms a
+      // choice without demanding attention.
+      const now = audioCtx.currentTime;
+      const thumpOsc = audioCtx.createOscillator();
+      thumpOsc.type = 'sine';
+      thumpOsc.frequency.setValueAtTime(150, now);
+      thumpOsc.frequency.exponentialRampToValueAtTime(95, now + 0.07);
+      const thumpFilter = audioCtx.createBiquadFilter();
+      thumpFilter.type = 'lowpass';
+      thumpFilter.frequency.value = 500;
+      const thumpGain = audioCtx.createGain();
+      thumpGain.gain.setValueAtTime(0, now);
+      thumpGain.gain.linearRampToValueAtTime(0.22, now + 0.006);
+      thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      thumpOsc.connect(thumpFilter);
+      thumpFilter.connect(thumpGain);
+      thumpGain.connect(audioCtx.destination);
+      thumpOsc.start(now);
+      thumpOsc.stop(now + 0.1);
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else if (type === 'uiAction') {
+      // Satisfying click for action buttons (back, start, rematch, menu,
+      // etc): a bright, brief transient plus a small underlying thump for
+      // tactile weight -- crisp on top, a little body underneath.
+      const now = audioCtx.currentTime;
+
+      const noiseDur = 0.012;
+      const bufferSize = Math.ceil(audioCtx.sampleRate * noiseDur);
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.value = 3400;
+      noiseFilter.Q.value = 1.0;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.2, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(now);
+      noise.stop(now + noiseDur);
+
+      const clickOsc = audioCtx.createOscillator();
+      clickOsc.type = 'sine';
+      clickOsc.frequency.value = 950;
+      const clickGain = audioCtx.createGain();
+      clickGain.gain.setValueAtTime(0.18, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+      clickOsc.connect(clickGain);
+      clickGain.connect(audioCtx.destination);
+      clickOsc.start(now);
+      clickOsc.stop(now + 0.04);
+
+      const thumpOsc = audioCtx.createOscillator();
+      thumpOsc.type = 'sine';
+      thumpOsc.frequency.value = 280;
+      const thumpGain = audioCtx.createGain();
+      thumpGain.gain.setValueAtTime(0.1, now);
+      thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      thumpOsc.connect(thumpGain);
+      thumpGain.connect(audioCtx.destination);
+      thumpOsc.start(now);
+      thumpOsc.stop(now + 0.07);
+
+      return; // fully handled above, skip the default osc/filter/gain chain
+    } else {
+      osc.type = 'sine';
+      osc.frequency.value = 300;
+      gain.gain.value = 0.2;
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+    }
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    setTimeout(() => osc.stop(), 600);
+  } catch(e) {}
+}
+
+// Rolling sound: filtered noise (not a tone) so it reads as surface texture
+// -- metal rolling across felt/wood -- rather than a pitch, and includes a
+// watchdog that auto-fades if updateRollSound() stops being called (e.g. the
+// ball is removed mid-roll on a goal). Previously a persistent oscillator
+// could get stuck droning forever if that happened, since nothing else
+// would ever tell it to stop.
+//
+// Two steady noise layers blend based on speed: a low resonant "body" layer
+// and a higher "grain" layer for surface grit. Both track speed directly and
+// continuously with no periodic modulation -- an earlier version used an LFO
+// to pulse the volume, but pulsing in the 9-40Hz range is exactly the rate
+// the ear reads as rhythmic flutter/buzz (insect wings, rattling) rather
+// than continuous rolling texture, and it didn't track the ball's actual
+// speed since the LFO ran on its own independent curve.
+let rollNoise = null;
+let rollBodyFilter = null;
+let rollBodyLowpass = null;
+let rollBodyGain = null;
+let rollGrainFilter = null;
+let rollGrainGain = null;
+let rollActive = false;
+let rollWatchdogTimer = null;
+
+function startRollSound() {
+  rollActive = true;
+  const loopSec = 1;
+  const bufSize = Math.ceil(audioCtx.sampleRate * loopSec);
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+  rollNoise = audioCtx.createBufferSource();
+  rollNoise.buffer = buf;
+  rollNoise.loop = true;
+
+  rollBodyFilter = audioCtx.createBiquadFilter();
+  rollBodyFilter.type = 'bandpass';
+  rollBodyFilter.frequency.value = 150;
+  rollBodyFilter.Q.value = 1.6; // broader than before -- fuller, thicker rumble
+  rollBodyLowpass = audioCtx.createBiquadFilter();
+  rollBodyLowpass.type = 'lowpass';
+  rollBodyLowpass.frequency.value = 380; // keeps it warm, cuts any thin/bright edge
+  rollBodyGain = audioCtx.createGain();
+  rollBodyGain.gain.value = 0;
+
+  rollGrainFilter = audioCtx.createBiquadFilter();
+  rollGrainFilter.type = 'bandpass';
+  rollGrainFilter.frequency.value = 900;
+  rollGrainFilter.Q.value = 1.8;
+  rollGrainGain = audioCtx.createGain();
+  rollGrainGain.gain.value = 0;
+
+  rollNoise.connect(rollBodyFilter);
+  rollBodyFilter.connect(rollBodyLowpass);
+  rollBodyLowpass.connect(rollBodyGain);
+  rollBodyGain.connect(audioCtx.destination);
+
+  rollNoise.connect(rollGrainFilter);
+  rollGrainFilter.connect(rollGrainGain);
+  rollGrainGain.connect(audioCtx.destination);
+
+  rollNoise.start();
+}
+
+function updateRollSound(vx, vy) {
+  if (!audioCtx) return;
+  const speed = Math.hypot(vx, vy);
+  if (speed <= 2.5) { stopRollSound(); return; }
+  if (!rollActive) startRollSound();
+
+  const now = audioCtx.currentTime;
+  const t = Math.min(1, (speed - 2.5) / 12);
+
+  rollBodyFilter.frequency.setTargetAtTime(105 + t * 175, now, 0.05);
+  rollBodyGain.gain.setTargetAtTime(Math.min(0.032, 0.012 + t * 0.024), now, 0.05);
+
+  rollGrainFilter.frequency.setTargetAtTime(700 + t * 1600, now, 0.05);
+  rollGrainGain.gain.setTargetAtTime(Math.min(0.011, 0.0015 + t * 0.011), now, 0.05);
+
+  // Watchdog: if this isn't refreshed again soon, fade out on its own.
+  // Guarantees the sound can never persist after callers stop feeding it.
+  clearTimeout(rollWatchdogTimer);
+  rollWatchdogTimer = setTimeout(stopRollSound, 200);
+}
+
+function stopRollSound() {
+  if (!rollActive) return;
+  rollActive = false;
+  clearTimeout(rollWatchdogTimer);
+  const now = audioCtx.currentTime;
+  rollBodyGain.gain.setTargetAtTime(0, now, 0.08);
+  rollGrainGain.gain.setTargetAtTime(0, now, 0.08);
+  const n = rollNoise;
+  rollNoise = null;
+  rollBodyFilter = null;
+  rollBodyLowpass = null;
+  rollBodyGain = null;
+  rollGrainFilter = null;
+  rollGrainGain = null;
+  setTimeout(() => {
+    try { n.stop(); } catch(e) {}
+  }, 300);
+}
+
+// Persistent spring-stretch tension tone, played while pulling back to serve.
+// Modeled as a metal groan rather than a clean tone: two detuned oscillators
+// beat against each other (roughness grows with tension), a filtered noise
+// layer adds grain, and randomized pitch jitter gives it a stick-slip
+// creak-and-catch character instead of a smooth glide.
+let springOsc1 = null;
+let springOsc2 = null;
+let springFilter = null;
+let springGain = null;
+let springNoise = null;
+let springNoiseGain = null;
+let springActive = false;
+let springPower = 0;
+let springJitterTimer = null;
+let springIdleTimer = null;
+let lastWallSoundTime = 0;
+
+function startSpringSound() {
+  springActive = true;
+
+  springOsc1 = audioCtx.createOscillator();
+  springOsc1.type = 'sawtooth';
+  springOsc2 = audioCtx.createOscillator();
+  springOsc2.type = 'sawtooth';
+  springFilter = audioCtx.createBiquadFilter();
+  springFilter.type = 'bandpass';
+  springFilter.Q.value = 3.5;
+  springGain = audioCtx.createGain();
+  springGain.gain.value = 0;
+  springOsc1.connect(springFilter);
+  springOsc2.connect(springFilter);
+  springFilter.connect(springGain);
+  springGain.connect(audioCtx.destination);
+  springOsc1.frequency.value = 90;
+  springOsc2.frequency.value = 96;
+  springOsc1.start();
+  springOsc2.start();
+
+  const loopSec = 1;
+  const bufSize = Math.ceil(audioCtx.sampleRate * loopSec);
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+  springNoise = audioCtx.createBufferSource();
+  springNoise.buffer = buf;
+  springNoise.loop = true;
+  const noiseFilter = audioCtx.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.value = 1100;
+  noiseFilter.Q.value = 0.6;
+  springNoiseGain = audioCtx.createGain();
+  springNoiseGain.gain.value = 0;
+  springNoise.connect(noiseFilter);
+  noiseFilter.connect(springNoiseGain);
+  springNoiseGain.connect(audioCtx.destination);
+  springNoise.start();
+
+  scheduleSpringJitter();
+}
+
+function scheduleSpringJitter() {
+  if (!springActive) return;
+  const now = audioCtx.currentTime;
+  if (springOsc1 && springOsc2) {
+    const jitterAmt = 3 + springPower * 26;
+    const j = (Math.random() - 0.5) * jitterAmt;
+    const baseFreq = 90 + springPower * 90;
+    const detune = 5 + springPower * 16;
+    springOsc1.frequency.setTargetAtTime(baseFreq + j, now, 0.025);
+    springOsc2.frequency.setTargetAtTime(baseFreq + detune - j * 0.6, now, 0.025);
+  }
+  const nextDelay = 35 + Math.random() * 100;
+  springJitterTimer = setTimeout(scheduleSpringJitter, nextDelay);
+}
+
+function updateSpringSound(power) {
+  if (!audioCtx) return;
+  power = Math.max(0, Math.min(1, power));
+  springPower = power;
+  if (power < 0.03) { stopSpringSound(); return; }
+  if (!springActive) startSpringSound();
+
+  const now = audioCtx.currentTime;
+  const baseFreq = 90 + power * 90;
+  springFilter.frequency.setTargetAtTime(baseFreq * 2.6 + power * 300, now, 0.06);
+  springGain.gain.setTargetAtTime(0.03 + power * 0.08, now, 0.06);
+  springNoiseGain.gain.setTargetAtTime(0.015 + power * 0.05, now, 0.06);
+
+  // Springs only creak while actively being stretched — if the pull
+  // distance stops changing (finger holding still), fade to silence
+  // instead of sustaining the groan at a fixed tension.
+  clearTimeout(springIdleTimer);
+  springIdleTimer = setTimeout(() => {
+    if (!springActive) return;
+    const idleNow = audioCtx.currentTime;
+    springGain.gain.setTargetAtTime(0, idleNow, 0.05);
+    springNoiseGain.gain.setTargetAtTime(0, idleNow, 0.05);
+  }, 80);
+}
+
+function stopSpringSound() {
+  if (!springActive) return;
+  springActive = false;
+  clearTimeout(springJitterTimer);
+  clearTimeout(springIdleTimer);
+  const now = audioCtx.currentTime;
+  springGain.gain.setTargetAtTime(0, now, 0.03);
+  springNoiseGain.gain.setTargetAtTime(0, now, 0.03);
+  const o1 = springOsc1, o2 = springOsc2, n = springNoise;
+  springOsc1 = null; springOsc2 = null; springNoise = null;
+  springGain = null; springNoiseGain = null; springFilter = null;
+  setTimeout(() => {
+    try { o1.stop(); } catch(e) {}
+    try { o2.stop(); } catch(e) {}
+    try { n.stop(); } catch(e) {}
+  }, 200);
+}
+
+function playCountdownBeep(power = 1) {
+  playSound('countdown', power);
+}
+
+// Schedules accelerating stopwatch-style ticks across `duration` ms:
+// starts slow (~2.5/sec) and speeds up to a rapid flutter (~14/sec)
+// right before time runs out, with a louder accented tick on the last one.
+let countdownTickToken = 0;
+function scheduleCountdownTicks(duration) {
+  const myToken = ++countdownTickToken;
+  const startInterval = 400;
+  const endInterval = 70;
+  let elapsed = 0;
+
+  function tick() {
+    if (myToken !== countdownTickToken) return; // superseded by a new serve
+    if (elapsed >= duration) return;
+    const t = Math.min(1, elapsed / duration);
+    // ease-in so it stays slow early and ramps quickly near the end
+    const eased = t * t;
+    const interval = startInterval - eased * (startInterval - endInterval);
+    const isFinal = elapsed + interval >= duration;
+    playCountdownBeep(isFinal ? 1.6 : 1);
+    elapsed += interval;
+    setTimeout(tick, interval);
+  }
+  tick();
+}
+
+// ── Load table ──
+function loadTable(table) {
+  currentTable = table;
+  pegs = table.pegs.map(p => ({...p, flashColor: null, flashTime: 0}));
+  pegLayerCanvas = null; // peg bake is per-table
+  flippers = {};
+  for (const k in table.flippers) {
+    const f = table.flippers[k];
+    flippers[k] = {
+      ...f,
+      ang: f.rest,
+      prevAng: f.rest,
+      omega: 0,
+      on: false,
+      contactUntil: 0,
+      cooldownUntil: 0,
+      lastClankTime: 0
+    };
+  }
+  resetTableBalls(table);
+}
+
+// Table balls live on the midline ridge (y is always H/2), placed by x the
+// same way pegs are placed. They respawn at their home spots on every serve.
+function resetTableBalls(table) {
+  tableBalls = (table.balls || []).map(b => ({
+    x: b.x,
+    y: H / 2,
+    r: b.r,
+    vx: 0,
+    vy: 0,
+    lastHitColor: '#c0c0c0'
+  }));
+}
+
+// ── Drawing (no green octagon border) ──
+// ── Playfield surface: lamplit baize, recessed into the cabinet ──
+// The whole surface (lamp falloff + felt grain + inset shadow) is baked once
+// into an offscreen canvas and blitted each frame, so the per-pixel noise
+// costs nothing at 60fps.
+let sceneryCanvas = null;
+
+function buildFeltGrain(size) {
+  const off = document.createElement('canvas');
+  off.width = size;
+  off.height = size;
+  const octx = off.getContext('2d');
+  const img = octx.createImageData(size, size);
+  for (let i = 0; i < size * size; i++) {
+    // Half light fibres, half dark, all at very low alpha — random per pixel,
+    // so there's no lattice or weave, just fuzz.
+    const c = Math.random() < 0.5 ? 255 : 0;
+    img.data[i * 4] = c;
+    img.data[i * 4 + 1] = c;
+    img.data[i * 4 + 2] = c;
+    img.data[i * 4 + 3] = Math.floor(Math.random() * 15);
+  }
+  octx.putImageData(img, 0, 0);
+  return off;
+}
+
+function tracefieldPath(context) {
+  context.beginPath();
+  context.moveTo(fieldPoly[0].x, fieldPoly[0].y);
+  for (let i = 1; i < fieldPoly.length; i++) context.lineTo(fieldPoly[i].x, fieldPoly[i].y);
+  context.closePath();
+}
+
+function buildScenery() {
+  sceneryCanvas = document.createElement('canvas');
+  sceneryCanvas.width = W;
+  sceneryCanvas.height = H;
+  const fx = sceneryCanvas.getContext('2d');
+
+  tracefieldPath(fx);
+  fx.save();
+  fx.clip();
+
+  // Lamp falloff. Centred on the midline, not up high like a single-player
+  // table: this field is symmetric and contested from both ends, so lighting
+  // one half brighter would hand that team a visibility edge. Centring it also
+  // lights the ridge crest, which suits the terrain.
+  const lampX = W / 2;
+  const lampY = H / 2;
+  const lamp = fx.createRadialGradient(lampX, lampY, 0, lampX, lampY, 420);
+  lamp.addColorStop(0, '#437c39');
+  lamp.addColorStop(0.5, '#2a5626');
+  lamp.addColorStop(1, '#153014');
+  fx.fillStyle = lamp;
+  fx.fillRect(0, 0, W, H);
+
+  fx.fillStyle = fx.createPattern(buildFeltGrain(128), 'repeat');
+  fx.fillRect(0, 0, W, H);
+
+  // Inset shadow: stroking the field path while clipped to it throws away the
+  // outer half of each stroke, leaving a soft dark rim — the felt reads as
+  // sunk into the wooden cabinet rather than painted on top of it.
+  tracefieldPath(fx);
+  fx.lineJoin = 'round';
+  fx.strokeStyle = 'rgba(8,18,7,0.18)'; fx.lineWidth = 34; fx.stroke();
+  fx.strokeStyle = 'rgba(8,18,7,0.30)'; fx.lineWidth = 18; fx.stroke();
+  fx.strokeStyle = 'rgba(8,18,7,0.45)'; fx.lineWidth = 7;  fx.stroke();
+
+  fx.restore();
+
+  // Everything else that never changes during play goes into the same bake:
+  // cabinet wood, grain, drains, and the painted white markings. The whole
+  // static layer then costs one drawImage per frame instead of ~150 path ops.
+  drawBrownBoard(fx);
+  drawWoodgrain(fx);
+  drawDrains(fx);
+  drawWhiteMarkings(fx);
+}
+
+function drawScenery() {
+  if (!sceneryCanvas) buildScenery();
+  ctx.drawImage(sceneryCanvas, 0, 0);
+}
+
+function drawBrownBoard(g) {
+  g.beginPath();
+  g.rect(0, 0, W, H);
+  g.moveTo(fieldPoly[0].x, fieldPoly[0].y);
+  for (let i = 1; i < fieldPoly.length; i++) g.lineTo(fieldPoly[i].x, fieldPoly[i].y);
+  g.closePath();
+  g.fillStyle = '#c9a66b';
+  g.fill('evenodd');
+}
+
+function drawWoodgrain(g) {
+  g.save();
+  g.beginPath();
+  g.rect(0, 0, W, H);
+  g.moveTo(fieldPoly[0].x, fieldPoly[0].y);
+  for (let i = 1; i < fieldPoly.length; i++) g.lineTo(fieldPoly[i].x, fieldPoly[i].y);
+  g.closePath();
+  g.clip('evenodd');
+
+  g.strokeStyle = 'rgba(140, 85, 40, 0.22)';
+  g.lineWidth = 1.4;
+  g.lineCap = 'round';
+  for (let x = 3; x < W; x += 6) {
+    g.beginPath();
+    const wobble = Math.sin(x * 0.035) * 5 + Math.cos(x * 0.02) * 3;
+    g.moveTo(x + wobble, 0);
+    g.lineTo(x - wobble * 0.7, H);
+    g.stroke();
+  }
+  g.strokeStyle = 'rgba(110, 60, 25, 0.18)';
+  g.lineWidth = 1.8;
+  for (let x = 10; x < W; x += 23) {
+    g.beginPath();
+    const wobble = Math.cos(x * 0.028) * 8;
+    g.moveTo(x + wobble, 0);
+    g.lineTo(x - wobble * 0.5, H);
+    g.stroke();
+  }
+  g.strokeStyle = 'rgba(210, 160, 90, 0.12)';
+  g.lineWidth = 1.1;
+  for (let x = 18; x < W; x += 31) {
+    g.beginPath();
+    const wobble = Math.sin(x * 0.04) * 4;
+    g.moveTo(x + wobble, 0);
+    g.lineTo(x - wobble * 0.6, H);
+    g.stroke();
+  }
+  g.restore();
+}
+
+// The goal mouth is exactly the white-outlined box — no further. Everything
+// beyond it is the wooden cabinet border, which drawBrownBoard/drawWoodgrain
+// have already laid down outside the field polygon.
+const GOAL_W = 140, GOAL_H = 36, GOAL_INSET = 48;
+
+function drawDrains(g) {
+  const gx = W / 2 - GOAL_W / 2;
+  g.fillStyle = '#111';
+  g.fillRect(gx, GOAL_INSET, GOAL_W, GOAL_H);
+  g.fillRect(gx, H - GOAL_INSET - GOAL_H, GOAL_W, GOAL_H);
+}
+
+function drawWhiteMarkings(g) {
+  const cx = W / 2, cy = H / 2;
+  g.strokeStyle = '#f8f8f8';
+  g.fillStyle = '#f8f8f8';
+  g.lineWidth = 4;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+
+  g.beginPath(); g.moveTo(55, cy); g.lineTo(W - 55, cy); g.stroke();
+  g.beginPath(); g.arc(cx, cy, 62, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.arc(cx, cy, 5.5, 0, Math.PI * 2); g.fill();
+
+  // Goals are drawn on three sides only — the field-facing edge is left open,
+  // so each reads as a mouth rather than a closed rectangle.
+  g.lineWidth = 6;
+  const gl = cx - GOAL_W / 2, gr = cx + GOAL_W / 2;
+  const topInner = GOAL_INSET + GOAL_H, botInner = H - GOAL_INSET - GOAL_H;
+
+  g.beginPath();
+  g.moveTo(gl, topInner);
+  g.lineTo(gl, GOAL_INSET);
+  g.lineTo(gr, GOAL_INSET);
+  g.lineTo(gr, topInner);
+  g.stroke();
+
+  g.beginPath();
+  g.moveTo(gl, botInner);
+  g.lineTo(gl, H - GOAL_INSET);
+  g.lineTo(gr, H - GOAL_INSET);
+  g.lineTo(gr, botInner);
+  g.stroke();
+
+  g.lineWidth = 3;
+  g.beginPath(); g.arc(cx, 125, 50, 0.2 * Math.PI, 0.8 * Math.PI); g.stroke();
+  g.beginPath(); g.arc(cx, H - 125, 50, 1.2 * Math.PI, 1.8 * Math.PI); g.stroke();
+}
+
+// One painted score numeral: white paint outline underneath for
+// legibility on the green, with the translucent team color over it.
+// Everything kept low-opacity so it reads as worn paint on the felt.
+function paintScoreNum(text, x, y, fillColor) {
+  ctx.strokeStyle = 'rgba(248, 248, 248, 0.45)';
+  ctx.lineWidth = 4;
+  ctx.lineJoin = 'round';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = fillColor;
+  ctx.fillText(text, x, y);
+}
+
+function drawScores() {
+  const cx = W / 2;
+  const cy = H / 2;
+  // Slid outward so the digits sit fully clear of the 62px center circle
+  // (even at two digits) instead of crossing its line.
+  const xOffset = 88;
+  const yOffset = 44;
+
+  ctx.save();
+  ctx.font = "bold 38px 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  paintScoreNum(String(score.blue), cx - xOffset, cy - yOffset, 'rgba(74, 140, 189, 0.35)');
+  paintScoreNum(String(score.red), cx + xOffset, cy - yOffset, 'rgba(221, 90, 63, 0.35)');
+
+  ctx.translate(cx, cy);
+  ctx.rotate(Math.PI);
+  paintScoreNum(String(score.blue), xOffset, -yOffset, 'rgba(74, 140, 189, 0.35)');
+  paintScoreNum(String(score.red), -xOffset, -yOffset, 'rgba(221, 90, 63, 0.35)');
+  ctx.restore();
+}
+
+// ── Peg layer ──
+// Pegs at rest never change, so they're baked once per table (shadow +
+// gradient sphere each) and blitted. Per frame, only currently-flashing
+// pegs draw anything on top: the glow halo and a white sphere. The white
+// sphere is opaque and congruent with the baked one, so it fully covers it;
+// the baked shadow underneath is reused rather than redrawn.
+let pegLayerCanvas = null;
+
+function drawPegSphere(g, p, color) {
+  const grad = g.createRadialGradient(p.x - 3, p.y - 3, 1, p.x, p.y, p.r);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.3, color);
+  grad.addColorStop(1, shade(color, -45));
+  g.fillStyle = grad;
+  g.beginPath();
+  g.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+  g.fill();
+}
+
+function bakePegLayer() {
+  pegLayerCanvas = document.createElement('canvas');
+  pegLayerCanvas.width = W;
+  pegLayerCanvas.height = H;
+  const g = pegLayerCanvas.getContext('2d');
+  for (const p of pegs) {
+    g.fillStyle = 'rgba(0,0,0,0.3)';
+    g.beginPath();
+    g.arc(p.x + 2, p.y + 3, p.r, 0, Math.PI * 2);
+    g.fill();
+    drawPegSphere(g, p, p.c);
+  }
+}
+
+function drawPegs() {
+  if (!pegLayerCanvas) bakePegLayer();
+  ctx.drawImage(pegLayerCanvas, 0, 0);
+
+  const now = performance.now();
+  for (const p of pegs) {
+    if (p.flashTime <= now) continue;
+    const glowC = p.flashColor || '#ffffff';
+    ctx.save();
+    ctx.shadowColor = glowC;
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = glowC;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r + 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    drawPegSphere(ctx, p, '#ffffff');
+  }
+}
+
+function shade(hex, a) {
+  let r = Math.max(0, Math.min(255, parseInt(hex.slice(1,3),16) + a));
+  let g = Math.max(0, Math.min(255, parseInt(hex.slice(3,5),16) + a));
+  let b = Math.max(0, Math.min(255, parseInt(hex.slice(5,7),16) + a));
+  return `rgb(${r},${g},${b})`;
+}
+
+// Builds a tapered "belt" outline between two circles of different radii —
+// i.e. a flipper silhouette: wide rounded pivot end, narrow rounded tip end.
+// Caller is responsible for ctx.beginPath()/closePath()/fill() around this.
+function traceTaperedFlipper(context, x1, y1, r1, x2, y2, r2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const dist = Math.hypot(dx, dy) || 0.001;
+  const angle = Math.atan2(dy, dx);
+  const theta = Math.acos(Math.max(-1, Math.min(1, (r1 - r2) / dist)));
+
+  const p1a = { x: x1 + r1 * Math.cos(angle + theta), y: y1 + r1 * Math.sin(angle + theta) };
+  const p1b = { x: x1 + r1 * Math.cos(angle - theta), y: y1 + r1 * Math.sin(angle - theta) };
+  const p2a = { x: x2 + r2 * Math.cos(angle + theta), y: y2 + r2 * Math.sin(angle + theta) };
+
+  context.moveTo(p1a.x, p1a.y);
+  context.lineTo(p2a.x, p2a.y);
+  context.arc(x2, y2, r2, angle + theta, angle - theta, true);
+  context.lineTo(p1b.x, p1b.y);
+  context.arc(x1, y1, r1, angle - theta, angle + theta, true);
+}
+
+function drawFlipper(f) {
+  const tx = f.px + Math.cos(f.ang) * f.len;
+  const ty = f.py + Math.sin(f.ang) * f.len;
+
+  const mainColor = f.team === 'blue' ? '#4a8cbd' : '#dd5a3f';
+  const darkColor = f.team === 'blue' ? '#2b5675' : '#8b3623';
+
+  const locked = !serveFlippersEnabled && f.team === serveTeam;
+  ctx.globalAlpha = locked ? 0.35 : 1;
+
+  ctx.fillStyle = mainColor;
+  ctx.beginPath();
+  traceTaperedFlipper(ctx, f.px, f.py, 9, tx, ty, 3.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = darkColor;
+  ctx.beginPath();
+  traceTaperedFlipper(ctx, f.px, f.py, 3.2, tx, ty, 1.2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(f.px, f.py, 6.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+}
+
+// ── Serve prompt: the canon's "this piece is waiting for you" pulse ──
+// Amber glowhalo underneath, pulsing gold ring on top, both on the canon's
+// 1.5s ease-in-out cycle. Shown only when a human has the serve and hasn't
+// started dragging yet.
+function servePromptVisible() {
+  return serving && ball && !aiming && !gameOver &&
+         !(vsCPU && serveTeam !== humanTeam);
+}
+
+function servePulse() {
+  const t = (performance.now() % 1500) / 1500;
+  return 0.5 - 0.5 * Math.cos(t * Math.PI * 2);
+}
+
+// The ball sits still while serving, so the halo gradient is built once per
+// serve position and the pulse is applied via globalAlpha — mathematically
+// identical to baking the pulse into the stops, without per-frame gradients.
+let serveHalo = null;
+
+function drawServeHalo(b) {
+  const r = b.r * 3.4;
+  if (!serveHalo || serveHalo.x !== b.x || serveHalo.y !== b.y || serveHalo.r !== r) {
+    const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r);
+    grad.addColorStop(0, 'rgba(255,200,70,0.7)');
+    grad.addColorStop(0.35, 'rgba(255,200,70,0.7)');
+    grad.addColorStop(1, 'rgba(255,200,70,0)');
+    serveHalo = { x: b.x, y: b.y, r, grad };
+  }
+  ctx.globalAlpha = 0.22 + 0.46 * servePulse();
+  ctx.fillStyle = serveHalo.grad;
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawServeRing(b) {
+  const a = 0.45 + 0.55 * servePulse();
+  ctx.strokeStyle = 'rgba(255,215,94,' + a.toFixed(3) + ')';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, b.r + 5.5, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawBall(b) {
+  if (!b) return;
+
+  if (b.lastHitColor) {
+    ctx.save();
+    ctx.shadowColor = b.lastHitColor;
+    ctx.shadowBlur = 25;
+    ctx.strokeStyle = b.lastHitColor;
+    ctx.lineWidth = 6;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  ctx.beginPath();
+  ctx.ellipse(b.x + 3, b.y + 5, b.r * 0.92, b.r * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const g = ctx.createRadialGradient(
+    b.x - b.r * 0.38, b.y - b.r * 0.42, 2,
+    b.x, b.y, b.r * 1.15
+  );
+  g.addColorStop(0, '#f2f2f2');
+  g.addColorStop(0.28, '#c0c0c0');
+  g.addColorStop(0.7, '#7a7a7a');
+  g.addColorStop(1, '#3a3a3a');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.78)';
+  ctx.beginPath();
+  ctx.arc(b.x - 5, b.y - 6, 4.2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawAimPreview() {
+  if (!aiming || !ball) return;
+
+  const dx = aimStartX - aimCurX;
+  const dy = aimStartY - aimCurY;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 8) return;
+
+  const power = Math.min(dist, MAX_AIM_DIST) / MAX_AIM_DIST;
+  const len = Math.hypot(dx, dy) || 1;
+  const dirX = dx / len;
+  const dirY = dy / len;
+  const lineLen = 40 + power * 110;
+
+  const r = 255;
+  const g = Math.floor(220 - power * 140);
+  const b = Math.floor(40 - power * 40);
+  const col = `rgb(${r},${g},${Math.max(0,b)})`;
+
+  ctx.save();
+  ctx.strokeStyle = col;
+  ctx.fillStyle = col;
+  ctx.lineWidth = 4 + power * 3;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.85;
+
+  ctx.beginPath();
+  ctx.moveTo(ball.x, ball.y);
+  ctx.lineTo(ball.x + dirX * lineLen, ball.y + dirY * lineLen);
+  ctx.stroke();
+
+  const ax = ball.x + dirX * lineLen;
+  const ay = ball.y + dirY * lineLen;
+  const ah = 12 + power * 6;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(ax - dirX * ah + dirY * ah * 0.5, ay - dirY * ah - dirX * ah * 0.5);
+  ctx.lineTo(ax - dirX * ah - dirY * ah * 0.5, ay - dirY * ah + dirX * ah * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 0.35 + power * 0.4;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r + 8 + power * 18, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawCountdown(progress) {
+  const cx = W / 2;
+  const cy = H / 2;
+  const outerR = 52;
+  const innerR = 40;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  ctx.beginPath();
+  ctx.ellipse(cx + 3, cy + 5, outerR * 0.95, outerR * 0.55, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const metal = ctx.createRadialGradient(
+    cx - outerR * 0.38, cy - outerR * 0.42, 2,
+    cx, cy, outerR * 1.15
+  );
+  metal.addColorStop(0, '#f2f2f2');
+  metal.addColorStop(0.28, '#c0c0c0');
+  metal.addColorStop(0.7, '#7a7a7a');
+  metal.addColorStop(1, '#3a3a3a');
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.fillStyle = metal;
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.78)';
+  ctx.beginPath();
+  ctx.arc(cx - 14, cy - 16, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  const totalTicks = 24;
+  const wiped = Math.floor(progress * totalTicks);
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < totalTicks; i++) {
+    if (i < wiped) continue;
+    const a = -Math.PI / 2 + (i / totalTicks) * Math.PI * 2;
+    const r1 = innerR - 3;
+    const r2 = innerR - (i % 3 === 0 ? 11 : 7);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+    ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+    ctx.stroke();
+  }
+
+  const handAngle = -Math.PI / 2 + progress * Math.PI * 2;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(handAngle);
+
+  ctx.beginPath();
+  ctx.moveTo(0, 4);
+  ctx.lineTo(innerR - 6, 0);
+  ctx.lineTo(0, -4);
+  ctx.closePath();
+  ctx.fillStyle = '#dd5a3f';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#b04833';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#f8f8f8';
+  ctx.fill();
+
+  ctx.restore();
+  ctx.restore();
+}
+
+// ── Physics with sounds + table balls ──
+function segmentCollision(cx, cy, r, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len2 = dx * dx + dy * dy || 1;
+  let t = ((cx - x1) * dx + (cy - y1) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const px = x1 + t * dx;
+  const py = y1 + t * dy;
+  const dist = Math.hypot(cx - px, cy - py);
+  if (dist >= r) return null;
+  const nx = (cx - px) / (dist || 1);
+  const ny = (cy - py) / (dist || 1);
+  return { nx, ny, dist, px, py };
+}
+
+function resolveFlipper(f, b) {
+  if (!b) return;
+  if (!serveFlippersEnabled && f.team === serveTeam) return;
+
+  const SAMPLES = 4;
+  let hit = null;
+
+  for (let s = 0; s <= SAMPLES; s++) {
+    const t = s / SAMPLES;
+    const ang = f.prevAng + (f.ang - f.prevAng) * t;
+    const tx = f.px + Math.cos(ang) * f.len;
+    const ty = f.py + Math.sin(ang) * f.len;
+    const candidate = segmentCollision(b.x, b.y, b.r + 3, f.px, f.py, tx, ty);
+    if (candidate) { hit = candidate; break; }
+  }
+  if (!hit) return;
+
+  const overlap = (b.r + 3) - hit.dist;
+  b.x += hit.nx * overlap;
+  b.y += hit.ny * overlap;
+
+  const rx = hit.px - f.px;
+  const ry = hit.py - f.py;
+  const fvx = -f.omega * ry;
+  const fvy =  f.omega * rx;
+
+  const rvx = b.vx - fvx;
+  const rvy = b.vy - fvy;
+  const vn = rvx * hit.nx + rvy * hit.ny;
+
+  if (vn < 0) {
+    b.vx -= (1 + REST) * vn * hit.nx;
+    b.vy -= (1 + REST) * vn * hit.ny;
+    const teamColor = f.team === 'blue' ? '#4a8cbd' : '#dd5a3f';
+    b.lastHitColor = teamColor;
+
+    const FLIPPER_HIT_THRESHOLD = 1.5; // ignore soft rolls/resting contact
+    const FLIPPER_SOUND_DEBOUNCE = 90; // ms, avoid re-triggering mid-collision
+    const now = performance.now();
+    if (Math.abs(vn) > FLIPPER_HIT_THRESHOLD && now - f.lastClankTime > FLIPPER_SOUND_DEBOUNCE) {
+      f.lastClankTime = now;
+      playSound('flipper', Math.abs(vn) * 0.1);
+    }
+  }
+}
+
+function updateFlippers() {
+  for (const k in flippers) {
+    const f = flippers[k];
+    let target, maxOmega;
+
+    f.prevAng = f.ang;
+
+    if (!serveFlippersEnabled && f.team === serveTeam) {
+      f.on = false;
+      target = f.rest;
+      maxOmega = RETURN_OMEGA;
+    } else {
+      target = f.on ? f.act : f.rest;
+      maxOmega = f.on ? FLIP_OMEGA : RETURN_OMEGA;
+    }
+
+    const diff = target - f.ang;
+    const step = Math.sign(diff) * Math.min(Math.abs(diff), maxOmega);
+    f.omega = step;
+    f.ang += step;
+
+    if (Math.abs(f.ang - target) < 0.0005) {
+      f.ang = target;
+      f.omega = 0;
+    }
+  }
+}
+
+function resolveWalls(b) {
+  for (let i = 0; i < fieldPoly.length; i++) {
+    const p0 = fieldPoly[i];
+    const p1 = fieldPoly[(i + 1) % fieldPoly.length];
+
+    const isTopEdge = (p0.y < 100 && p1.y < 100);
+    const isBottomEdge = (p0.y > H - 100 && p1.y > H - 100);
+    const inGoalX = Math.abs((p0.x + p1.x) / 2 - W / 2) < 90;
+    if ((isTopEdge || isBottomEdge) && inGoalX) continue;
+
+    const hit = segmentCollision(b.x, b.y, b.r, p0.x, p0.y, p1.x, p1.y);
+    if (hit) {
+      const overlap = b.r - hit.dist + 0.5;
+      b.x += hit.nx * overlap;
+      b.y += hit.ny * overlap;
+      const vn = b.vx * hit.nx + b.vy * hit.ny;
+      if (vn < 0) {
+        b.vx -= (1 + REST) * vn * hit.nx;
+        b.vy -= (1 + REST) * vn * hit.ny;
+
+        const WALL_HIT_THRESHOLD = 1.2; // ignore soft/pinned contact
+        const WALL_SOUND_DEBOUNCE = 90; // ms, avoid rapid-fire retriggering
+        const now = performance.now();
+        if (Math.abs(vn) > WALL_HIT_THRESHOLD && now - lastWallSoundTime > WALL_SOUND_DEBOUNCE) {
+          lastWallSoundTime = now;
+          playSound('wall');
+        }
+      }
+    }
+  }
+}
+
+function containBall(b) {
+  let closestDist = Infinity;
+  let closestNx = 0, closestNy = 0, closestPx = 0, closestPy = 0;
+  let outside = false;
+
+  for (let i = 0; i < fieldPoly.length; i++) {
+    const p0 = fieldPoly[i];
+    const p1 = fieldPoly[(i + 1) % fieldPoly.length];
+
+    const isTopEdge = (p0.y < 100 && p1.y < 100);
+    const isBottomEdge = (p0.y > H - 100 && p1.y > H - 100);
+    const inGoalX = Math.abs((p0.x + p1.x) / 2 - W / 2) < 90;
+    if ((isTopEdge || isBottomEdge) && inGoalX) continue;
+
+    const dx = p1.x - p0.x, dy = p1.y - p0.y;
+    const len2 = dx * dx + dy * dy || 1;
+    let t = ((b.x - p0.x) * dx + (b.y - p0.y) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const px = p0.x + t * dx;
+    const py = p0.y + t * dy;
+    const dist = Math.hypot(b.x - px, b.y - py);
+
+    const edgeLen = Math.hypot(dx, dy) || 1;
+    const nx = dy / edgeLen;
+    const ny = -dx / edgeLen;
+
+    const signed = (b.x - px) * nx + (b.y - py) * ny;
+    if (signed > 0) outside = true;
+
+    if (dist < closestDist) {
+      closestDist = dist;
+      closestNx = nx;
+      closestNy = ny;
+      closestPx = px;
+      closestPy = py;
+    }
+  }
+
+  if (outside || closestDist < b.r) {
+    const targetDist = b.r + 0.5;
+    b.x = closestPx - closestNx * targetDist;
+    b.y = closestPy - closestNy * targetDist;
+
+    const vn = b.vx * closestNx + b.vy * closestNy;
+    if (vn > 0) {
+      b.vx -= vn * closestNx * 1.1;
+      b.vy -= vn * closestNy * 1.1;
+    }
+  }
+}
+
+// Full physics step for one ball: terrain, friction, integration, and
+// collisions with pegs, flippers, and walls. Used by the main ball and
+// every table ball alike.
+function stepBallPhysics(b) {
+  applyTerrain(b);
+
+  b.vx *= FRICTION;
+  b.vy *= FRICTION;
+  b.x += b.vx;
+  b.y += b.vy;
+
+  resolvePegs(b);
+  for (const k in flippers) resolveFlipper(flippers[k], b);
+  resolveWalls(b);
+  resolveWalls(b);
+  containBall(b);
+}
+
+function resolvePegs(b) {
+  for (const p of pegs) {
+    const dist = Math.hypot(b.x - p.x, b.y - p.y);
+    if (dist < b.r + p.r) {
+      const nx = (b.x - p.x) / dist;
+      const ny = (b.y - p.y) / dist;
+      const overlap = b.r + p.r - dist;
+      b.x += nx * overlap;
+      b.y += ny * overlap;
+      const vn = b.vx * nx + b.vy * ny;
+      if (vn < 0) {
+        b.vx -= (1 + 0.82) * vn * nx;
+        b.vy -= (1 + 0.82) * vn * ny;
+        if (!physicsQuiet) {
+          if (b.lastHitColor) {
+            p.flashColor = b.lastHitColor;
+            p.flashTime = performance.now() + 180;
+          }
+          // Peg hits feed the owner's striker gauge. Debounced per peg so a
+          // ball pinned against a pin by terrain can't farm it every frame.
+          const bumpTeam = colorToTeam(b.lastHitColor);
+          if (bumpTeam && performance.now() - (p.lastBump || 0) > 200) {
+            p.lastBump = performance.now();
+            awardGauge(bumpTeam, PEG_BUMP);
+          }
+        }
+        playSound('peg');
+      }
+    }
+  }
+}
+
+// Equal-mass elastic collision — both balls react. The first ball's
+// team color (last flipper touch) passes to the second on contact.
+function collideBalls(a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const d = Math.hypot(dx, dy) || 0.0001;
+  const overlap = a.r + b.r - d;
+  if (overlap <= 0) return;
+
+  const nx = dx / d;
+  const ny = dy / d;
+  a.x -= nx * overlap / 2;
+  a.y -= ny * overlap / 2;
+  b.x += nx * overlap / 2;
+  b.y += ny * overlap / 2;
+
+  const vn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+  if (vn < 0) {
+    const j = (1 + 0.9) * vn / 2;
+    a.vx += j * nx;
+    a.vy += j * ny;
+    b.vx -= j * nx;
+    b.vy -= j * ny;
+    if (a.lastHitColor) b.lastHitColor = a.lastHitColor;
+    playSound('ballClick', Math.min(1.2, 0.35 + Math.abs(vn) * 0.1));
+  }
+}
+
+function updateBall() {
+  if (serving || gameOver) return;
+
+  if (ball) {
+    if (!serveFlippersEnabled) {
+      if (serveTeam === 'blue' && ball.y > H / 2) serveFlippersEnabled = true;
+      if (serveTeam === 'red' && ball.y < H / 2) serveFlippersEnabled = true;
+    }
+
+    stepBallPhysics(ball);
+    updateRollSound(ball.vx, ball.vy);
+  }
+
+  for (const tb of tableBalls) stepBallPhysics(tb);
+
+  if (ball) for (const tb of tableBalls) collideBalls(ball, tb);
+  for (let i = 0; i < tableBalls.length; i++) {
+    for (let j = i + 1; j < tableBalls.length; j++) {
+      collideBalls(tableBalls[i], tableBalls[j]);
+    }
+  }
+
+  const gw = 65;
+
+  // A table ball through a goal scores just like the main ball, then
+  // leaves play — resetTableBalls() brings it home at the next serve.
+  for (let i = tableBalls.length - 1; i >= 0; i--) {
+    const tb = tableBalls[i];
+    if (Math.abs(tb.x - W / 2) >= gw) continue;
+    const inTopGoal = tb.y - tb.r < 55;
+    const inBottomGoal = tb.y + tb.r > H - 55;
+    if (!inTopGoal && !inBottomGoal) continue;
+
+    if (inTopGoal) score.red++;
+    else score.blue++;
+    awardGauge(inTopGoal ? 'red' : 'blue', GOAL_BUMP);
+    pendingServe = inTopGoal ? 'red' : 'blue';
+    updateScore();
+    playSound('goal');
+    tableBalls.splice(i, 1);
+  }
+
+  // The main ball scoring doesn't end the rally while other balls are
+  // still live — it just leaves play, and the serve waits below.
+  if (ball && Math.abs(ball.x - W / 2) < gw) {
+    const inTopGoal = ball.y - ball.r < 55;
+    const inBottomGoal = ball.y + ball.r > H - 55;
+    if (inTopGoal || inBottomGoal) {
+      if (inTopGoal) score.red++;
+      else score.blue++;
+      awardGauge(inTopGoal ? 'red' : 'blue', GOAL_BUMP);
+      pendingServe = inTopGoal ? 'red' : 'blue';
+      updateScore();
+      playSound('goal');
+      stopRollSound();
+      ball = null;
+      lastLivelyTime = performance.now();
+    }
+  }
+
+  // Move on to the serve only when the field has gone quiet: every
+  // remaining table ball motionless on the midline (or none left).
+  // Safety valve: if nothing has moved at speed for a while (e.g. a ball
+  // wedged in pegs off the midline), serve anyway instead of stalling.
+  if (!ball && pendingServe) {
+    let anyLively = false;
+    let allSettled = true;
+    for (const tb of tableBalls) {
+      if (tb.spawned) continue; // roaming striker balls never gate the serve
+      const sp = Math.hypot(tb.vx, tb.vy);
+      if (sp > 0.5) anyLively = true;
+      if (sp >= 0.06 || Math.abs(tb.y - H / 2) >= 3) allSettled = false;
+    }
+    if (anyLively) lastLivelyTime = performance.now();
+
+    if (allSettled || performance.now() - lastLivelyTime > 4000) {
+      startServe(pendingServe);
+    }
+  }
+}
+
+function updateScore() {
+  scoreEl.textContent = `${score.blue}  —  ${score.red}`;
+  checkWinCondition();
+}
+
+function checkWinCondition() {
+  if (gameOver) return;
+  if (score.blue >= pointsToWin) showVictory('blue');
+  else if (score.red >= pointsToWin) showVictory('red');
+}
+
+function showVictory(winner) {
+  gameOver = true;
+  const victoryScreen = document.getElementById('victoryScreen');
+  const title = document.getElementById('victoryTitle');
+  const subtitle = document.getElementById('victorySubtitle');
+  
+  title.textContent = winner.toUpperCase() + ' WINS!';
+  subtitle.textContent = `${score.blue} — ${score.red}`;
+  title.style.color = winner === 'blue' ? '#4a8cbd' : '#dd5a3f';
+  victoryScreen.style.display = 'flex';
+}
+
+function updateCPU() {
+  if (!vsCPU || serving) return;
+  if (!ball && tableBalls.length === 0) return;
+
+  const now = performance.now();
+  const cpuTeam = (humanTeam === 'red') ? 'blue' : 'red';
+
+  for (const id in flippers) {
+    const f = flippers[id];
+    if (f.team !== cpuTeam) continue;
+
+    const rtx = f.px + Math.cos(f.rest) * f.len;
+    const rty = f.py + Math.sin(f.rest) * f.len;
+    let near = !!(ball && segmentCollision(ball.x, ball.y, ball.r + 22, f.px, f.py, rtx, rty));
+    if (!near) {
+      for (const t of tableBalls) {
+        if (segmentCollision(t.x, t.y, t.r + 22, f.px, f.py, rtx, rty)) {
+          near = true;
+          break;
+        }
+      }
+    }
+
+    if (near && now > f.cooldownUntil && now > f.contactUntil) {
+      f.contactUntil = now + 120;
+    }
+
+    if (now < f.contactUntil) {
+      f.on = true;
+    } else {
+      if (f.contactUntil > 0 && now >= f.contactUntil) {
+        f.cooldownUntil = now + 1600;
+        f.contactUntil = 0;
+      }
+      f.on = false;
+    }
+  }
+}
+
+// ── CPU serve brain ──
+// The old serve fired a blind random angle and conceded constantly (58% own
+// goals on Classic: peg rebounds funnel straight back down the goal corridor
+// while the server's flippers are still serve-locked ghosts). Instead: sample
+// candidates from the same cone, silently roll each forward with the REAL
+// physics, throw out any that concede or never crest the ridge, then plunge
+// on a random survivor — the machine still "picks a lane", it just looks
+// down the lane first. Table-agnostic by construction: pegs, midline balls,
+// and extra flippers are all just physics.
+const SERVE_CANDIDATES = 16;
+const SERVE_SAFE_ENOUGH = 8; // stop looking once this many clean lanes exist
+const SERVE_ROLLOUT_FRAMES = 300; // ~5s at 60fps
+
+function rolloutServe(vx, vy) {
+  const toward = serveTeam === 'blue' ? 1 : -1;
+  const simBall = { x: ball.x, y: ball.y, r: ball.r, vx, vy, lastHitColor: ball.lastHitColor };
+  const simBalls = tableBalls.map(tb => ({ ...tb }));
+
+  let crossed = false;
+  let maxDepth = -Infinity;
+
+  // Flipper state is read live: receiver's flippers sit at rest as static
+  // geometry, the server's are serve-locked ghosts — exactly the situation
+  // the real serve launches into.
+  physicsQuiet = true;
+  try {
+    for (let f = 0; f < SERVE_ROLLOUT_FRAMES; f++) {
+      stepBallPhysics(simBall);
+      for (const tb of simBalls) stepBallPhysics(tb);
+      for (const tb of simBalls) collideBalls(simBall, tb);
+      for (let i = 0; i < simBalls.length; i++) {
+        for (let j = i + 1; j < simBalls.length; j++) {
+          collideBalls(simBalls[i], simBalls[j]);
+        }
+      }
+
+      const depth = toward === 1 ? simBall.y : H - simBall.y;
+      if (depth > maxDepth) maxDepth = depth;
+      if (toward === 1 ? simBall.y > H / 2 : simBall.y < H / 2) crossed = true;
+
+      // Any ball (served or midline) reaching a goal ends the rollout —
+      // same 65px scoring window updateBall uses.
+      const g = goalCheck(simBall, toward, crossed, maxDepth);
+      if (g) return g;
+      for (const tb of simBalls) {
+        const gt = goalCheck(tb, toward, crossed, maxDepth);
+        if (gt) return gt;
+      }
+    }
+  } finally {
+    physicsQuiet = false;
+  }
+  return { own: false, crossed, maxDepth };
+}
+
+function goalCheck(b, toward, crossed, maxDepth) {
+  if (Math.abs(b.x - W / 2) >= 65) return null;
+  const inTop = b.y - b.r < 55;
+  const inBottom = b.y + b.r > H - 55;
+  if (!inTop && !inBottom) return null;
+  const own = (toward === 1) ? inTop : inBottom;
+  if (own) return { own: true, crossed, maxDepth };
+  return { own: false, crossed: true, maxDepth: H };
+}
+
+function autoServe() {
+  if (!serving || !ball) return;
+
+  const toward = serveTeam === 'blue' ? 1 : -1;
+
+  const evaluated = [];
+  const safe = [];
+  for (let i = 0; i < SERVE_CANDIDATES; i++) {
+    const angle = (Math.random() - 0.5) * 0.85;
+    const power = 0.48 + Math.random() * 0.42;
+    const speed = 7.5 + power * 11.5;
+    const c = {
+      power,
+      vx: Math.sin(angle) * speed,
+      vy: Math.cos(angle) * speed * toward
+    };
+    c.roll = rolloutServe(c.vx, c.vy);
+    evaluated.push(c);
+    if (!c.roll.own && c.roll.crossed) {
+      safe.push(c);
+      if (safe.length >= SERVE_SAFE_ENOUGH) break;
+    }
+  }
+
+  let pick;
+  if (safe.length) {
+    pick = safe[Math.floor(Math.random() * safe.length)];
+  } else {
+    // Dense future table where nothing rolls clean: take the least-bad
+    // candidate — deepest progress, never preferring an own goal.
+    let best = -Infinity;
+    for (const c of evaluated) {
+      const s = (c.roll.own ? -1e6 : 0) + c.roll.maxDepth;
+      if (s > best) { best = s; pick = c; }
+    }
+  }
+
+  ball.vx = pick.vx;
+  ball.vy = pick.vy;
+  // The server owns the ball off the plunge — glow + gauge attribution.
+  ball.lastHitColor = TEAM_COLORS[serveTeam];
+
+  serving = false;
+  msgEl.style.display = 'none';
+  cpuCountdownStart = 0;
+  countdownTickToken++; // cancel any in-flight countdown ticks
+  playSound('serve', pick.power);
+}
+
+function startServe(team) {
+  serving = true;
+  serveTeam = team;
+  pendingServe = null;
+  serveFlippersEnabled = false;
+  aiming = false;
+  cpuCountdownStart = 0;
+
+  for (const k in flippers) {
+    if (flippers[k].team === team) {
+      flippers[k].on = false;
+      flippers[k].ang = flippers[k].rest;
+      flippers[k].prevAng = flippers[k].rest;
+      flippers[k].omega = 0;
+      flippers[k].contactUntil = 0;
+      flippers[k].cooldownUntil = 0;
+    }
+  }
+
+  if (currentTable) resetTableBalls(currentTable);
+
+  const y = team === 'blue' ? 210 : 650;
+  ball = {
+    x: W / 2,
+    y,
+    r: 13,
+    vx: 0,
+    vy: 0,
+    lastHitColor: null
+  };
+
+  const isCPUServe = vsCPU && team !== humanTeam;
+
+  msgEl.style.display = 'block';
+  if (isCPUServe) {
+    msgEl.style.display = 'none';
+    cpuCountdownStart = performance.now();
+    scheduleCountdownTicks(COUNTDOWN_MS);
+  } else {
+    const keeperHint = pockets[team].tier >= 1
+      ? '<br><span style="opacity:.75;font-size:12px">Keeper charged — tap him once play starts</span>'
+      : '';
+    msgEl.innerHTML = '<b>' + (team === 'blue' ? 'BLUE' : 'RED') + '</b> to serve<br>Drag to aim &amp; release' + keeperHint;
+  }
+}
+
+// One control = (team, side). Every flipper matching the pair fires
+// together, so extra mid-field flippers ride the same button as the
+// standard one on that wing — classic pinball behavior.
+function setFlip(team, side, state) {
+  for (const k in flippers) {
+    const f = flippers[k];
+    if (f.team !== team || f.side !== side) continue;
+    if (vsCPU && f.team !== humanTeam) continue;
+    if (!serveFlippersEnabled && f.team === serveTeam) continue;
+    f.on = state;
+  }
+}
+
+function getCanvasPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+// Input: screen touch zones → (team, side) controls
+// The four cabinet triangles plus the four margin quadrants beside it. The
+// margin zones map to the same (team, side) controls as the triangle they sit
+// next to, so a thumb resting off the table still works a flipper.
+const ZONE_CONTROLS = {
+  tl:  ['blue', 'left'],  tr:  ['blue', 'right'],
+  bl:  ['red',  'left'],  br:  ['red',  'right'],
+  mtl: ['blue', 'left'],  mtr: ['blue', 'right'],
+  mbl: ['red',  'left'],  mbr: ['red',  'right']
+};
+
+// Overlays only cover the cabinet, not the margins, so the margin zones would
+// otherwise still fire behind an open menu.
+const victoryScreenEl = document.getElementById('victoryScreen');
+function menusOpen() {
+  return startScreen.style.display !== 'none' ||
+         tableScreen.style.display !== 'none' ||
+         victoryScreenEl.style.display !== 'none';
+}
+
+Object.keys(ZONE_CONTROLS).forEach(zoneId => {
+  const [team, side] = ZONE_CONTROLS[zoneId];
+  const el = document.getElementById(zoneId);
+  el.addEventListener('pointerdown', e => { if (menusOpen()) return; e.preventDefault(); setFlip(team, side, true); });
+  el.addEventListener('pointerup', e => { e.preventDefault(); setFlip(team, side, false); });
+  el.addEventListener('pointerleave', e => { e.preventDefault(); setFlip(team, side, false); });
+  el.addEventListener('pointercancel', e => { e.preventDefault(); setFlip(team, side, false); });
+});
+
+window.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  if (e.key === 'q' || e.key === 'Q') setFlip('blue', 'left', true);
+  if (e.key === 'e' || e.key === 'E') setFlip('blue', 'right', true);
+  if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') setFlip('red', 'left', true);
+  if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') setFlip('red', 'right', true);
+  // Deploy sits between each team's flipper keys.
+  if (e.key === 'w' || e.key === 'W') tryDeployKey('blue');
+  if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') tryDeployKey('red');
+});
+window.addEventListener('keyup', e => {
+  if (e.key === 'q' || e.key === 'Q') setFlip('blue', 'left', false);
+  if (e.key === 'e' || e.key === 'E') setFlip('blue', 'right', false);
+  if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') setFlip('red', 'left', false);
+  if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') setFlip('red', 'right', false);
+});
+
+canvas.addEventListener('pointerdown', e => {
+  initAudio();
+  // During play, a tap on your own charged pocket deploys the keeper.
+  if (!serving && !gameOver && !menusOpen()) {
+    const pos = getCanvasPos(e);
+    if (tryPocketTap(pos.x, pos.y)) { e.preventDefault(); return; }
+  }
+  if (!serving || !ball) return;
+  if (vsCPU && serveTeam !== humanTeam) return;
+  e.preventDefault();
+  const pos = getCanvasPos(e);
+  aiming = true;
+  aimStartX = pos.x;
+  aimStartY = pos.y;
+  aimCurX = pos.x;
+  aimCurY = pos.y;
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (!aiming) return;
+  e.preventDefault();
+  const pos = getCanvasPos(e);
+  aimCurX = pos.x;
+  aimCurY = pos.y;
+  const dx = aimStartX - pos.x;
+  const dy = aimStartY - pos.y;
+  const dist = Math.hypot(dx, dy);
+  const power = Math.min(dist, MAX_AIM_DIST) / MAX_AIM_DIST;
+  updateSpringSound(power);
+});
+
+function endAim(e) {
+  if (!aiming || !ball) return;
+  e.preventDefault();
+  aiming = false;
+  stopSpringSound();
+
+  const dx = aimStartX - aimCurX;
+  const dy = aimStartY - aimCurY;
+  const dist = Math.hypot(dx, dy);
+  if (dist < MIN_AIM_DIST) return;
+
+  const power = Math.min(dist, MAX_AIM_DIST) / MAX_AIM_DIST;
+  const speed = 7.5 + power * 11.5;
+
+  const len = dist || 1;
+  ball.vx = (dx / len) * speed;
+  ball.vy = (dy / len) * speed;
+  // The server owns the ball off the plunge — glow + gauge attribution.
+  ball.lastHitColor = TEAM_COLORS[serveTeam];
+
+  serving = false;
+  msgEl.style.display = 'none';
+  playSound('serve', power);
+}
+
+canvas.addEventListener('pointerup', endAim);
+canvas.addEventListener('pointercancel', endAim);
+
+// Resize
+function resizeCanvas() {
+  const maxW = window.innerWidth * 0.95;
+  const maxH = window.innerHeight * 0.92;
+  const aspect = 520 / 860;
+
+  let newW = maxW;
+  let newH = newW / aspect;
+
+  if (newH > maxH) {
+    newH = maxH;
+    newW = newH * aspect;
+  }
+
+  canvas.style.width = newW + 'px';
+  canvas.style.height = newH + 'px';
+  wrap.style.width = newW + 'px';
+  wrap.style.height = newH + 'px';
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Points
+let pointsDisplay = document.getElementById('pointsDisplay');
+const pointsDown = document.getElementById('pointsDown');
+const pointsUp = document.getElementById('pointsUp');
+
+pointsDown.addEventListener('click', () => {
+  initAudio();
+  pointsToWin = Math.max(3, pointsToWin - 1);
+  pointsDisplay.textContent = pointsToWin;
+  playSound('uiSelect');
+});
+pointsUp.addEventListener('click', () => {
+  initAudio();
+  pointsToWin = Math.min(21, pointsToWin + 1);
+  pointsDisplay.textContent = pointsToWin;
+  playSound('uiSelect');
+});
+
+// Fullscreen
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+const syncFsIcon = () => fullscreenBtn.classList.toggle('fs-on', !!document.fullscreenElement);
+document.addEventListener('fullscreenchange', syncFsIcon);
+document.addEventListener('webkitfullscreenchange', syncFsIcon);
+fullscreenBtn.addEventListener('click', () => {
+  initAudio();
+  playSound('uiAction');
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => console.log(err));
+  } else {
+    document.exitFullscreen();
+  }
+});
+
+// Victory buttons
+document.getElementById('rematchBtn').addEventListener('click', () => {
+  initAudio();
+  playSound('uiAction');
+  document.getElementById('victoryScreen').style.display = 'none';
+  gameOver = false;
+  score = { blue: 0, red: 0 };
+  updateScore();
+  resetRTS();
+  startServe('blue');
+});
+
+document.getElementById('chooseTableBtn').addEventListener('click', () => {
+  initAudio();
+  playSound('uiAction');
+  document.getElementById('victoryScreen').style.display = 'none';
+  showTableScreen();
+});
+
+document.getElementById('homeBtn').addEventListener('click', () => {
+  initAudio();
+  playSound('uiAction');
+  document.getElementById('victoryScreen').style.display = 'none';
+  startScreen.style.display = 'flex';
+  tableScreen.style.display = 'none';
+  gameOver = false;
+  score = { blue: 0, red: 0 };
+  updateScore();
+});
+
+// Start screen Choose Table button
+document.getElementById('startChooseTableBtn').addEventListener('click', () => {
+  initAudio();
+  playSound('uiAction');
+  showTableScreen();
+});
+
+// Table back button
+document.getElementById('tableBackBtn').addEventListener('click', () => {
+  initAudio();
+  playSound('uiAction');
+  tableScreen.style.display = 'none';
+  startScreen.style.display = 'flex';
+});
+
+// Player select: just marks the choice (radio-style), no navigation
+function selectModeBtn(btnEl, onePlayer) {
+  initAudio();
+  playSound('uiSelect');
+  vsCPU = onePlayer;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+  btnEl.classList.add('selected');
+}
+
+document.getElementById('btn1p').addEventListener('click', (e) => selectModeBtn(e.currentTarget, true));
+document.getElementById('btn2p').addEventListener('click', (e) => selectModeBtn(e.currentTarget, false));
+document.getElementById('btn1p').classList.add('selected'); // default selection
+
+// Start Game: applies whatever is currently selected and launches
+document.getElementById('startGameBtn').addEventListener('click', () => {
+  initAudio();
+  playSound('uiAction');
+  humanTeam = 'red';
+  startScreen.style.display = 'none';
+  gameOver = false;
+  score = { blue: 0, red: 0 };
+  updateScore();
+  loadTable(selectedTable);
+  resetRTS();
+  startServe('blue');
+});
+
+// Table selection with previews. PREV_* must match the .cab-btn inner inset
+// (button size minus the 11px ::before inset on each edge).
+const PREV_W = 82, PREV_H = 100;
+
+function showTableScreen() {
+  tableScreen.style.display = 'flex';
+  startScreen.style.display = 'none';
+  const row = document.getElementById('tableRow');
+  row.innerHTML = '';
+
+  tables.forEach((table) => {
+    const btn = document.createElement('button');
+    btn.className = 'cab-btn table-btn';
+    if (table.id === selectedTable.id) btn.classList.add('selected');
+
+    const prevCanvas = document.createElement('canvas');
+    prevCanvas.width = PREV_W;
+    prevCanvas.height = PREV_H;
+    const pctx = prevCanvas.getContext('2d');
+
+    // Map field-space coordinates into the preview canvas, preserving aspect ratio.
+    const fieldXs = fieldPoly.map(p => p.x);
+    const fieldYs = fieldPoly.map(p => p.y);
+    const fieldMinX = Math.min(...fieldXs), fieldMaxX = Math.max(...fieldXs);
+    const fieldMinY = Math.min(...fieldYs), fieldMaxY = Math.max(...fieldYs);
+    const fieldW = fieldMaxX - fieldMinX, fieldH = fieldMaxY - fieldMinY;
+    const pad = 4;
+    const scale = Math.min((PREV_W - pad * 2) / fieldW, (PREV_H - pad * 2) / fieldH);
+    const offX = (PREV_W - fieldW * scale) / 2 - fieldMinX * scale;
+    const offY = (PREV_H - fieldH * scale) / 2 - fieldMinY * scale;
+    const toX = x => x * scale + offX;
+    const toY = y => y * scale + offY;
+
+    table.pegs.forEach(p => {
+      const mx = toX(p.x);
+      const my = toY(p.y);
+      const mr = p.r * scale;
+
+      pctx.fillStyle = 'rgba(0,0,0,0.3)';
+      pctx.beginPath();
+      pctx.arc(mx + 1.5, my + 2, mr, 0, Math.PI * 2);
+      pctx.fill();
+
+      pctx.fillStyle = p.c;
+      pctx.beginPath();
+      pctx.arc(mx, my, mr, 0, Math.PI * 2);
+      pctx.fill();
+    });
+
+    (table.balls || []).forEach(tb => {
+      const mx = toX(tb.x);
+      const my = toY(H / 2);
+      const mr = tb.r * scale;
+
+      pctx.fillStyle = 'rgba(0,0,0,0.3)';
+      pctx.beginPath();
+      pctx.arc(mx + 1.5, my + 2, mr, 0, Math.PI * 2);
+      pctx.fill();
+
+      const grad = pctx.createRadialGradient(mx - mr * 0.35, my - mr * 0.35, mr * 0.2, mx, my, mr);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.5, '#c0c0c0');
+      grad.addColorStop(1, '#7a7a7a');
+      pctx.fillStyle = grad;
+      pctx.beginPath();
+      pctx.arc(mx, my, mr, 0, Math.PI * 2);
+      pctx.fill();
+    });
+
+    // Draws a tapered capsule between two circles of different radii,
+    // i.e. a flipper shape: wide rounded pivot, narrow rounded tip.
+    const drawTaperedFlipper = (x1, y1, r1, x2, y2, r2, color) => {
+      pctx.fillStyle = color;
+      pctx.beginPath();
+      traceTaperedFlipper(pctx, x1, y1, r1, x2, y2, r2);
+      pctx.closePath();
+      pctx.fill();
+    };
+
+    const drawMiniFlipper = (f, color) => {
+      const mx = toX(f.px);
+      const my = toY(f.py);
+      const tx = mx + Math.cos(f.rest) * f.len * scale;
+      const ty = my + Math.sin(f.rest) * f.len * scale;
+      drawTaperedFlipper(mx, my, 3.6, tx, ty, 1.3, color);
+    };
+
+    for (const k in table.flippers) {
+      const f = table.flippers[k];
+      drawMiniFlipper(f, f.team === 'blue' ? '#4a8cbd' : '#dd5a3f');
+    }
+
+    btn.appendChild(prevCanvas);
+
+    btn.onclick = () => {
+      initAudio();
+      playSound('uiSelect');
+      document.querySelectorAll('.table-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedTable = table;
+    };
+
+    row.appendChild(btn);
+  });
+}
+
+// ═════════════════════ STRIKER / RTS LAYER ═════════════════════
+// A tower-defense-ish layer on top of the pinball core. Each team's pocket
+// (the triangular dead zone between its flippers) grows a single unit in
+// place; the pie gauge above/below it charges from play, and each full pie
+// upgrades the unit a tier (1 Striker → 2 Pitbull → 3 Wolf → 4 Horse →
+// 5 Gator). Tap the pocket to deploy: the unit punts any nearby ball hard
+// upfield (the keeper save), drops its own pinball at its feet, and heads
+// for the opponent's drain no matter what — dribbling its ball along with
+// little kicks routed through clear lanes between the pegs, and shooting
+// once the mouth is in range. The pinball stays the
+// weapon: a fast enemy-colored ball shatters a striker into confetti, a
+// fast friendly ball just bowls him over for STUN_MS. Gators trample.
+
+function colorToTeam(c) {
+  if (c === TEAM_COLORS.blue) return 'blue';
+  if (c === TEAM_COLORS.red) return 'red';
+  return null; // grey table balls have no owner until touched
+}
+
+function otherTeam(team) { return team === 'blue' ? 'red' : 'blue'; }
+
+// The pocket sits in the dead-zone triangle between a team's flippers;
+// the gauge sits beyond it, set into the goal box like an enamel dial.
+function pocketPos(team) {
+  return team === 'blue' ? { x: W / 2, y: 112 } : { x: W / 2, y: H - 112 };
+}
+function gaugePos(team) {
+  return team === 'blue' ? { x: W / 2, y: 66 } : { x: W / 2, y: H - 66 };
+}
+
+// ── Gauge economy ──
+function awardGauge(team, amt) {
+  if (!team || gameOver) return;
+  const pk = pockets[team];
+  if (pk.tier >= MAX_TIER) { pk.charge = 1; return; } // topped out, stays ready
+  pk.charge += amt;
+  while (pk.charge >= 1 && pk.tier < MAX_TIER) {
+    pk.charge -= 1;
+    pk.tier++;
+    if (pk.tier >= MAX_TIER) pk.charge = 1;
+    playSound('tierUp', 0.7 + pk.tier * 0.12);
+  }
+}
+
+// Passive trickle, doubled for a team while the ball is deep in enemy
+// territory. Paused whenever the ball is out of play, same as stun timers.
+function updateGauges() {
+  if (serving || gameOver) return;
+  for (const team of ['blue', 'red']) {
+    let rate = BASE_GAUGE_RATE;
+    if (ball) {
+      const onOpponentHalf = team === 'blue' ? ball.y > H / 2 : ball.y < H / 2;
+      if (onOpponentHalf) rate *= GAUGE_AWAY_MULT;
+    }
+    awardGauge(team, rate);
+  }
+}
+
+// ── Deployment ──
+function deployPocket(team) {
+  const pk = pockets[team];
+  if (serving || gameOver || pk.tier < 1) return false;
+  let alive = 0;
+  for (const s of strikers) if (s.team === team) alive++;
+  if (alive >= MAX_STRIKERS_PER_TEAM) return false;
+
+  const pos = pocketPos(team);
+  const s = spawnStriker(team, pk.tier, pos.x, pos.y);
+  pk.tier = 0;
+  pk.charge = 0;
+  playSound('deploy');
+  puntNearbyBalls(s);  // the keeper-save: boot anything already in reach upfield
+  spawnStrikerBall(s); // then bring your own ball onto the pitch
+  return true;
+}
+
+function spawnStriker(team, tier, x, y) {
+  const s = {
+    team, tier, x, y,
+    r: TIER_R[tier],
+    vx: 0, vy: 0,
+    facing: team === 'blue' ? Math.PI / 2 : -Math.PI / 2, // face downfield
+    phase: Math.random() * Math.PI * 2, // walk-cycle clock
+    state: 'walk',                      // 'walk' | 'stunned'
+    stunLeft: 0,                        // ms; only ticks while ball in play
+    kickReadyAt: 0,
+    kickAnim: 0,                        // 0..1 leg-thrust flourish, decays
+    wanderSeed: Math.random() * 1000,
+    wanderPhase: Math.random() * Math.PI * 2
+  };
+  strikers.push(s);
+  return s;
+}
+
+// On deploy, boot every ball within reach hard at the opponent's goal —
+// timing a deploy against an incoming ball is the defensive skill move.
+function puntNearbyBalls(s) {
+  const targets = [];
+  if (ball) targets.push(ball);
+  for (const tb of tableBalls) targets.push(tb);
+
+  const goalY = s.team === 'blue' ? H - 30 : 30;
+  for (const b of targets) {
+    if (Math.hypot(b.x - s.x, b.y - s.y) > PUNT_RANGE + b.r) continue;
+    const aimX = W / 2 + (Math.random() - 0.5) * 90;
+    const d = Math.hypot(aimX - b.x, goalY - b.y) || 1;
+    const sp = 11 + s.tier * 1.1;
+    b.vx = ((aimX - b.x) / d) * sp;
+    b.vy = ((goalY - b.y) / d) * sp;
+    b.lastHitColor = TEAM_COLORS[s.team];
+    b._kickLockUntil = performance.now() + 250;
+    s.kickAnim = 1;
+    playSound('flipper', 1.4);
+  }
+}
+
+// Every deployed striker brings its own pinball onto the pitch, dropped at
+// its feet, which it then dribbles toward the opponent's drain. The drop
+// spot must dodge not just where other balls ARE but where they're GOING —
+// the keeper punt travels straight up the facing line, and a spawn placed
+// in that corridor gets slammed and launched wild. So candidate spots
+// (dead ahead first, then off to either side) are swept against each
+// ball's projected path before use. Spawned balls score like any other
+// and are cleared at the next serve; they never gate the serve while they
+// roam (see the settle check in updateBall).
+function spawnStrikerBall(s) {
+  const others = [ball].concat(tableBalls);
+  const clearSpot = (px, py) => !others.some(o => {
+    if (!o) return false;
+    for (let t = 0; t <= 24; t += 4) {
+      if (Math.hypot(o.x + o.vx * t - px, o.y + o.vy * t - py) <
+          o.r + SPAWN_BALL_R + 4) return true;
+    }
+    return false;
+  });
+  let px = s.x + Math.cos(s.facing) * (s.r + SPAWN_BALL_R + 2);
+  let py = s.y + Math.sin(s.facing) * (s.r + SPAWN_BALL_R + 2);
+  outer:
+  for (const out of [s.r + SPAWN_BALL_R + 2, s.r + SPAWN_BALL_R + 26]) {
+    for (const da of [0, 0.75, -0.75, 1.35, -1.35]) {
+      const cx = s.x + Math.cos(s.facing + da) * out;
+      const cy = s.y + Math.sin(s.facing + da) * out;
+      if (clearSpot(cx, cy)) { px = cx; py = cy; break outer; }
+    }
+  }
+  tableBalls.push({
+    x: px,
+    y: py,
+    r: SPAWN_BALL_R,
+    vx: 0, vy: 0,
+    lastHitColor: TEAM_COLORS[s.team],
+    spawned: true,
+    _kickLockUntil: 0
+  });
+}
+
+// ── Striker update ──
+function updateStrikers(dtMs) {
+  const now = performance.now();
+  for (let i = strikers.length - 1; i >= 0; i--) {
+    const s = strikers[i];
+
+    // Knocked down: lie there. The clock only runs while the ball is in
+    // play, so a stun can't quietly expire during a serve.
+    if (s.state === 'stunned') {
+      if (!serving && !gameOver) s.stunLeft -= dtMs;
+      if (s.stunLeft <= 0) s.state = 'walk';
+      s.vx = 0; s.vy = 0;
+      s.kickAnim = Math.max(0, s.kickAnim - dtMs / 260);
+      // Even down, a fast enemy ball still finishes the job.
+      if (!serving && !gameOver) interactStrikerBalls(s, false, now);
+      continue;
+    }
+
+    if (serving || gameOver) {
+      // Idle at the whistle: no travel, just a slow breathing bob.
+      s.phase += 0.03;
+      s.vx *= 0.8; s.vy *= 0.8;
+      continue;
+    }
+
+    steerStriker(s);
+
+    s.x += s.vx;
+    s.y += s.vy;
+    s.phase += 0.22 * Math.hypot(s.vx, s.vy) + 0.02;
+    s.kickAnim = Math.max(0, s.kickAnim - dtMs / 260);
+
+    if (Math.hypot(s.vx, s.vy) > 0.05) {
+      s.facing = angleLerp(s.facing, Math.atan2(s.vy, s.vx), 0.14);
+    }
+
+    hardCollideStrikerPegs(s);
+    flipperShove(s);
+    containStriker(s);
+
+    if (interactStrikerBalls(s, true, now)) continue; // squished & removed
+  }
+}
+
+// Where a striker wants to go this frame, expressed as a desired velocity
+// that steering eases toward. Base drive is a meander at the opponent's
+// goal mouth; ball sense overrides it.
+function steerStriker(s) {
+  const speed = TIER_SPEED[s.tier];
+
+  s.wanderPhase += 0.012 + (s.wanderSeed % 0.01);
+  let tx = W / 2 + Math.sin(s.wanderPhase + s.wanderSeed) * 120;
+  let ty = s.team === 'blue' ? H - 100 : 100;
+  let urgency = 1;
+
+  const b = nearestBall(s.x, s.y);
+  if (b) {
+    const bd = Math.hypot(b.x - s.x, b.y - s.y);
+    const bSpeed = Math.hypot(b.vx, b.vy);
+    const owner = colorToTeam(b.lastHitColor);
+    const onMyHalf = s.team === 'blue' ? s.y < H / 2 : s.y > H / 2;
+
+    if (isThreatToTeam(b, s.team) && (onMyHalf || bd < 260)) {
+      // A ball rolling at our drain: sprint to where it's going, not
+      // where it is. (Only defenders near the play drop back — the
+      // squad doesn't abandon an attack across the ridge.)
+      tx = b.x + b.vx * 12;
+      ty = b.y + b.vy * 12;
+      urgency = 1.55;
+    } else if (bSpeed < BALL_FAST && bd < CHASE_R) {
+      // Any slow ball nearby is playable — chase it. Touching an
+      // enemy-owned slow ball is a tackle (the kick claims it).
+      tx = b.x; ty = b.y; urgency = 1.2;
+    } else if (bSpeed >= BALL_FAST && owner && owner !== s.team && bd < 90) {
+      // A hot enemy ball is death — sidestep.
+      const away = Math.atan2(s.y - b.y, s.x - b.x);
+      tx = s.x + Math.cos(away) * 80;
+      ty = s.y + Math.sin(away) * 80;
+      urgency = 1.4;
+    }
+  }
+
+  let dx = tx - s.x, dy = ty - s.y;
+  const d = Math.hypot(dx, dy) || 1;
+  let desiredX = (dx / d) * speed * urgency;
+  let desiredY = (dy / d) * speed * urgency;
+
+  // Peg avoidance: a gentle radial push plus a tangential slide, so they
+  // curve around pins instead of stalling nose-first against them.
+  for (const p of pegs) {
+    const px = s.x - p.x, py = s.y - p.y;
+    const pd = Math.hypot(px, py) || 1;
+    const reach = AVOID_R + s.r;
+    if (pd < reach) {
+      const w = 1 - pd / reach;
+      const k = w * w * speed * 2.2;
+      desiredX += (px / pd) * k;
+      desiredY += (py / pd) * k;
+      const tX = -py / pd, tY = px / pd;
+      const sgn = (tX * desiredX + tY * desiredY) >= 0 ? 1 : -1;
+      desiredX += tX * sgn * k * 0.8;
+      desiredY += tY * sgn * k * 0.8;
+    }
+  }
+
+  s.vx += (desiredX - s.vx) * 0.10;
+  s.vy += (desiredY - s.vy) * 0.10;
+}
+
+function nearestBall(x, y) {
+  let best = null, bd = Infinity;
+  const consider = b => {
+    const d = Math.hypot(b.x - x, b.y - y);
+    if (d < bd) { bd = d; best = b; }
+  };
+  if (ball) consider(ball);
+  for (const tb of tableBalls) consider(tb);
+  return best;
+}
+
+// "Rolling toward our drain": on our half, heading goalward with pace,
+// roughly inside the drain corridor.
+function isThreatToTeam(b, team) {
+  if (Math.hypot(b.vx, b.vy) < 1.1) return false;
+  if (Math.abs(b.x - W / 2) > 170) return false;
+  if (team === 'blue') return b.y < H / 2 && b.vy < -0.4;
+  return b.y > H / 2 && b.vy > 0.4;
+}
+
+function hardCollideStrikerPegs(s) {
+  for (const p of pegs) {
+    const dx = s.x - p.x, dy = s.y - p.y;
+    const d = Math.hypot(dx, dy) || 0.001;
+    const min = s.r + p.r;
+    if (d < min) {
+      s.x = p.x + (dx / d) * min;
+      s.y = p.y + (dy / d) * min;
+    }
+  }
+}
+
+// A swinging flipper bats strikers aside — walking through the opponent's
+// flipper zone is a gamble, and your own flip can scatter your own men.
+function flipperShove(s) {
+  for (const k in flippers) {
+    const f = flippers[k];
+    if (Math.abs(f.omega) < 0.03) continue;
+    const tx = f.px + Math.cos(f.ang) * f.len;
+    const ty = f.py + Math.sin(f.ang) * f.len;
+    const hit = segmentCollision(s.x, s.y, s.r + 4, f.px, f.py, tx, ty);
+    if (!hit) continue;
+    const overlap = (s.r + 4) - hit.dist;
+    s.x += hit.nx * overlap;
+    s.y += hit.ny * overlap;
+    s.vx += hit.nx * 3.2;
+    s.vy += hit.ny * 3.2;
+  }
+}
+
+// Same wall containment as the balls, plus a clamp that keeps figures out
+// of the goal mouths themselves — they hover at the lip and tap shots in.
+function containStriker(s) {
+  containBall(s);
+  s.y = Math.max(96, Math.min(H - 96, s.y));
+}
+
+// Pairwise pass, run once per frame after everyone has moved: soft-body
+// separation, except a tier-5 gator flattens any smaller enemy it reaches.
+function separateAllStrikers() {
+  const victims = [];
+  for (let i = 0; i < strikers.length; i++) {
+    const a = strikers[i];
+    for (let j = i + 1; j < strikers.length; j++) {
+      const b = strikers[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.hypot(dx, dy) || 0.001;
+      const min = a.r + b.r;
+      if (d >= min) continue;
+
+      if (a.team !== b.team) {
+        const aG = a.tier === MAX_TIER, bG = b.tier === MAX_TIER;
+        if (aG && !bG) { victims.push([b, a.team]); continue; }
+        if (bG && !aG) { victims.push([a, b.team]); continue; }
+      }
+
+      const push = (min - d) / 2;
+      const nx = dx / d, ny = dy / d;
+      a.x -= nx * push; a.y -= ny * push;
+      b.x += nx * push; b.y += ny * push;
+    }
+  }
+  for (const v of victims) squishStriker(v[0], v[1]);
+}
+
+// Ball contact rules. Returns true if this striker was squished (removed).
+function interactStrikerBalls(s, canKick, now) {
+  const targets = [];
+  if (ball) targets.push(ball);
+  for (const tb of tableBalls) targets.push(tb);
+
+  for (const b of targets) {
+    const dx = b.x - s.x, dy = b.y - s.y;
+    const d = Math.hypot(dx, dy) || 0.001;
+    const touch = b.r + s.r;
+    const bSpeed = Math.hypot(b.vx, b.vy);
+    const owner = colorToTeam(b.lastHitColor);
+
+    // A slow ball in reach gets kicked at the opponent's goal. This is
+    // dribbling, shooting, AND tackling in one rule: the kick claims the
+    // ball for the kicker's team. The per-ball lock keeps two adjacent
+    // figures from ping-ponging it in a single frame.
+    if (canKick && d < touch + KICK_RANGE_PAD && bSpeed < BALL_FAST &&
+        now >= s.kickReadyAt && now >= (b._kickLockUntil || 0)) {
+      kickBall(s, b);
+      continue;
+    }
+
+    if (d >= touch) continue;
+
+    if (bSpeed >= BALL_FAST) {
+      if (owner && owner !== s.team) {
+        // Shot down by an enemy-colored ball: pixel-shatter. The ball
+        // ploughs on, only slightly the worse for it.
+        b.vx *= 0.88; b.vy *= 0.88;
+        squishStriker(s, owner);
+        return true;
+      }
+      const nx = dx / d, ny = dy / d;
+      const vn = b.vx * nx + b.vy * ny;
+      // A freshly kicked ball has right of way — it can't floor the very
+      // figure (or a teammate) it's leaving at point-blank range.
+      if (now < (b._kickLockUntil || 0)) continue;
+      if (bSpeed >= STUN_FAST && s.state !== 'stunned') {
+        // A genuine friendly (or unclaimed) cannonball bowls him over.
+        // Figures already down can't be re-stunned into a lock.
+        s.state = 'stunned';
+        s.stunLeft = STUN_MS;
+        if (vn < 0) {
+          b.vx -= 1.6 * vn * nx;
+          b.vy -= 1.6 * vn * ny;
+        }
+        b.vx *= 0.9; b.vy *= 0.9;
+        playSound('wall', 1.15);
+      } else {
+        // Merely brisk friendly ball — like one rolling back downhill —
+        // body-blocks off him: firm deflection, extra damping, no
+        // knockdown. A couple of bounces later it's slow enough to kick.
+        if (vn < 0) {
+          b.vx -= 1.6 * vn * nx;
+          b.vy -= 1.6 * vn * ny;
+        }
+        b.vx *= 0.8; b.vy *= 0.8;
+        playSound('wall', 0.7);
+      }
+    } else {
+      // Slow ball resting against a figure who can't kick yet: hold it
+      // off the body (trapping the ball until the next kick is ready).
+      const nx = dx / d, ny = dy / d;
+      const push = touch - d;
+      b.x += nx * push;
+      b.y += ny * push;
+    }
+  }
+  return false;
+}
+
+// Sample a dense fan of kick angles and take the straightest lane whose
+// lookahead ray clears every peg — the "invisible radius" routing that
+// walks the ball around the pins (and future bumpers) instead of banging
+// it straight into them. The fan is fine-grained because some tables
+// leave only needle-thin threading lanes; candidates go straightest-first
+// so the first open lane wins, and if nothing clears, the least-blocked
+// lane is used. `reach` scales with how far the kick will actually
+// travel (long uphill clearing kicks must see all the way to the crest).
+function clearKickAngle(b, baseAng, maxOff, reach) {
+  if (!pegs.length) return baseAng;
+  reach = reach || 116;
+  const STEPS = 18;
+  let bestAng = baseAng, bestClear = -Infinity;
+  for (let k = 0; k <= STEPS * 2; k++) {
+    const off = k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (maxOff / STEPS);
+    const a = baseAng + off;
+    const cx = Math.cos(a), cy = Math.sin(a);
+    let clear = Infinity;
+    for (let d = 14; d <= reach; d += 17) {
+      const px = b.x + cx * d, py = b.y + cy * d;
+      for (const p of pegs) {
+        const c = Math.hypot(px - p.x, py - p.y) - p.r - b.r;
+        if (c < clear) clear = c;
+      }
+    }
+    if (clear > 7) return a;
+    if (clear > bestClear) { bestClear = clear; bestAng = a; }
+  }
+  return bestAng;
+}
+
+// The big uphill clearing kick can't trust a straight ray: as the ridge
+// drains vertical speed the ball's path bows outward, so a lane that
+// looked 7px clear can graze the very peg it "missed" and stall just
+// short of the crest. Candidates are validated by integrating the real
+// terrain + friction (applyTerrain itself) along the curve, checking peg
+// clearance the whole way AND that the ball genuinely crosses the crest.
+// Straightest lane that does both wins; if none does, take the best.
+function planClearingKick(b, baseAng, maxOff, team, minSp) {
+  const perPx = team === 'red' ? UPHILL_RED : UPHILL_BLUE;
+  const distToCrest = Math.abs(b.y - H / 2);
+  const STEPS = 18;
+  let best = null, bestScore = -Infinity;
+  for (let k = 0; k <= STEPS * 2; k++) {
+    const off = k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (maxOff / STEPS);
+    const a = baseAng + off;
+    const vertical = Math.max(0.6, Math.abs(Math.sin(a)));
+    const sp = Math.min(UPHILL_MAX,
+      Math.max(minSp, (distToCrest * perPx * UPHILL_MARGIN) / vertical));
+    const res = simulateKick(b, a, sp, team);
+    if (res.crested && res.minClear > 6) return { ang: a, sp };
+    const score = (res.crested ? 1000 : 0) + Math.min(res.minClear, 60);
+    if (score > bestScore) { bestScore = score; best = { ang: a, sp }; }
+  }
+  return best;
+}
+
+// Point-mass rollout of a kick using the game's own terrain function,
+// ending at the crest, a stall, or a wall graze (which poisons the lane).
+function simulateKick(b, ang, sp, team) {
+  const m = { x: b.x, y: b.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp };
+  let minClear = Infinity;
+  for (let i = 0; i < 170; i++) {
+    applyTerrain(m);
+    m.vx *= FRICTION;
+    m.vy *= FRICTION;
+    m.x += m.vx;
+    m.y += m.vy;
+    for (const p of pegs) {
+      const c = Math.hypot(m.x - p.x, m.y - p.y) - p.r - b.r;
+      if (c < minClear) minClear = c;
+    }
+    if (m.x < 39 || m.x > W - 39) return { crested: false, minClear: -1 };
+    if (team === 'red' ? m.y <= H / 2 : m.y >= H / 2) return { crested: true, minClear };
+    if (team === 'red' ? m.vy >= 0 : m.vy <= 0) return { crested: false, minClear };
+  }
+  return { crested: false, minClear };
+}
+
+// Two kinds of kick: little dribble taps that walk the ball upfield
+// through clear lanes, and a real tier-strength shot once the goal mouth
+// is inside SHOT_RANGE. Dribbles from the kicker's own half get exactly
+// enough leg to crest the midline ridge (see UPHILL_* above) — one honest
+// clearing kick, then small taps the rest of the way. Either way the kick
+// claims the ball.
+function kickBall(s, b) {
+  const goalX = W / 2 + (Math.random() - 0.5) * 60;
+  const goalY = s.team === 'blue' ? H - 30 : 30;
+  const distToGoal = Math.hypot(goalX - b.x, goalY - b.y) || 1;
+  const shooting = distToGoal < SHOT_RANGE;
+  const ownHalf = s.team === 'blue' ? b.y < H / 2 : b.y > H / 2;
+  const baseAng = Math.atan2(goalY - b.y, goalX - b.x);
+  let ang, sp;
+  if (shooting) {
+    ang = clearKickAngle(b, baseAng, 0.35);
+    sp = Math.min(TIER_KICK[s.tier], 2.6 + distToGoal * 0.014);
+  } else if (ownHalf) {
+    // From the kicker's own half, the dribble is a crest-clearing kick
+    // planned against the real physics (see planClearingKick above).
+    const plan = planClearingKick(b, baseAng, 0.55, s.team,
+      DRIBBLE_KICK + s.tier * DRIBBLE_TIER_ADD);
+    ang = plan.ang;
+    sp = plan.sp;
+  } else {
+    ang = clearKickAngle(b, baseAng, 0.9);
+    sp = DRIBBLE_KICK + s.tier * DRIBBLE_TIER_ADD;
+  }
+  b.vx = Math.cos(ang) * sp;
+  b.vy = Math.sin(ang) * sp;
+  b.lastHitColor = TEAM_COLORS[s.team];
+  b._kickLockUntil = performance.now() + 240;
+  s.kickReadyAt = performance.now() + KICK_COOLDOWN_MS;
+  s.kickAnim = 1;
+  s.facing = ang;
+  playSound('ballClick', shooting ? 1.15 : 0.7);
+}
+
+function squishStriker(s, byTeam) {
+  if (strikers.indexOf(s) < 0) return; // already gone (e.g. two gators claimed him)
+  spawnConfetti(s);
+  awardGauge(byTeam, SQUISH_BUMP);
+  playSound('squish', 0.8 + s.tier * 0.1);
+  strikers.splice(strikers.indexOf(s), 1);
+}
+
+// ── Confetti: old-school pixel shatter ──
+function spawnConfetti(s) {
+  const pal = ANIMAL[s.team];
+  const cols = [
+    TEAM_COLORS[s.team],                          // jersey stripes
+    KIT_BASE,                                     // jersey cream
+    s.tier === 1 ? pal.hair : pal['t' + s.tier],  // hair / hide
+    pal.skin,                                     // skin
+    BOOT_C                                        // boots
+  ];
+  const n = 22 + s.tier * 4;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = 1 + Math.random() * 4.2;
+    confetti.push({
+      x: s.x, y: s.y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp - 1.2,
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.5,
+      size: 2 + Math.random() * 3.5,
+      color: cols[Math.floor(Math.random() * cols.length)],
+      life: 620 + Math.random() * 500,
+      age: 0
+    });
+  }
+}
+
+function updateParticles(dtMs) {
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const p = confetti[i];
+    p.age += dtMs;
+    if (p.age >= p.life) { confetti.splice(i, 1); continue; }
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.05; // a whisper of gravity so bits settle onto the felt
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    p.rot += p.vr;
+  }
+}
+
+function drawParticles() {
+  for (const p of confetti) {
+    const fade = 1 - p.age / p.life;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, fade * 1.6);
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.7);
+    ctx.restore();
+  }
+}
+
+function angleLerp(a, b, t) {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return a + d * t;
+}
+
+// ── Drawing: pockets, gauges, figures ──
+function drawPockets() {
+  for (const team of ['blue', 'red']) {
+    const pk = pockets[team];
+    const pos = pocketPos(team);
+    const ready = pk.tier >= 1;
+
+    // A worn patch on the boards where the keeper waits.
+    ctx.fillStyle = 'rgba(0,0,0,0.16)';
+    ctx.beginPath();
+    ctx.ellipse(pos.x, pos.y + 3, 21, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // The unit-in-progress: grey silhouette until tier 1 exists, then the
+    // earned tier in full color, marching in place, wearing the canon's
+    // gold "this is waiting for you" ring.
+    const showTier = Math.max(1, pk.tier);
+    const ghost = {
+      team,
+      tier: showTier,
+      r: TIER_R[showTier],
+      x: pos.x, y: pos.y,
+      facing: team === 'blue' ? Math.PI / 2 : -Math.PI / 2,
+      phase: performance.now() * (ready ? 0.004 : 0.0015),
+      state: 'walk',
+      kickAnim: 0
+    };
+    drawStriker(ghost, { ghost: true, ready });
+
+    if (ready) {
+      const a = 0.45 + 0.55 * servePulse();
+      ctx.strokeStyle = 'rgba(255,215,94,' + a.toFixed(3) + ')';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, ghost.r + 7, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    drawGauge(team, pk);
+  }
+}
+
+function drawGauge(team, pk) {
+  const gp = gaugePos(team);
+  const R = 12;
+  ctx.save();
+  ctx.translate(gp.x, gp.y);
+  if (team === 'blue') ctx.rotate(Math.PI); // blue reads it from the far end
+
+  // Enamel dial set into the goal box.
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath();
+  ctx.arc(0, 0, R + 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pie fills in the team color; topped out reads as solid gold.
+  const fillC = pk.tier >= MAX_TIER ? '#ffd75e' : TEAM_COLORS[team];
+  if (pk.charge > 0.003) {
+    ctx.fillStyle = fillC;
+    ctx.globalAlpha = 0.92;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, R - 0.5, -Math.PI / 2, -Math.PI / 2 + pk.charge * Math.PI * 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.strokeStyle = 'rgba(248,248,248,0.85)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, R + 1, 0, Math.PI * 2);
+  ctx.stroke();
+
+  if (pk.tier >= 1) {
+    ctx.font = "bold 12px 'Avenir Next','Segoe UI',Roboto,system-ui,sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+    ctx.strokeText(String(pk.tier), 0, 1);
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillText(String(pk.tier), 0, 1);
+  }
+  ctx.restore();
+}
+
+function drawStrikers() {
+  for (const s of strikers) drawStriker(s);
+}
+
+// One figure, drawn in a local frame where +x is the way it's facing.
+// Every tier is bipedal — striped club jersey, arms, boots — with the tier
+// told entirely by the head (person → pitbull → wolf → horse → alligator)
+// and, from tier 2 up, a distinct tail. Kits and animal colorways follow
+// the team reference art; the pocket ghost renders the same figure in
+// grey until it's ready.
+function drawStriker(s, opts) {
+  opts = opts || {};
+  const ghost = !!opts.ghost;
+  const ready = !!opts.ready;
+  const mono = ghost && !ready;
+  const stunned = s.state === 'stunned';
+  const pal = ANIMAL[s.team];
+  const teamC = TEAM_COLORS[s.team];
+  const kitBase = mono ? '#c6c6c6' : KIT_BASE;
+  const kitStripe = mono ? '#9a9a9a' : teamC;
+  const animalC = mono ? '#adadad' : (s.tier === 1 ? pal.skin : pal['t' + s.tier]);
+  const animalDark = shade(animalC, -38);
+  const baseAlpha = ghost ? (ready ? 0.95 : 0.42) : 1;
+  const r = s.r;
+  const now = performance.now();
+
+  ctx.save();
+  ctx.globalAlpha = baseAlpha;
+  ctx.translate(s.x, s.y);
+
+  // Shadow stays world-aligned.
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(2, 3, r * 1.05, r * 0.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Team ring on the felt under live units.
+  if (!ghost) {
+    ctx.globalAlpha = baseAlpha * 0.5;
+    ctx.strokeStyle = teamC;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, 2, r + 3.5, (r + 3.5) * 0.72, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = baseAlpha;
+  }
+
+  ctx.rotate(stunned ? s.facing + Math.PI / 2 : s.facing);
+  if (stunned) ctx.globalAlpha = baseAlpha * 0.88;
+
+  const swing = stunned ? 0 : Math.sin(s.phase) * r * 0.42;
+  const kick = s.kickAnim * r * 0.9;
+  const sway = Math.sin(s.phase * 0.55) * r * 0.35; // tail lag
+
+  const dot = (x, y, rad, fill) => {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.arc(x, y, rad, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  const ell = (x, y, rx, ry, fill) => {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  const taper = (x1, y1, r1, x2, y2, r2, fill) => {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    traceTaperedFlipper(ctx, x1, y1, r1, x2, y2, r2);
+    ctx.closePath();
+    ctx.fill();
+  };
+
+  // ── Tail first, tucked behind the body (tiers 2–5) ──
+  if (s.tier === 2) {
+    // pitbull: thin whip tail
+    taper(-r * 0.8, 0, r * 0.13, -r * 1.5, sway * 0.8, r * 0.05, animalC);
+  } else if (s.tier === 3) {
+    // wolf: bushy brush with a pale tip
+    ell(-r * 1.3, sway * 0.5, r * 0.52, r * 0.3, animalC);
+    dot(-r * 1.72, sway * 0.6, r * 0.14, kitBase);
+  } else if (s.tier === 4) {
+    // horse: long flowing tail in the mane color
+    taper(-r * 0.8, 0, r * 0.18, -r * 1.85, sway, r * 0.06,
+      mono ? '#8f8f8f' : pal.mane);
+  } else if (s.tier === 5) {
+    // gator: the big tapered rudder, ridged
+    taper(-r * 0.75, 0, r * 0.4, -r * 2.0, sway, r * 0.08, animalC);
+    dot(-r * 1.0, sway * 0.2, r * 0.1, animalDark);
+    dot(-r * 1.35, sway * 0.55, r * 0.08, animalDark);
+  }
+
+  // ── Boots, under the torso ──
+  dot(swing + kick, r * 0.45, r * 0.24 + 1.2, mono ? '#8a8a8a' : BOOT_C);
+  dot(-swing, -r * 0.45, r * 0.24 + 1.2, mono ? '#8a8a8a' : BOOT_C);
+
+  // ── Torso: the striped club jersey, seen from above ──
+  // Stripes run along the facing axis, i.e. head-to-toe like a real kit.
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.05, 0, r * 0.92, r * 0.8, 0, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = kitBase;
+  ctx.fillRect(-r * 1.1, -r * 0.9, r * 2.2, r * 1.8);
+  ctx.fillStyle = kitStripe;
+  for (const yy of [-r * 0.56, 0, r * 0.56]) {
+    ctx.fillRect(-r * 1.1, yy - r * 0.145, r * 2.2, r * 0.29);
+  }
+  ctx.restore();
+  ctx.lineWidth = 1.25;
+  ctx.strokeStyle = 'rgba(20,25,20,0.55)';
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.05, 0, r * 0.92, r * 0.8, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // ── Arms counter-swing at the sleeves ──
+  dot(-swing * 0.7, r * 0.92, r * 0.2 + 0.8, animalC);
+  dot(swing * 0.7, -r * 0.92, r * 0.2 + 0.8, animalC);
+
+  // ── The head: the tier's whole identity ──
+  if (s.tier === 1) {
+    // person: round head, team-colorway hair across the back
+    dot(r * 0.62, 0, r * 0.52, mono ? '#bdbdbd' : pal.skin);
+    ctx.fillStyle = mono ? '#8f8f8f' : pal.hair;
+    ctx.beginPath();
+    ctx.arc(r * 0.62, 0, r * 0.52, Math.PI * 0.55, Math.PI * 1.45);
+    ctx.closePath();
+    ctx.fill();
+    dot(r * 0.86, r * 0.16, 1.1, '#1c1c1c');
+    dot(r * 0.86, -r * 0.16, 1.1, '#1c1c1c');
+  } else if (s.tier === 2) {
+    // pitbull: round head, folded ears, short muzzle, happy tongue
+    dot(r * 0.32, r * 0.48, r * 0.17, animalDark);
+    dot(r * 0.32, -r * 0.48, r * 0.17, animalDark);
+    dot(r * 0.6, 0, r * 0.58, animalC);
+    ell(r * 1.05, 0, r * 0.32, r * 0.25, animalDark);
+    dot(r * 1.28, 0, 1.7, '#1c1c1c');
+    dot(r * 1.08, r * 0.13, r * 0.1, '#e5866f');
+    dot(r * 0.72, r * 0.27, 1.3, '#1c1c1c');
+    dot(r * 0.72, -r * 0.27, 1.3, '#1c1c1c');
+  } else if (s.tier === 3) {
+    // wolf: upright pointed ears, long tapered snout
+    ctx.fillStyle = animalC;
+    ctx.beginPath();
+    ctx.moveTo(r * 0.5, r * 0.3); ctx.lineTo(r * 0.14, r * 0.72); ctx.lineTo(r * 0.28, r * 0.24);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(r * 0.5, -r * 0.3); ctx.lineTo(r * 0.14, -r * 0.72); ctx.lineTo(r * 0.28, -r * 0.24);
+    ctx.closePath(); ctx.fill();
+    dot(r * 0.6, 0, r * 0.54, animalC);
+    ctx.fillStyle = animalDark;
+    ctx.beginPath();
+    ctx.moveTo(r * 0.85, r * 0.2);
+    ctx.lineTo(r * 1.5, 0);
+    ctx.lineTo(r * 0.85, -r * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    dot(r * 1.46, 0, 1.6, '#1c1c1c');
+    dot(r * 0.74, r * 0.24, 1.3, '#1c1c1c');
+    dot(r * 0.74, -r * 0.24, 1.3, '#1c1c1c');
+  } else if (s.tier === 4) {
+    // horse: the long head is the icon, mane crest down the neck
+    dot(r * 0.42, r * 0.3, r * 0.13, animalDark);
+    dot(r * 0.42, -r * 0.3, r * 0.13, animalDark);
+    ell(r * 0.9, 0, r * 0.62, r * 0.3, animalC);
+    ell(r * 1.4, 0, r * 0.2, r * 0.22, animalDark);
+    dot(r * 1.5, r * 0.1, 1.1, '#1c1c1c');
+    dot(r * 1.5, -r * 0.1, 1.1, '#1c1c1c');
+    dot(r * 0.86, r * 0.2, 1.3, '#1c1c1c');
+    dot(r * 0.86, -r * 0.2, 1.3, '#1c1c1c');
+    for (let m = 0; m < 4; m++) {
+      dot(r * (0.5 - m * 0.3), 0, r * 0.13, mono ? '#8f8f8f' : pal.mane);
+    }
+  } else if (s.tier === 5) {
+    // alligator: broad tapered snout, periscope eyes, colorway spots
+    dot(r * 0.42, r * 0.36, r * 0.17, animalC);
+    dot(r * 0.42, -r * 0.36, r * 0.17, animalC);
+    taper(r * 0.4, 0, r * 0.5, r * 1.68, 0, r * 0.2, animalC);
+    dot(r * 1.58, r * 0.09, 1.3, '#1c1c1c');
+    dot(r * 1.58, -r * 0.09, 1.3, '#1c1c1c');
+    dot(r * 0.45, r * 0.36, 1.3, '#1c1c1c');
+    dot(r * 0.45, -r * 0.36, 1.3, '#1c1c1c');
+    const spotC = mono ? '#9a9a9a' : pal.spots;
+    dot(r * 0.85, r * 0.16, r * 0.08, spotC);
+    dot(r * 1.15, -r * 0.12, r * 0.07, spotC);
+    dot(r * 0.6, -r * 0.1, r * 0.07, spotC);
+  }
+
+  ctx.restore();
+
+  // Dizzy stars orbit a knocked-down figure (world frame).
+  if (stunned) {
+    const t = now * 0.006;
+    ctx.fillStyle = '#ffd75e';
+    for (let k = 0; k < 3; k++) {
+      const a = t + k * (Math.PI * 2 / 3);
+      ctx.beginPath();
+      ctx.arc(s.x + Math.cos(a) * (r + 5), s.y - 4 + Math.sin(a) * (r + 5) * 0.45,
+        1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ── Input: deploying ──
+function tryPocketTap(x, y) {
+  for (const team of ['blue', 'red']) {
+    if (vsCPU && team !== humanTeam) continue;
+    const pos = pocketPos(team);
+    if (Math.hypot(x - pos.x, y - pos.y) > POCKET_TAP_R) continue;
+    if (deployPocket(team)) return true;
+  }
+  return false;
+}
+
+function tryDeployKey(team) {
+  if (vsCPU && team !== humanTeam) return;
+  deployPocket(team);
+}
+
+// ── CPU commander ──
+// The machine plays the same economy: it holds out for a random target
+// tier (rerolled after each deploy), always cashes in a gator, and — like
+// a human hovering a thumb over the pocket — slams the deploy for a punt
+// save when a ball bears down on its drain. The per-frame dice give it
+// human-ish reaction time instead of frame-perfect saves.
+function rollCpuDeployTier() {
+  cpuNextDeployTier = 2 + Math.floor(Math.random() * 3); // 2..4
+}
+
+function updateCPUCommander() {
+  if (!vsCPU || gameOver || serving) return;
+  const cpuTeam = otherTeam(humanTeam);
+  const pk = pockets[cpuTeam];
+  if (pk.tier < 1) return;
+
+  const pos = pocketPos(cpuTeam);
+  const inSaveWindow = b => b && isThreatToTeam(b, cpuTeam) &&
+    Math.hypot(b.x - pos.x, b.y - pos.y) < PUNT_RANGE * 0.95;
+
+  let danger = inSaveWindow(ball);
+  if (!danger) for (const tb of tableBalls) if (inSaveWindow(tb)) { danger = true; break; }
+
+  if (danger) {
+    if (Math.random() < 0.12) { deployPocket(cpuTeam); rollCpuDeployTier(); }
+    return;
+  }
+
+  let alive = 0;
+  for (const s of strikers) if (s.team === cpuTeam) alive++;
+
+  if (pk.tier >= MAX_TIER || (pk.tier >= cpuNextDeployTier && alive < 3)) {
+    deployPocket(cpuTeam);
+    rollCpuDeployTier();
+  }
+}
+
+function resetRTS() {
+  pockets = { blue: { tier: 0, charge: 0 }, red: { tier: 0, charge: 0 } };
+  strikers = [];
+  confetti = [];
+  rollCpuDeployTier();
+}
+
+// Main loop
+function loop() {
+  // Movement stays per-frame like the rest of the game; dtMs only feeds
+  // the wall-clock timers (stuns, kick cooldowns, particle lifetimes).
+  const nowMs = performance.now();
+  const dtMs = Math.min(50, nowMs - lastFrameMs);
+  lastFrameMs = nowMs;
+
+  // Update first, then draw: the frame shows the state it just computed,
+  // instead of last frame's — one frame less input latency.
+  updateCPU();
+  updateCPUCommander();
+  updateFlippers();
+  updateBall();
+  updateGauges();
+  updateStrikers(dtMs);
+  separateAllStrikers();
+  updateParticles(dtMs);
+
+  drawScenery();
+  drawScores();
+  drawPegs();
+  drawPockets();
+  drawStrikers(); // under the flippers and ball: the hardware rides above the men
+  for (const k in flippers) drawFlipper(flippers[k]);
+  const prompt = servePromptVisible();
+  if (prompt) drawServeHalo(ball);
+  if (ball) drawBall(ball);
+  if (prompt) drawServeRing(ball);
+  for (const tb of tableBalls) drawBall(tb);
+  drawParticles();
+  drawAimPreview();
+
+  if (cpuCountdownStart > 0) {
+    const now = performance.now();
+    const progress = Math.min(1, (now - cpuCountdownStart) / COUNTDOWN_MS);
+    drawCountdown(progress);
+    if (progress >= 1) autoServe();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// Boot
+loadTable(tables[0]);
+loop();
+</script>
+</body>
+</html>
