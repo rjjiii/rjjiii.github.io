@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flick & Fire: Compass Hockey</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+            overflow: hidden;
+            touch-action: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let width, height, centerLine, goalWidth;
+let scoreP1 = 0; // Bottom player
+let scoreP2 = 0; // Top player
+
+const strikers = [];
+let pucks = [];
+let pellets = [];
+let ducks = [];
+
+const pointers = new Map();
+let bgCanvas, bgCtx;
+
+const duckImg = new Image();
+duckImg.src = 'data:image/svg+xml,' + encodeURIComponent(`
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#FFD700" d="M30,70 Q20,70 20,60 T30,50 L50,50 Q70,50 70,60 T60,70 Z"/>
+    <path fill="#FFD700" d="M50,40 Q40,40 40,30 T50,20 T60,30 T50,40 Z"/>
+    <circle cx="45" cy="28" r="4" fill="#000"/>
+    <path fill="#FFA500" d="M35,32 L20,35 L35,38 Z"/>
+</svg>`);
+
+class Circle {
+    constructor(x, y, radius, mass) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.radius = radius;
+        this.mass = mass;
+    }
+    applyForce(fx, fy) {
+        this.vx += fx / this.mass;
+        this.vy += fy / this.mass;
+    }
+}
+
+class Striker extends Circle {
+    constructor(x, y, color, isPlayer1) {
+        super(x, y, 40, 12); 
+        this.color = color;
+        this.isPlayer1 = isPlayer1;
+        this.target = null;
+        this.friction = 0.94; 
+        this.spring = 0.25;  
+        this.angle = 0;
+    }
+
+    update() {
+        if (this.target) {
+            let dx = this.target.x - this.x;
+            let dy = this.target.y - this.y;
+            let dist = Math.hypot(dx, dy);
+            
+            // Soften spring at close ranges to prevent jitter/rebounding on short taps
+            let rangeFactor = Math.min(dist / 80, 1); 
+            let activeSpring = this.spring * rangeFactor;
+            
+            this.applyForce(dx * activeSpring, dy * activeSpring);
+
+            // Fire pellets if finger is hovering over it
+            if (dist < this.radius) {
+                this.shoot();
+            }
+        }
+
+        // Apply board friction/sliding properties
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.x += this.vx;
+        this.y += this.vy;
+        
+        // Spin pattern based on velocity
+        this.angle += (Math.abs(this.vx) + Math.abs(this.vy)) * 0.015;
+
+        this.constrain();
+    }
+
+    shoot() {
+        if (performance.now() - (this.lastShot || 0) < 120) return;
+        this.lastShot = performance.now();
+
+        let vy = this.isPlayer1 ? -18 : 18;
+        let p = new Pellet(this.x, this.y + (this.isPlayer1 ? -this.radius : this.radius), vy, false);
+        pellets.push(p);
+        
+        // Kick the rotation slightly when firing so it looks active
+        this.angle += 0.2;
+    }
+
+    constrain() {
+        // Hard physics boundaries for the sliding striker (Outer walls only)
+        if (this.x < this.radius) { this.x = this.radius; this.vx *= -0.5; }
+        if (this.x > width - this.radius) { this.x = width - this.radius; this.vx *= -0.5; }
+        
+        if (this.y < this.radius) { this.y = this.radius; this.vy *= -0.5; }
+        if (this.y > height - this.radius) { this.y = height - this.radius; this.vy *= -0.5; }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        // Outer base
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+
+        // Inner concentric circle to bound the diamonds
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.65, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Ring of rotating diamonds
+        ctx.fillStyle = '#fff';
+        let numDiamonds = 12;
+        let rCenter = this.radius * 0.825; // Positioned between the two concentric circles
+        for (let i = 0; i < numDiamonds; i++) {
+            let a = (i * Math.PI * 2) / numDiamonds;
+            ctx.save();
+            ctx.rotate(a);
+            ctx.translate(rCenter, 0);
+            ctx.beginPath();
+            ctx.moveTo(4, 0);
+            ctx.lineTo(0, 3);
+            ctx.lineTo(-4, 0);
+            ctx.lineTo(0, -3);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // White compass rose generator function
+        const drawStar = (points, outer, inner) => {
+            ctx.beginPath();
+            for (let i = 0; i < points * 2; i++) {
+                let r = (i % 2 === 0) ? outer : inner;
+                let a = (i * Math.PI) / points;
+                ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+            }
+            ctx.closePath();
+            ctx.fill();
+        };
+
+        // Main 4-point compass star
+        ctx.fillStyle = '#fff';
+        drawStar(4, this.radius * 0.6, this.radius * 0.15);
+        
+        // Minor 4-point sub-star
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        drawStar(4, this.radius * 0.45, this.radius * 0.15);
+
+        // Center hub
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.12, 0, Math.PI * 2);
+        ctx.fillStyle = '#222';
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+class Puck extends Circle {
+    constructor(x, y) {
+        super(x, y, 25, 2);
+        this.friction = 0.99;
+        this.angle = 0;
+    }
+
+    update() {
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.x += this.vx;
+        this.y += this.vy;
+        
+        // Spin according to movement speed
+        this.angle += (Math.abs(this.vx) + Math.abs(this.vy)) * 0.02;
+
+        this.checkGoals();
+        this.constrain();
+    }
+
+    checkGoals() {
+        let inGoalX = this.x > (width / 2 - goalWidth / 2) && this.x < (width / 2 + goalWidth / 2);
+        if (this.y < 0 && inGoalX) { scoreP1++; this.reset(); }
+        else if (this.y > height && inGoalX) { scoreP2++; this.reset(); }
+    }
+
+    constrain() {
+        let inGoalX = this.x > (width / 2 - goalWidth / 2) && this.x < (width / 2 + goalWidth / 2);
+        if (this.x < this.radius) { this.x = this.radius; this.vx *= -1; }
+        if (this.x > width - this.radius) { this.x = width - this.radius; this.vx *= -1; }
+        
+        if (!inGoalX) {
+            if (this.y < this.radius) { this.y = this.radius; this.vy *= -1; }
+            if (this.y > height - this.radius) { this.y = height - this.radius; this.vy *= -1; }
+        }
+    }
+
+    reset() {
+        this.x = width / 2;
+        this.y = height / 2;
+        this.vx = 0;
+        this.vy = 0;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#2c3e50';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#f1c40f';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.85, 0, Math.PI * 2);
+        ctx.fillStyle = '#ecf0f1';
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.5, 0, Math.PI * 2);
+        ctx.strokeStyle = '#e74c3c';
+        ctx.stroke();
+
+        const drawStar = (points, outer, inner, color) => {
+            ctx.beginPath();
+            for (let i = 0; i < points * 2; i++) {
+                let r = (i % 2 === 0) ? outer : inner;
+                let a = (i * Math.PI) / points;
+                ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+            }
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.fill();
+        };
+
+        ctx.rotate(Math.PI / 4);
+        drawStar(4, this.radius * 0.7, this.radius * 0.15, '#95a5a6');
+        ctx.rotate(-Math.PI / 4);
+
+        drawStar(4, this.radius * 0.8, this.radius * 0.15, '#c0392b');
+
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.12, 0, Math.PI * 2);
+        ctx.fillStyle = '#f1c40f';
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+class Duck extends Circle {
+    constructor(x, y) {
+        super(x, y, 15, 1);
+        this.owner = null;
+    }
+
+    update(leader, index) {
+        if (this.owner) {
+            // Target position calculation for a true single-file duck line
+            let targetX, targetY;
+            
+            if (index === 0) {
+                // First duck follows the striker directly
+                let angle = Math.atan2(this.y - leader.y, this.x - leader.x);
+                targetX = leader.x + Math.cos(angle) * 45;
+                targetY = leader.y + Math.sin(angle) * 45;
+            } else {
+                // Subsequent ducks follow the duck ahead of them in the line
+                let prevDuck = ducks.filter(d => d.owner === this.owner)[index - 1];
+                let angle = Math.atan2(this.y - prevDuck.y, this.x - prevDuck.x);
+                targetX = prevDuck.x + Math.cos(angle) * 30;
+                targetY = prevDuck.y + Math.sin(angle) * 30;
+            }
+
+            // Smooth interpolation towards line position
+            this.x += (targetX - this.x) * 0.15;
+            this.y += (targetY - this.y) * 0.15;
+            this.vx = 0;
+            this.vy = 0;
+
+            // Increased egg firing rate
+            if (Math.random() < 0.05) {
+                let vy = this.owner.isPlayer1 ? -12 : 12;
+                pellets.push(new Pellet(this.x, this.y, vy, true));
+            }
+        } else {
+            // Unowned organic shuffling behavior
+            this.vx += (Math.random() - 0.5) * 1.5;
+            this.vy += (Math.random() - 0.5) * 1.5;
+            this.vx *= 0.9;
+            this.vy *= 0.9;
+            this.x += this.vx;
+            this.y += this.vy;
+
+            if (this.x < this.radius || this.x > width - this.radius) this.vx *= -1;
+            if (this.y < this.radius || this.y > height - this.radius) this.vy *= -1;
+        }
+    }
+
+    draw(ctx) {
+        ctx.drawImage(duckImg, this.x - 20, this.y - 20, 40, 40);
+    }
+}
+
+class Pellet {
+    constructor(x, y, vy, isEgg) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = vy;
+        this.radius = isEgg ? 5 : 4;
+        this.mass = 0.3;
+        this.isEgg = isEgg;
+    }
+
+    update() {
+        this.y += this.vy;
+    }
+
+    draw(ctx) {
+        if (this.isEgg) {
+            ctx.fillStyle = '#FFF8E7';
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y, 4, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#ccc';
+            ctx.stroke();
+        } else {
+            let grad = ctx.createRadialGradient(this.x - 1, this.y - 1, 0, this.x, this.y, this.radius);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.4, '#a0a0a0');
+            grad.addColorStop(1, '#333333');
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function generateStoneBackground() {
+    bgCanvas = document.createElement('canvas');
+    bgCanvas.width = 512;
+    bgCanvas.height = 512;
+    bgCtx = bgCanvas.getContext('2d');
+    
+    bgCtx.fillStyle = '#dcd5cc';
+    bgCtx.fillRect(0, 0, 512, 512);
+    
+    let imgData = bgCtx.getImageData(0, 0, 512, 512);
+    let data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        let noise = (Math.random() - 0.5) * 15;
+        data[i] += noise;
+        data[i+1] += noise;
+        data[i+2] += noise;
+    }
+    bgCtx.putImageData(imgData, 0, 0);
+}
+
+function init() {
+    generateStoneBackground();
+    resize();
+    window.addEventListener('resize', resize);
+    
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+
+    // Initialized with Subtle Blue and Warm Vermilion Red
+    strikers.push(new Striker(width / 2, height - 100, '#4A90E2', true));
+    strikers.push(new Striker(width / 2, 100, '#E34234', false));
+    pucks.push(new Puck(width / 2, height / 2));
+
+    setInterval(spawnEntity, 10000);
+
+    requestAnimationFrame(loop);
+}
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    width = canvas.width;
+    height = canvas.height;
+    centerLine = height / 2;
+    goalWidth = Math.min(width * 0.4, 250);
+}
+
+function handlePointerDown(e) {
+    e.preventDefault();
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    updateTargets();
+}
+function handlePointerMove(e) {
+    e.preventDefault();
+    if (pointers.has(e.pointerId)) {
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        updateTargets();
+    }
+}
+function handlePointerUp(e) {
+    pointers.delete(e.pointerId);
+    updateTargets();
+}
+
+function updateTargets() {
+    strikers[0].target = null;
+    strikers[1].target = null;
+
+    pointers.forEach(p => {
+        if (p.y > centerLine) strikers[0].target = { x: p.x, y: p.y };
+        else strikers[1].target = { x: p.x, y: p.y };
+    });
+}
+
+function spawnEntity() {
+    let side = Math.random() > 0.5 ? 1 : -1;
+    let xPos = side > 0 ? width - 30 : 30;
+    let yPos = centerLine + (Math.random() * 60 - 30);
+
+    if (Math.random() < 0.33) {
+        let duck = new Duck(xPos, yPos);
+        duck.vx = -side * 2;
+        ducks.push(duck);
+    } else {
+        let newPuck = new Puck(xPos, yPos);
+        newPuck.vx = -side * (6 + Math.random() * 4); 
+        newPuck.vy = (Math.random() - 0.5) * 4;
+        pucks.push(newPuck);
+    }
+}
+
+function resolveCollision(a, b) {
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let dist = Math.hypot(dx, dy);
+    
+    if (dist < a.radius + b.radius) {
+        let overlap = a.radius + b.radius - dist;
+        let nx = dx / dist;
+        let ny = dy / dist;
+        
+        let totalMass = a.mass + b.mass;
+        let mRatioA = b.mass / totalMass;
+        let mRatioB = a.mass / totalMass;
+        
+        a.x -= nx * overlap * mRatioA;
+        a.y -= ny * overlap * mRatioA;
+        b.x += nx * overlap * mRatioB;
+        b.y += ny * overlap * mRatioB;
+
+        let kx = (a.vx - b.vx);
+        let ky = (a.vy - b.vy);
+        let p = 2.0 * (nx * kx + ny * ky) / totalMass;
+        
+        let bounce = 0.88; 
+        a.vx -= p * b.mass * nx * bounce;
+        a.vy -= p * b.mass * ny * bounce;
+        b.vx += p * a.mass * nx * bounce;
+        b.vy += p * a.mass * ny * bounce;
+        return true;
+    }
+    return false;
+}
+
+function drawField() {
+    ctx.fillStyle = ctx.createPattern(bgCanvas, 'repeat');
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.beginPath();
+    ctx.moveTo(0, centerLine);
+    ctx.lineTo(width, centerLine);
+    ctx.strokeStyle = '#b8ad9e';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.arc(width / 2, centerLine, 60, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 0, 255, 0.15)'; 
+    ctx.fillRect(width / 2 - goalWidth / 2, 0, goalWidth, 20);
+    ctx.strokeRect(width / 2 - goalWidth / 2, -10, goalWidth, 30);
+    
+    ctx.fillStyle = 'rgba(0, 255, 255, 0.15)'; 
+    ctx.fillRect(width / 2 - goalWidth / 2, height - 20, goalWidth, 20);
+    ctx.strokeRect(width / 2 - goalWidth / 2, height - 20, goalWidth, 30);
+
+    ctx.font = 'bold 120px sans-serif';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    ctx.save();
+    ctx.translate(width / 2, height * 0.25);
+    ctx.rotate(Math.PI);
+    ctx.fillText(scoreP2, 0, 0);
+    ctx.restore();
+
+    ctx.fillText(scoreP1, width / 2, height * 0.75);
+}
+
+function loop() {
+    ctx.clearRect(0, 0, width, height);
+    drawField();
+
+    // Striker vs Puck collisions
+    for (let striker of strikers) {
+        for (let puck of pucks) resolveCollision(striker, puck);
+    }
+
+    // Puck vs Puck collisions
+    for (let i = 0; i < pucks.length; i++) {
+        for (let j = i + 1; j < pucks.length; j++) resolveCollision(pucks[i], pucks[j]);
+    }
+
+    // Striker vs Striker collisions
+    resolveCollision(strikers[0], strikers[1]);
+
+    // Track line positions for ducks per player
+    let p1DuckCount = 0;
+    let p2DuckCount = 0;
+
+    for (let duck of ducks) {
+        let leader = duck.owner;
+        let index = 0;
+        
+        if (leader === strikers[0]) {
+            index = p1DuckCount;
+            p1DuckCount++;
+        } else if (leader === strikers[1]) {
+            index = p2DuckCount;
+            p2DuckCount++;
+        }
+
+        duck.update(leader, index);
+        duck.draw(ctx);
+        
+        // Duck capture/stealing mechanism
+        for (let striker of strikers) {
+            let dist = Math.hypot(striker.x - duck.x, striker.y - duck.y);
+            if (dist < striker.radius + duck.radius) {
+                duck.owner = striker;
+            }
+        }
+    }
+
+    // Pellet Logic
+    for (let i = pellets.length - 1; i >= 0; i--) {
+        let p = pellets[i];
+        p.update();
+        
+        let hitPuck = false;
+        for (let puck of pucks) {
+            if (resolveCollision(p, puck)) hitPuck = true;
+        }
+
+        if (p.y < -10 || p.y > height + 10 || hitPuck) {
+            pellets.splice(i, 1);
+        } else {
+            p.draw(ctx);
+        }
+    }
+
+    // Update & Draw Pucks
+    for (let puck of pucks) {
+        puck.update();
+        puck.draw(ctx);
+    }
+
+    // Update & Draw Strikers
+    for (let striker of strikers) {
+        striker.update();
+        striker.draw(ctx);
+        
+        if (striker.target) {
+            ctx.beginPath();
+            ctx.arc(striker.target.x, striker.target.y, 15, 0, Math.PI * 2);
+            ctx.fillStyle = striker.color;
+            ctx.globalAlpha = 0.2;
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(striker.x, striker.y);
+            ctx.lineTo(striker.target.x, striker.target.y);
+            ctx.strokeStyle = striker.color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+        }
+    }
+
+    requestAnimationFrame(loop);
+}
+
+init();
+</script>
+</body>
+</html>
