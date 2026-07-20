@@ -44,15 +44,16 @@
   .deselect.show{ opacity:1; pointer-events:auto; }
   .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
   @media (prefers-reduced-motion:reduce){ .deselect{ transition:none; } }
-  .fsbtn{ position:absolute; top:16px; left:16px; z-index:5; width:44px; height:44px;
-    display:inline-flex; align-items:center; justify-content:center; border-radius:11px;
-    border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36);
+  .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px;
+    border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36);
     color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
   .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
-  .fsbtn svg{ width:22px; height:22px; display:block; }
+  .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
   .fsbtn .fs-exit{ display:none; }
   .fsbtn.fs-on .fs-enter{ display:none; }
   .fsbtn.fs-on .fs-exit{ display:block; }
+  .gicon-hero{display:flex;justify-content:center;margin:6px 0 16px;}
+  .gicon-hero svg{width:88px;height:88px;}
 </style>
 </head>
 <body>
@@ -71,7 +72,9 @@
       <g id="boardRoot" transform="translate(90,0)">
         <g id="staticG"></g>
         <g id="holesG"></g>
+        <g id="glowG"></g>
         <g id="marbleG"></g>
+        <g id="fxG"></g>
         <g id="hitG"></g>
         <g id="ghostG"></g>
       </g>
@@ -83,13 +86,14 @@
 
 <div class="overlay" id="setup">
     <button class="fsbtn" id="fsbtn" type="button" aria-label="Toggle fullscreen">
-      <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9 V4 H9 M15 4 H20 V9 M20 15 V20 H15 M9 20 H4 V15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 V9 H4 M20 9 H15 V4 M15 20 V15 H20 M4 15 H9 V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   <div class="card">
     <h1>Three Men's Morris</h1>
     <div class="sub">A game of three-in-a-row</div>
     <p>Each player has three marbles, shown waiting at the sides. Take turns placing them on the glowing points; once all six are down, slide one marble per turn along a line to a neighbouring empty point. The first player to line up their three &mdash; along any row, column, or diagonal &mdash; wins. White moves first.</p>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="5" fill="#d8a24e"/><rect x="13.00" y="13.00" width="38.00" height="38.00" fill="none" stroke="#4a3016" stroke-width="1.6"/><line x1="32.00" y1="13.00" x2="32.00" y2="51.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="13.00" y1="32.00" x2="51.00" y2="32.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="13.00" y1="13.00" x2="51.00" y2="51.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="13.00" y1="51.00" x2="51.00" y2="13.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><circle cx="13.00" cy="13.00" r="1.7" fill="#4a3016"/><circle cx="32.00" cy="13.00" r="1.7" fill="#4a3016"/><circle cx="51.00" cy="13.00" r="1.7" fill="#4a3016"/><circle cx="51.00" cy="32.00" r="1.7" fill="#4a3016"/><circle cx="51.00" cy="51.00" r="1.7" fill="#4a3016"/><circle cx="32.00" cy="51.00" r="1.7" fill="#4a3016"/><circle cx="13.00" cy="51.00" r="1.7" fill="#4a3016"/><circle cx="13.00" cy="32.00" r="1.7" fill="#4a3016"/><circle cx="32.00" cy="32.00" r="1.7" fill="#4a3016"/></svg></div>
     <button id="startbtn">Start Game</button>
   </div>
 </div>
@@ -176,9 +180,9 @@ function onPointTap(i){
   if(busy || phase==='over' || phase==='anim') return;
   if(phase==='place'){ if(!board[i]) doPlace(i); return; }
   if(phase==='move'){
-    if(selected<0){ if(board[i]===turn && destinations(board,i).length){ selected=i; renderAll(); } return; }
-    if(i===selected){ selected=-1; renderAll(); return; }
-    if(board[i]===turn && destinations(board,i).length){ selected=i; renderAll(); return; }
+    if(selected<0){ if(board[i]===turn && destinations(board,i).length){ selected=i; drawSel(); } return; }
+    if(i===selected){ selected=-1; drawSel(); return; }
+    if(board[i]===turn && destinations(board,i).length){ selected=i; drawSel(); return; }
     if(!board[i] && destinations(board,selected).indexOf(i)>=0){ doMoveSlide(selected,i); return; }
   }
 }
@@ -236,26 +240,42 @@ function renderReserve(){
   for(let i=0;i<remB;i++){ const y=cy + (i-(remB-1)/2)*gap; drawReserve(rg, VBW-RAIL/2, y, r, 'B'); }
 }
 
+/* full redraw: real state changes only (placements, slides, turn change) */
 function renderAll(){
-    const _db=document.getElementById('deselect'); if(_db) _db.classList.toggle('show', phase==='move' && selected>=0);
   const hs=highlightSets();
   const holesG=document.getElementById('holesG'); clear(holesG);
   for(let i=0;i<9;i++) drawHole(holesG, PT[i].x, PT[i].y, hs.place.has(i));
-  hs.dest.forEach(function(i){ drawMoveTarget(holesG, PT[i].x, PT[i].y); });
   const marbleG=document.getElementById('marbleG'); clear(marbleG);
-  for(let i=0;i<9;i++){ if(!board[i]) continue; const c=PT[i]; const pulse=(hs.movable.has(i)&&selected<0);
-    if(hs.sel===i){ E('circle',{cx:c.x,cy:c.y,r:MARBLE_R+12,fill:'url(#glowhalo)'},marbleG); }
-    else if(pulse){ E('circle',{cx:c.x,cy:c.y,r:MARBLE_R+12,fill:'url(#glowhalo)','class':'pulseGlow'},marbleG); }
-    drawMarble(marbleG, c.x, c.y, MARBLE_R, colorKey(board[i]));
-    if(pulse) E('circle',{cx:c.x,cy:c.y,r:MARBLE_R+6,fill:'none',stroke:'#ffd75e','stroke-width':3,'class':'pulseRing'},marbleG);
-    if(hs.sel===i) E('circle',{cx:c.x,cy:c.y,r:MARBLE_R+6,fill:'none',stroke:'#ffd75e','stroke-width':5,opacity:0.97},marbleG);
-  }
-  const hitG=document.getElementById('hitG'); clear(hitG);
-  if(phase==='place'||phase==='move'){
-    const act=new Set(); hs.place.forEach(function(i){ act.add(i); }); hs.movable.forEach(function(i){ act.add(i); }); hs.dest.forEach(function(i){ act.add(i); }); if(hs.sel>=0) act.add(hs.sel);
-    act.forEach(function(i){ const c=PT[i]; const h=E('circle',{cx:c.x,cy:c.y,r:HOLE_R+6,fill:'transparent',style:'cursor:pointer'},hitG); h.onclick=(function(idx){ return function(){ onPointTap(idx); }; })(i); });
-  }
+  for(let i=0;i<9;i++){ if(!board[i]) continue; const c=PT[i]; drawMarble(marbleG, c.x, c.y, MARBLE_R, colorKey(board[i])); }
+  buildHits();
+  drawSel();
   renderReserve();
+}
+/* hit layer: rebuilt ONLY here, on real state changes — never on a selection press.
+   Movement carries one target per actionable point for the whole turn: every
+   movable marble plus every destination any of them could slide to; onPointTap
+   consults the current selection, so selecting never rebuilds hits. */
+function buildHits(){
+  const hitG=document.getElementById('hitG'); clear(hitG);
+  const hs=highlightSets();
+  const act=new Set();
+  if(phase==='place') hs.place.forEach(function(i){ act.add(i); });
+  else if(phase==='move') hs.movable.forEach(function(i){ act.add(i); destinations(board,i).forEach(function(x){ act.add(x); }); });
+  act.forEach(function(i){ const c=PT[i]; const h=E('circle',{cx:c.x,cy:c.y,r:HOLE_R+6,fill:'transparent',style:'cursor:pointer'},hitG); h.onpointerdown=(function(idx){ return function(){ onPointTap(idx); }; })(i); });
+}
+/* selection-dependent layers only (halos under marbles, rings/targets above): never touches hitG */
+function drawSel(){
+  const _db=document.getElementById('deselect'); if(_db) _db.classList.toggle('show', phase==='move' && selected>=0);
+  const hs=highlightSets();
+  const glowG=document.getElementById('glowG'); clear(glowG);
+  const fxG=document.getElementById('fxG'); clear(fxG);
+  hs.dest.forEach(function(i){ drawMoveTarget(fxG, PT[i].x, PT[i].y); });
+  for(let i=0;i<9;i++){ if(!board[i]) continue; const c=PT[i]; const pulse=(hs.movable.has(i)&&selected<0);
+    if(hs.sel===i){ E('circle',{cx:c.x,cy:c.y,r:MARBLE_R+12,fill:'url(#glowhalo)'},glowG); }
+    else if(pulse){ E('circle',{cx:c.x,cy:c.y,r:MARBLE_R+12,fill:'url(#glowhalo)','class':'pulseGlow'},glowG); }
+    if(pulse) E('circle',{cx:c.x,cy:c.y,r:MARBLE_R+6,fill:'none',stroke:'#ffd75e','stroke-width':3,'class':'pulseRing'},fxG);
+    if(hs.sel===i) E('circle',{cx:c.x,cy:c.y,r:MARBLE_R+6,fill:'none',stroke:'#ffd75e','stroke-width':5,opacity:0.97},fxG);
+  }
   updateStatus();
 }
 function updateStatus(){
@@ -285,7 +305,7 @@ function init(){
   document.getElementById('fsbtn').onclick=function(){ if(fsElement()) fsExit(); else fsEnter(); };
   document.getElementById('startbtn').onclick=function(){ ac(); newGame(); };
   document.getElementById('againbtn').onclick=function(){ document.getElementById('banner').classList.add('hidden'); document.getElementById('setup').classList.remove('hidden'); };
-  document.getElementById('deselect').onclick=function(){ if(selected>=0){ selected=-1; renderAll(); } };
+  document.getElementById('deselect').onclick=function(){ if(selected>=0){ selected=-1; drawSel(); } };
 }
 init();
 </script>
