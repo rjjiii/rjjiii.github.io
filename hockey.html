@@ -37,20 +37,152 @@ let scoreP2 = 0; // Top player
 const strikers = [];
 let pucks = [];
 let pellets = [];
-let ducks = [];
+let birds = [];
 
 const pointers = new Map();
 let bgCanvas, bgCtx;
+let audioCtx = null;
+let lastHitSound = 0;
 
-const duckImg = new Image();
-duckImg.src = 'data:image/svg+xml,' + encodeURIComponent(`
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#FFD700" d="M30,70 Q20,70 20,60 T30,50 L50,50 Q70,50 70,60 T60,70 Z"/>
-    <path fill="#FFD700" d="M50,40 Q40,40 40,30 T50,20 T60,30 T50,40 Z"/>
-    <circle cx="45" cy="28" r="4" fill="#000"/>
-    <path fill="#FFA500" d="M35,32 L20,35 L35,38 Z"/>
-</svg>`);
+// --- Sound Synthesizer ---
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
 
+function playSound(type) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    let now = audioCtx.currentTime;
+    
+    if (type === 'quack') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+        gainNode.gain.setValueAtTime(0.2, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.15);
+        osc.start(now); osc.stop(now + 0.15);
+    } else if (type === 'tweet') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'honk') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.setValueAtTime(250, now + 0.1);
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+        osc.start(now); osc.stop(now + 0.2);
+    } else if (type === 'noot') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.setValueAtTime(500, now + 0.05);
+        gainNode.gain.setValueAtTime(0.15, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'parrot') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.linearRampToValueAtTime(1000, now + 0.05);
+        osc.frequency.linearRampToValueAtTime(800, now + 0.1);
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'hit') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.05);
+        gainNode.gain.setValueAtTime(0.15, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+        osc.start(now); osc.stop(now + 0.05);
+    } else if (type === 'pop') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        gainNode.gain.setValueAtTime(0.1, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+        osc.start(now); osc.stop(now + 0.05);
+    } else if (type === 'pew') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
+        gainNode.gain.setValueAtTime(0.05, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.05);
+        osc.start(now); osc.stop(now + 0.05);
+    }
+}
+
+// --- Bird Definitions ---
+const BIRD_TYPES = {
+    DUCK: {
+        color: '#FFF8E7', // Cream
+        sound: 'quack',
+        svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#FFD700" d="M30,70 Q20,70 20,60 T30,50 L50,50 Q70,50 70,60 T60,70 Z"/>
+                <path fill="#FFD700" d="M50,40 Q40,40 40,30 T50,20 T60,30 T50,40 Z"/>
+                <circle cx="45" cy="28" r="4" fill="#000"/>
+                <path fill="#FFA500" d="M35,32 L20,35 L35,38 Z"/>
+              </svg>`
+    },
+    BIRD: {
+        color: '#E0FFFF', // Pale blue
+        sound: 'tweet',
+        svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#87CEEB" d="M35,65 Q25,65 25,55 T35,45 L55,45 Q65,45 65,55 T55,65 Z"/>
+                <path fill="#87CEEB" d="M55,35 Q45,35 45,25 T55,15 T65,25 T55,35 Z"/>
+                <circle cx="50" cy="23" r="3" fill="#000"/>
+                <path fill="#FFD700" d="M42,27 L30,29 L42,31 Z"/>
+              </svg>`
+    },
+    FLAMINGO: {
+        color: '#FFD1DC', // Pastel pink
+        sound: 'honk',
+        svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#FF7F50" d="M40,75 Q30,75 30,65 T40,55 L55,55 Q65,55 65,65 T55,75 Z"/>
+                <path fill="none" stroke="#FF7F50" stroke-width="6" stroke-linecap="round" d="M55,55 Q75,35 60,15"/>
+                <circle cx="58" cy="15" r="7" fill="#FF7F50"/>
+                <circle cx="55" cy="13" r="2" fill="#000"/>
+                <path fill="#333" d="M50,17 L40,20 L45,23 Z"/>
+              </svg>`
+    },
+    PENGUIN: {
+        color: '#F0F8FF', // Ice white
+        sound: 'noot',
+        svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#222" d="M35,75 Q25,75 25,50 T45,25 Q65,25 65,50 T55,75 Z"/>
+                <path fill="#FFF" d="M38,70 Q30,70 30,55 T45,35 Q60,35 60,55 T52,70 Z"/>
+                <circle cx="40" cy="35" r="3" fill="#000"/>
+                <path fill="#FFA500" d="M35,40 L30,43 L38,45 Z"/>
+              </svg>`
+    },
+    PARROT: {
+        color: '#98FB98', // Pale green
+        sound: 'parrot',
+        svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#FF3333" d="M40,70 Q25,70 25,50 T45,25 Q65,25 65,50 T55,70 Z"/>
+                <path fill="#33CC33" d="M50,45 Q35,55 35,65 Q50,65 55,50 Z"/>
+                <circle cx="35" cy="32" r="3" fill="#000"/>
+                <path fill="#FFD700" d="M30,35 Q20,38 28,45 Q26,38 30,35 Z"/>
+              </svg>`
+    }
+};
+
+// Preload SVG Images
+for (let key in BIRD_TYPES) {
+    let img = new Image();
+    img.src = 'data:image/svg+xml,' + encodeURIComponent(BIRD_TYPES[key].svg);
+    BIRD_TYPES[key].img = img;
+}
+
+// --- Game Classes ---
 class Circle {
     constructor(x, y, radius, mass) {
         this.x = x;
@@ -72,7 +204,7 @@ class Striker extends Circle {
         this.color = color;
         this.isPlayer1 = isPlayer1;
         this.target = null;
-        this.friction = 0.94; 
+        this.friction = 0.975; // Lower friction for easier flicking and sliding
         this.spring = 0.25;  
         this.angle = 0;
     }
@@ -112,15 +244,17 @@ class Striker extends Circle {
         this.lastShot = performance.now();
 
         let vy = this.isPlayer1 ? -18 : 18;
-        let p = new Pellet(this.x, this.y + (this.isPlayer1 ? -this.radius : this.radius), vy, false);
+        let p = new Pellet(this.x, this.y + (this.isPlayer1 ? -this.radius : this.radius), vy, null);
         pellets.push(p);
         
-        // Kick the rotation slightly when firing so it looks active
+        // Tiny synth laser for striker firing
+        if (Math.random() < 0.2) playSound('pew');
+        
+        // Kick the rotation slightly when firing
         this.angle += 0.2;
     }
 
     constrain() {
-        // Hard physics boundaries for the sliding striker (Outer walls only)
         if (this.x < this.radius) { this.x = this.radius; this.vx *= -0.5; }
         if (this.x > width - this.radius) { this.x = width - this.radius; this.vx *= -0.5; }
         
@@ -133,7 +267,6 @@ class Striker extends Circle {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
 
-        // Outer base
         ctx.beginPath();
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
@@ -142,15 +275,13 @@ class Striker extends Circle {
         ctx.strokeStyle = '#fff';
         ctx.stroke();
 
-        // Inner concentric circle to bound the diamonds
         ctx.beginPath();
         ctx.arc(0, 0, this.radius * 0.65, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Ring of rotating diamonds
         ctx.fillStyle = '#fff';
         let numDiamonds = 12;
-        let rCenter = this.radius * 0.825; // Positioned between the two concentric circles
+        let rCenter = this.radius * 0.825; 
         for (let i = 0; i < numDiamonds; i++) {
             let a = (i * Math.PI * 2) / numDiamonds;
             ctx.save();
@@ -166,7 +297,6 @@ class Striker extends Circle {
             ctx.restore();
         }
 
-        // White compass rose generator function
         const drawStar = (points, outer, inner) => {
             ctx.beginPath();
             for (let i = 0; i < points * 2; i++) {
@@ -178,16 +308,13 @@ class Striker extends Circle {
             ctx.fill();
         };
 
-        // Main 4-point compass star
         ctx.fillStyle = '#fff';
         drawStar(4, this.radius * 0.6, this.radius * 0.15);
         
-        // Minor 4-point sub-star
         ctx.rotate(Math.PI / 4);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
         drawStar(4, this.radius * 0.45, this.radius * 0.15);
 
-        // Center hub
         ctx.beginPath();
         ctx.arc(0, 0, this.radius * 0.12, 0, Math.PI * 2);
         ctx.fillStyle = '#222';
@@ -209,18 +336,15 @@ class Puck extends Circle {
         this.vy *= this.friction;
         this.x += this.vx;
         this.y += this.vy;
-        
-        // Spin according to movement speed
         this.angle += (Math.abs(this.vx) + Math.abs(this.vy)) * 0.02;
-
         this.checkGoals();
         this.constrain();
     }
 
     checkGoals() {
         let inGoalX = this.x > (width / 2 - goalWidth / 2) && this.x < (width / 2 + goalWidth / 2);
-        if (this.y < 0 && inGoalX) { scoreP1++; this.reset(); }
-        else if (this.y > height && inGoalX) { scoreP2++; this.reset(); }
+        if (this.y < 0 && inGoalX) { scoreP1++; playSound('tweet'); this.reset(); }
+        else if (this.y > height && inGoalX) { scoreP2++; playSound('tweet'); this.reset(); }
     }
 
     constrain() {
@@ -292,43 +416,40 @@ class Puck extends Circle {
     }
 }
 
-class Duck extends Circle {
-    constructor(x, y) {
+class Bird extends Circle {
+    constructor(x, y, typeKey) {
         super(x, y, 15, 1);
         this.owner = null;
+        this.typeKey = typeKey;
+        this.type = BIRD_TYPES[typeKey];
     }
 
     update(leader, index) {
         if (this.owner) {
-            // Target position calculation for a true single-file duck line
             let targetX, targetY;
-            
             if (index === 0) {
-                // First duck follows the striker directly
                 let angle = Math.atan2(this.y - leader.y, this.x - leader.x);
                 targetX = leader.x + Math.cos(angle) * 45;
                 targetY = leader.y + Math.sin(angle) * 45;
             } else {
-                // Subsequent ducks follow the duck ahead of them in the line
-                let prevDuck = ducks.filter(d => d.owner === this.owner)[index - 1];
-                let angle = Math.atan2(this.y - prevDuck.y, this.x - prevDuck.x);
-                targetX = prevDuck.x + Math.cos(angle) * 30;
-                targetY = prevDuck.y + Math.sin(angle) * 30;
+                let prevBird = birds.filter(d => d.owner === this.owner)[index - 1];
+                let angle = Math.atan2(this.y - prevBird.y, this.x - prevBird.x);
+                targetX = prevBird.x + Math.cos(angle) * 30;
+                targetY = prevBird.y + Math.sin(angle) * 30;
             }
 
-            // Smooth interpolation towards line position
             this.x += (targetX - this.x) * 0.15;
             this.y += (targetY - this.y) * 0.15;
             this.vx = 0;
             this.vy = 0;
 
-            // Increased egg firing rate
             if (Math.random() < 0.05) {
                 let vy = this.owner.isPlayer1 ? -12 : 12;
-                pellets.push(new Pellet(this.x, this.y, vy, true));
+                pellets.push(new Pellet(this.x, this.y, vy, this.type.color));
+                playSound('pop');
+                if (Math.random() < 0.25) playSound(this.type.sound);
             }
         } else {
-            // Unowned organic shuffling behavior
             this.vx += (Math.random() - 0.5) * 1.5;
             this.vy += (Math.random() - 0.5) * 1.5;
             this.vx *= 0.9;
@@ -342,19 +463,21 @@ class Duck extends Circle {
     }
 
     draw(ctx) {
-        ctx.drawImage(duckImg, this.x - 20, this.y - 20, 40, 40);
+        if (this.type.img) {
+            ctx.drawImage(this.type.img, this.x - 20, this.y - 20, 40, 40);
+        }
     }
 }
 
 class Pellet {
-    constructor(x, y, vy, isEgg) {
+    constructor(x, y, vy, eggColor) {
         this.x = x;
         this.y = y;
         this.vx = 0;
         this.vy = vy;
-        this.radius = isEgg ? 5 : 4;
+        this.eggColor = eggColor;
+        this.radius = eggColor ? 5 : 4;
         this.mass = 0.3;
-        this.isEgg = isEgg;
     }
 
     update() {
@@ -362,8 +485,8 @@ class Pellet {
     }
 
     draw(ctx) {
-        if (this.isEgg) {
-            ctx.fillStyle = '#FFF8E7';
+        if (this.eggColor) {
+            ctx.fillStyle = this.eggColor;
             ctx.beginPath();
             ctx.ellipse(this.x, this.y, 4, 6, 0, 0, Math.PI * 2);
             ctx.fill();
@@ -414,9 +537,9 @@ function init() {
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerUp);
 
-    // Initialized with Subtle Blue and Warm Vermilion Red
-    strikers.push(new Striker(width / 2, height - 100, '#4A90E2', true));
-    strikers.push(new Striker(width / 2, 100, '#E34234', false));
+    strikers.push(new Striker(width / 2, height - 100, '#4A90E2', true)); // Subtle Blue
+    strikers.push(new Striker(width / 2, 100, '#E34234', false)); // Warm Vermilion
+
     pucks.push(new Puck(width / 2, height / 2));
 
     setInterval(spawnEntity, 10000);
@@ -435,6 +558,7 @@ function resize() {
 
 function handlePointerDown(e) {
     e.preventDefault();
+    initAudio(); // Required to unlock audio on first interaction
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     updateTargets();
 }
@@ -465,10 +589,12 @@ function spawnEntity() {
     let xPos = side > 0 ? width - 30 : 30;
     let yPos = centerLine + (Math.random() * 60 - 30);
 
-    if (Math.random() < 0.33) {
-        let duck = new Duck(xPos, yPos);
-        duck.vx = -side * 2;
-        ducks.push(duck);
+    if (Math.random() < 0.4) { // Slightly higher chance to spawn birds now
+        const keys = Object.keys(BIRD_TYPES);
+        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+        let bird = new Bird(xPos, yPos, randomKey);
+        bird.vx = -side * 2;
+        birds.push(bird);
     } else {
         let newPuck = new Puck(xPos, yPos);
         newPuck.vx = -side * (6 + Math.random() * 4); 
@@ -505,6 +631,12 @@ function resolveCollision(a, b) {
         a.vy -= p * b.mass * ny * bounce;
         b.vx += p * a.mass * nx * bounce;
         b.vy += p * a.mass * ny * bounce;
+        
+        // Throttled satisfying hit sound
+        if (performance.now() - lastHitSound > 50) {
+            playSound('hit');
+            lastHitSound = performance.now();
+        }
         return true;
     }
     return false;
@@ -551,48 +683,41 @@ function loop() {
     ctx.clearRect(0, 0, width, height);
     drawField();
 
-    // Striker vs Puck collisions
     for (let striker of strikers) {
         for (let puck of pucks) resolveCollision(striker, puck);
     }
-
-    // Puck vs Puck collisions
     for (let i = 0; i < pucks.length; i++) {
         for (let j = i + 1; j < pucks.length; j++) resolveCollision(pucks[i], pucks[j]);
     }
-
-    // Striker vs Striker collisions
     resolveCollision(strikers[0], strikers[1]);
 
-    // Track line positions for ducks per player
-    let p1DuckCount = 0;
-    let p2DuckCount = 0;
+    let p1BirdCount = 0;
+    let p2BirdCount = 0;
 
-    for (let duck of ducks) {
-        let leader = duck.owner;
+    for (let bird of birds) {
+        let leader = bird.owner;
         let index = 0;
         
         if (leader === strikers[0]) {
-            index = p1DuckCount;
-            p1DuckCount++;
+            index = p1BirdCount;
+            p1BirdCount++;
         } else if (leader === strikers[1]) {
-            index = p2DuckCount;
-            p2DuckCount++;
+            index = p2BirdCount;
+            p2BirdCount++;
         }
 
-        duck.update(leader, index);
-        duck.draw(ctx);
+        bird.update(leader, index);
+        bird.draw(ctx);
         
-        // Duck capture/stealing mechanism
         for (let striker of strikers) {
-            let dist = Math.hypot(striker.x - duck.x, striker.y - duck.y);
-            if (dist < striker.radius + duck.radius) {
-                duck.owner = striker;
+            let dist = Math.hypot(striker.x - bird.x, striker.y - bird.y);
+            if (dist < striker.radius + bird.radius && bird.owner !== striker) {
+                bird.owner = striker;
+                playSound(bird.type.sound);
             }
         }
     }
 
-    // Pellet Logic
     for (let i = pellets.length - 1; i >= 0; i--) {
         let p = pellets[i];
         p.update();
@@ -609,13 +734,11 @@ function loop() {
         }
     }
 
-    // Update & Draw Pucks
     for (let puck of pucks) {
         puck.update();
         puck.draw(ctx);
     }
 
-    // Update & Draw Strikers
     for (let striker of strikers) {
         striker.update();
         striker.draw(ctx);
