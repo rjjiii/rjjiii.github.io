@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Arcade Bumper Soccer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #111;
+      font-family: 'Arial Black', sans-serif;
+      user-select: none;
+      touch-action: none;
+    }
+    #game-canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+    /* UI Overlay */
+    #ui-layer {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 30px;
+    }
+    .hud-panel {
+      background: rgba(0, 0, 0, 0.75);
+      border: 3px solid #00ffff;
+      border-radius: 10px;
+      padding: 10px 18px;
+      color: white;
+      font-size: 20px;
+      text-shadow: 0 0 8px #00ffff;
+      box-shadow: 0 0 12px #00ffff;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    #player-hud {
+      font-size: 24px;
+      letter-spacing: 1px;
+    }
+    #time-display, #score-display, #wins-display, #round-display {
+      color: #ff007f;
+      font-size: 26px;
+      margin-left: 6px;
+    }
+    
+    /* Instructions */
+    #aim-hint {
+      position: absolute;
+      bottom: 30px;
+      width: 100%;
+      text-align: center;
+      color: #00ffcc;
+      font-size: 22px;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px #00ffcc;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #aim-hint.show { opacity: 1; }
+    
+    /* Goal Message */
+    #goal-msg {
+      position: absolute;
+      top: 40%; left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      font-size: 90px;
+      color: #ffd700;
+      text-shadow: 4px 4px 0 #000, 0 0 40px #ffd700;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #goal-msg.active {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Menu / Overlay Screen */
+    #menu-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(12, 12, 22, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      z-index: 10;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h1 {
+      color: #00ffff;
+      font-size: 52px;
+      margin-top: 0;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px #00ffff;
+      text-align: center;
+    }
+    .menu-content {
+      color: #fff;
+      font-size: 18px;
+      text-align: center;
+      line-height: 1.5;
+      max-width: 600px;
+      margin-bottom: 25px;
+    }
+    
+    /* Form controls */
+    .options-grid {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 30px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 20px 30px;
+      border-radius: 15px;
+      border: 2px solid rgba(0, 255, 255, 0.3);
+    }
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .option-group label {
+      color: #00ffcc;
+      font-size: 16px;
+      letter-spacing: 1px;
+    }
+    select {
+      background: #111;
+      color: #fff;
+      border: 2px solid #00ffff;
+      padding: 10px 20px;
+      font-size: 20px;
+      font-family: inherit;
+      border-radius: 8px;
+      cursor: pointer;
+      outline: none;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    }
+
+    /* Scoreboard Table */
+    .standings-table {
+      width: 100%;
+      max-width: 480px;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 18px;
+    }
+    .standings-table th, .standings-table td {
+      padding: 8px 12px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .standings-table th {
+      color: #00ffff;
+      border-bottom: 2px solid #00ffff;
+    }
+
+    button {
+      background: linear-gradient(90deg, #ff007f, #ff4500);
+      border: none;
+      color: white;
+      font-size: 26px;
+      font-family: inherit;
+      padding: 16px 50px;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    button:hover {
+      box-shadow: 0 0 30px rgba(255, 0, 127, 0.8);
+    }
+    button:active { transform: scale(0.95); }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <canvas id="game-canvas"></canvas>
+
+  <div id="ui-layer">
+    <div class="top-bar">
+      <div class="hud-panel" id="timer-hud">TIME:<span id="time-display">30</span>s</div>
+      <div class="hud-panel" id="player-hud">PLAYER 1</div>
+      <div class="hud-panel" id="score-hud">
+        RD:<span id="round-display">1/1</span> | GOALS:<span id="score-display">0</span> | WINS:<span id="wins-display">0</span>
+      </div>
+    </div>
+    <div id="aim-hint">PULL BACKWARD & RELEASE TO KICK!</div>
+    <div id="goal-msg">GOAL!</div>
+  </div>
+
+  <div id="menu-screen">
+    <h1 id="menu-title">BUMPER SOCCER</h1>
+    <div class="menu-content" id="menu-body">
+      <p><b>Slingshot Mechanics:</b> Tap and pull backward to aim and power up.<br>Each player gets 30 seconds per turn to score on the wobbly dog!</p>
+      
+      <div class="options-grid" id="options-box">
+        <div class="option-group">
+          <label for="player-count">PLAYERS</label>
+          <select id="player-count">
+            <option value="1" selected>1 Player</option>
+            <option value="2">2 Players</option>
+            <option value="3">3 Players</option>
+            <option value="4">4 Players</option>
+            <option value="5">5 Players</option>
+            <option value="6">6 Players</option>
+            <option value="7">7 Players</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label for="round-count">ROUNDS</label>
+          <select id="round-count">
+            <option value="1" selected>1 Round</option>
+            <option value="2">2 Rounds</option>
+            <option value="3">3 Rounds</option>
+            <option value="5">5 Rounds</option>
+            <option value="10">10 Rounds</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <button id="main-btn">START GAME</button>
+  </div>
+
+  <script>
+    // --------------------------------------------------------
+    // 1. CONSTANTS & PLAYER COLOR PALETTE
+    // --------------------------------------------------------
+    const PLAYER_COLORS = [
+      { name: 'PLAYER 1', hex: '#ff2a2a', num: 0xff2a2a }, // Red
+      { name: 'PLAYER 2', hex: '#ff7f00', num: 0xff7f00 }, // Orange
+      { name: 'PLAYER 3', hex: '#ffff00', num: 0xffff00 }, // Yellow
+      { name: 'PLAYER 4', hex: '#00ff00', num: 0x00ff00 }, // Green
+      { name: 'PLAYER 5', hex: '#00ffff', num: 0x00ffff }, // Cyan
+      { name: 'PLAYER 6', hex: '#1e90ff', num: 0x1e90ff }, // Blue
+      { name: 'PLAYER 7', hex: '#b026ff', num: 0xb026ff }  // Purple
+    ];
+
+    const TURN_DURATION = 30000; // 30 Seconds
+
+    // Game Config & Tournament Tracking
+    let totalPlayers = 1;
+    let totalRounds = 1;
+    let currentRound = 1;
+    let currentPlayerIndex = 0;
+    
+    let playerRoundGoals = []; // Goals scored in current round [p0, p1, ...]
+    let playerTotalWins = [];  // Total round wins won across tournament [p0, p1, ...]
+
+    let turnScore = 0;
+    let gameActive = false;
+    let turnEndTime = 0;
+    let menuMode = 'START'; // 'START', 'INTERMISSION', 'GAMEOVER'
+    
+    // Ball Physics State
+    let ballState = 'IDLE'; // IDLE, AIMING, FLYING, RESETTING
+    let ballVelocity = new THREE.Vector3(0, 0, 0);
+    const gravity = 25;
+    const friction = 0.98;
+    const bounceDamp = 0.6;
+    const ballRadius = 0.5;
+
+    // Slingshot Input state
+    let dragStart = { x: 0, y: 0 };
+    let kickVector = { x: 0, z: 0, magnitude: 0 };
+
+    // DOM Elements
+    const timeEl = document.getElementById('time-display');
+    const scoreEl = document.getElementById('score-display');
+    const winsEl = document.getElementById('wins-display');
+    const roundEl = document.getElementById('round-display');
+    const playerHud = document.getElementById('player-hud');
+    const playerHudPanel = document.getElementById('player-hud');
+    
+    const menuScreen = document.getElementById('menu-screen');
+    const menuTitle = document.getElementById('menu-title');
+    const menuBody = document.getElementById('menu-body');
+    const mainBtn = document.getElementById('main-btn');
+    const goalMsg = document.getElementById('goal-msg');
+    const aimHint = document.getElementById('aim-hint');
+    const playerCountSelect = document.getElementById('player-count');
+    const roundCountSelect = document.getElementById('round-count');
+
+    // --------------------------------------------------------
+    // 2. THREE.JS SCENE SETUP
+    // --------------------------------------------------------
+    const canvas = document.getElementById('game-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0c16);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 7, 12);
+    camera.lookAt(0, 0, -3);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambient);
+    const spotLight = new THREE.SpotLight(0xffffff, 0.8);
+    spotLight.position.set(0, 20, 10);
+    spotLight.castShadow = true;
+    scene.add(spotLight);
+
+    // --------------------------------------------------------
+    // 3. BUILD ARENA & ENTITIES
+    // --------------------------------------------------------
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(16, 40), 
+      new THREE.MeshStandardMaterial({ color: 0x116622, roughness: 0.8 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.z = -5;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const bumperGeo = new THREE.CylinderGeometry(0.5, 0.5, 40, 16);
+    const bumperMat = new THREE.MeshStandardMaterial({ color: 0xff007f, emissive: 0xff007f, emissiveIntensity: 0.4 });
+    const leftBumper = new THREE.Mesh(bumperGeo, bumperMat);
+    leftBumper.rotation.x = Math.PI / 2; leftBumper.position.set(-6, 0.5, -5);
+    scene.add(leftBumper);
+    const rightBumper = leftBumper.clone(); rightBumper.position.set(6, 0.5, -5);
+    scene.add(rightBumper);
+
+    const goal = new THREE.Mesh(
+      new THREE.BoxGeometry(8, 4, 1), 
+      new THREE.MeshStandardMaterial({ color: 0xffffff, wireframe: true })
+    );
+    goal.position.set(0, 2, -15);
+    scene.add(goal);
+
+    // Dynamic Color Ball
+    const ballGeo = new THREE.IcosahedronGeometry(ballRadius, 1);
+    const ballMat = new THREE.MeshStandardMaterial({ color: PLAYER_COLORS[0].num, flatShading: true, roughness: 0.3 });
+    const ball = new THREE.Mesh(ballGeo, ballMat);
+    ball.castShadow = true;
+    scene.add(ball);
+
+    // Dynamic Color Aim Pointer
+    const pointerGroup = new THREE.Group();
+    const pointerGeo = new THREE.BoxGeometry(0.2, 0.1, 1);
+    pointerGeo.translate(0, 0, -0.5); 
+    const pointerMat = new THREE.MeshBasicMaterial({ color: PLAYER_COLORS[0].num });
+    const pointer = new THREE.Mesh(pointerGeo, pointerMat);
+    pointerGroup.add(pointer);
+    pointerGroup.visible = false;
+    scene.add(pointerGroup);
+
+    // Cartoon Dog Goalie
+    const dog = new THREE.Group();
+    const dogMat = new THREE.MeshStandardMaterial({ color: 0xd2a679 });
+    const earMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+
+    const dBody = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 2.0), dogMat);
+    dBody.position.y = 1.0; dBody.castShadow = true; dog.add(dBody);
+
+    const dHead = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 1.0), dogMat);
+    dHead.position.set(0, 1.8, -1.0); dHead.castShadow = true; dog.add(dHead);
+
+    const dSnout = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.8), dogMat);
+    dSnout.position.set(0, 1.5, -1.7); dog.add(dSnout);
+    
+    const dNose = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.2), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    dNose.position.set(0, 1.7, -2.1); dog.add(dNose);
+
+    const earL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.5), earMat);
+    earL.position.set(-0.6, 1.7, -0.8); earL.rotation.z = Math.PI / 6; dog.add(earL);
+    const earR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.5), earMat);
+    earR.position.set(0.6, 1.7, -0.8); earR.rotation.z = -Math.PI / 6; dog.add(earR);
+
+    const legGeo = new THREE.BoxGeometry(0.3, 0.6, 0.3);
+    const leg1 = new THREE.Mesh(legGeo, earMat); leg1.position.set(-0.4, 0.3, -0.7); dog.add(leg1);
+    const leg2 = new THREE.Mesh(legGeo, earMat); leg2.position.set(0.4, 0.3, -0.7); dog.add(leg2);
+    const leg3 = new THREE.Mesh(legGeo, earMat); leg3.position.set(-0.4, 0.3, 0.7); dog.add(leg3);
+    const leg4 = new THREE.Mesh(legGeo, earMat); leg4.position.set(0.4, 0.3, 0.7); dog.add(leg4);
+
+    scene.add(dog);
+
+    // --------------------------------------------------------
+    // 4. INPUT CONTROLS (SLINGSHOT)
+    // --------------------------------------------------------
+    function getCoords(e) {
+      if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      if (e.changedTouches && e.changedTouches.length > 0) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+      return { x: e.clientX, y: e.clientY };
+    }
+
+    function onPointerDown(e) {
+      if (!gameActive || ballState !== 'IDLE') return;
+      ballState = 'AIMING';
+      const pos = getCoords(e);
+      dragStart.x = pos.x;
+      dragStart.y = pos.y;
+      pointerGroup.visible = true;
+      pointerGroup.position.copy(ball.position);
+      pointer.scale.set(1, 1, 0.1);
+    }
+
+    function onPointerMove(e) {
+      if (ballState !== 'AIMING') return;
+      const pos = getCoords(e);
+      
+      let dx = (pos.x - dragStart.x) / window.innerWidth;
+      let dy = (pos.y - dragStart.y) / window.innerHeight;
+
+      kickVector.x = -dx; 
+      kickVector.z = -dy; 
+      kickVector.magnitude = Math.sqrt(kickVector.x ** 2 + kickVector.z ** 2);
+
+      if (kickVector.magnitude > 0) {
+        let angle = Math.atan2(kickVector.x, kickVector.z);
+        pointerGroup.rotation.y = angle;
+
+        let displayScale = Math.min(kickVector.magnitude * 25, 7);
+        pointer.scale.set(1, 1, displayScale);
+      }
+    }
+
+    function onPointerUp(e) {
+      if (ballState !== 'AIMING') return;
+      pointerGroup.visible = false;
+
+      if (kickVector.magnitude < 0.02) {
+        ballState = 'IDLE';
+        return;
+      }
+
+      const maxPower = 55;
+      const powerMult = 100;
+      let appliedPower = Math.min(kickVector.magnitude * powerMult, maxPower);
+
+      ballVelocity.x = (kickVector.x / kickVector.magnitude) * appliedPower;
+      ballVelocity.z = (kickVector.z / kickVector.magnitude) * appliedPower;
+      ballVelocity.y = Math.min(kickVector.magnitude * 30, 10);
+
+      ballState = 'FLYING';
+      aimHint.classList.remove('show');
+    }
+
+    window.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+    window.addEventListener('touchstart', onPointerDown, {passive: false});
+    window.addEventListener('touchmove', onPointerMove, {passive: false});
+    window.addEventListener('touchend', onPointerUp);
+
+    // --------------------------------------------------------
+    // 5. TURN & MULTIPLAYER FLOW LOGIC
+    // --------------------------------------------------------
+    function updatePlayerTheme(playerIndex) {
+      const colorObj = PLAYER_COLORS[playerIndex];
+      
+      // Update 3D Materials
+      ballMat.color.setHex(colorObj.num);
+      pointerMat.color.setHex(colorObj.num);
+      
+      // Update UI Header
+      playerHud.innerText = colorObj.name;
+      playerHud.style.color = colorObj.hex;
+      playerHudPanel.style.borderColor = colorObj.hex;
+      playerHudPanel.style.boxShadow = `0 0 12px ${colorObj.hex}`;
+    }
+
+    function resetBall() {
+      ball.position.set(0, ballRadius, 6);
+      ballVelocity.set(0, 0, 0);
+      ballState = 'IDLE';
+      kickVector.magnitude = 0;
+      if (gameActive) aimHint.classList.add('show');
+    }
+
+    function startTournament() {
+      totalPlayers = parseInt(playerCountSelect.value);
+      totalRounds = parseInt(roundCountSelect.value);
+      
+      playerTotalWins = new Array(totalPlayers).fill(0);
+      playerRoundGoals = new Array(totalPlayers).fill(0);
+      
+      currentRound = 1;
+      currentPlayerIndex = 0;
+      
+      startTurn();
+    }
+
+    function startTurn() {
+      turnScore = 0;
+      updatePlayerTheme(currentPlayerIndex);
+      
+      // Update HUD Numbers
+      timeEl.innerText = '30';
+      scoreEl.innerText = turnScore;
+      winsEl.innerText = playerTotalWins[currentPlayerIndex];
+      roundEl.innerText = `${currentRound}/${totalRounds}`;
+
+      menuScreen.style.display = 'none';
+      gameActive = true;
+      turnEndTime = Date.now() + TURN_DURATION;
+      
+      resetBall();
+    }
+
+    function endTurn() {
+      gameActive = false;
+      aimHint.classList.remove('show');
+      pointerGroup.visible = false;
+      
+      // Store player's goals for this round
+      playerRoundGoals[currentPlayerIndex] = turnScore;
+
+      // Check if all players have completed their turns for this round
+      if (currentPlayerIndex < totalPlayers - 1) {
+        // Next Player's Turn
+        currentPlayerIndex++;
+        showTurnIntermission();
+      } else {
+        // Round Completed!
+        processRoundEnd();
+      }
+    }
+
+    function processRoundEnd() {
+      // Find highest goal score in this round
+      let maxGoals = Math.max(...playerRoundGoals);
+      let winners = [];
+      
+      if (maxGoals > 0) {
+        playerRoundGoals.forEach((goals, idx) => {
+          if (goals === maxGoals) {
+            playerTotalWins[idx]++;
+            winners.push(PLAYER_COLORS[idx].name);
+          }
+        });
+      }
+
+      if (currentRound < totalRounds) {
+        // Move to next round
+        currentRound++;
+        currentPlayerIndex = 0;
+        playerRoundGoals = new Array(totalPlayers).fill(0); // Reset scores between rounds
+        showRoundIntermission(winners, maxGoals);
+      } else {
+        // All Rounds Completed -> End Game
+        showGameOverScreen();
+      }
+    }
+
+    // --- INTERMISSION SCREENS ---
+    function showTurnIntermission() {
+      menuMode = 'INTERMISSION';
+      const nextPlayer = PLAYER_COLORS[currentPlayerIndex];
+      const prevPlayer = PLAYER_COLORS[currentPlayerIndex - 1];
+
+      menuTitle.innerText = `${prevPlayer.name} TURN FINISHED!`;
+      menuTitle.style.color = prevPlayer.hex;
+
+      let html = `<p>You scored <b>${turnScore}</b> goals this round.</p>`;
+      html += `<p style="color:${nextPlayer.hex}; font-size:24px; margin-top:20px;">UP NEXT: <b>${nextPlayer.name}</b></p>`;
+      
+      menuBody.innerHTML = html;
+      mainBtn.innerText = "START TURN";
+      menuScreen.style.display = 'flex';
+    }
+
+    function showRoundIntermission(winners, maxGoals) {
+      menuMode = 'INTERMISSION';
+      menuTitle.innerText = `ROUND ${currentRound - 1} COMPLETE!`;
+      menuTitle.style.color = '#00ffff';
+
+      let winnerText = winners.length > 0 
+        ? `Round Winner: <b>${winners.join(', ')}</b> (${maxGoals} goals)` 
+        : `No goals scored this round!`;
+
+      let html = `<p>${winnerText}</p>`;
+      html += `<h3>CURRENT TOURNAMENT WINS</h3>`;
+      html += buildStandingsTable(playerTotalWins, 'Wins');
+      html += `<p style="color:#00ffcc; margin-top:15px;">GET READY FOR ROUND ${currentRound} OF ${totalRounds}!</p>`;
+
+      menuBody.innerHTML = html;
+      mainBtn.innerText = "START NEXT ROUND";
+      menuScreen.style.display = 'flex';
+    }
+
+    function showGameOverScreen() {
+      menuMode = 'GAMEOVER';
+      menuTitle.innerText = "TOURNAMENT FINISHED!";
+      menuTitle.style.color = "#ffd700";
+
+      let maxWins = Math.max(...playerTotalWins);
+      let champions = [];
+      
+      playerTotalWins.forEach((wins, idx) => {
+        if (wins === maxWins && wins > 0) champions.push(PLAYER_COLORS[idx].name);
+      });
+
+      let champText = champions.length > 0 
+        ? `🏆 OVERALL CHAMPION: <b style="color:#ffd700;">${champions.join(', ')}</b>!` 
+        : `No round wins recorded!`;
+
+      let html = `<p style="font-size:22px; margin-bottom:15px;">${champText}</p>`;
+      html += `<h3>FINAL WIN TALLY</h3>`;
+      html += buildStandingsTable(playerTotalWins, 'Total Wins');
+
+      menuBody.innerHTML = html;
+      mainBtn.innerText = "PLAY AGAIN";
+      menuScreen.style.display = 'flex';
+    }
+
+    function buildStandingsTable(dataArray, scoreLabel) {
+      let tableHtml = `<table class="standings-table"><thead><tr><th>Player</th><th>${scoreLabel}</th></tr></thead><tbody>`;
+      for (let i = 0; i < totalPlayers; i++) {
+        const p = PLAYER_COLORS[i];
+        tableHtml += `<tr><td style="color:${p.hex}; font-weight:bold;">${p.name}</td><td>${dataArray[i]}</td></tr>`;
+      }
+      tableHtml += `</tbody></table>`;
+      return tableHtml;
+    }
+
+    // Button Click Router
+    mainBtn.addEventListener('click', () => {
+      if (menuMode === 'START' || menuMode === 'GAMEOVER') {
+        menuMode = 'START';
+        startTournament();
+      } else if (menuMode === 'INTERMISSION') {
+        startTurn();
+      }
+    });
+
+    function triggerGoal() {
+      if (ballState === 'RESETTING') return;
+      ballState = 'RESETTING';
+      turnScore++;
+      scoreEl.innerText = turnScore;
+      
+      goalMsg.classList.add('active');
+      setTimeout(() => {
+        goalMsg.classList.remove('active');
+        if (gameActive) resetBall();
+      }, 1000);
+    }
+
+    window.addEventListener('resize', () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    // --------------------------------------------------------
+    // 6. MAIN GAME LOOP
+    // --------------------------------------------------------
+    let lastTime = Date.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = Date.now();
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      // Timer Logic
+      if (gameActive) {
+        const timeLeft = Math.max(0, Math.ceil((turnEndTime - now) / 1000));
+        timeEl.innerText = timeLeft;
+        if (timeLeft <= 0) {
+          endTurn();
+        }
+      }
+
+      // Goalie Patrol
+      if (gameActive) {
+        const t = now * 0.003;
+        const radius = 3.5;
+        
+        dog.position.x = Math.sin(t) * radius;
+        dog.position.z = -12 + Math.cos(t) * radius * 0.5;
+        dog.rotation.y = t + Math.PI / 2;
+
+        dog.position.y = Math.abs(Math.sin(t * 4)) * 0.5;
+        dog.rotation.z = Math.sin(t * 8) * 0.15;
+        
+        earL.rotation.x = Math.sin(t * 12) * 0.2;
+        earR.rotation.x = -Math.sin(t * 12) * 0.2;
+      }
+
+      // Ball Physics
+      if (ballState === 'FLYING') {
+        ball.position.x += ballVelocity.x * dt;
+        ball.position.y += ballVelocity.y * dt;
+        ball.position.z += ballVelocity.z * dt;
+
+        ball.rotation.x += ballVelocity.z * dt * 0.5;
+        ball.rotation.z -= ballVelocity.x * dt * 0.5;
+
+        ballVelocity.y -= gravity * dt;
+
+        // Floor Bounce
+        if (ball.position.y <= ballRadius) {
+          ball.position.y = ballRadius;
+          ballVelocity.y *= -bounceDamp;
+          ballVelocity.x *= friction;
+          ballVelocity.z *= friction;
+        }
+
+        // Bumper Bounce (Sides)
+        if (ball.position.x > 5.5) {
+          ball.position.x = 5.5;
+          ballVelocity.x *= -1;
+        } else if (ball.position.x < -5.5) {
+          ball.position.x = -5.5;
+          ballVelocity.x *= -1;
+        }
+
+        // Dog Collision
+        const distToDog = ball.position.distanceTo(dog.position);
+        if (distToDog < 1.8 && ball.position.z < -9 && ball.position.z > -14) {
+          ballVelocity.z = Math.abs(ballVelocity.z) * 0.6 + 8;
+          ballVelocity.x += (Math.random() - 0.5) * 15;
+          ballVelocity.y = 8;
+        }
+
+        // Goal Check
+        if (ball.position.z < -14 && Math.abs(ball.position.x) < 4 && ball.position.y < 4) {
+          triggerGoal();
+        }
+
+        // Out of Bounds / Stop Check
+        if (ball.position.z < -18 || ball.position.z > 12 || (Math.abs(ballVelocity.z) < 0.5 && ball.position.y <= ballRadius + 0.1)) {
+          ballState = 'RESETTING';
+          setTimeout(() => { if (gameActive) resetBall(); }, 600);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    resetBall();
+    animate();
+
+  </script>
+</body>
+</html>
