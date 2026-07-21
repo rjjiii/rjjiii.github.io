@@ -60,6 +60,8 @@
   .deselect.show{ opacity:1; pointer-events:auto; }
   .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
   @media (prefers-reduced-motion:reduce){ .deselect{ transition:none; } }
+  .gicon-hero{display:flex;justify-content:center;margin:6px 0 16px;}
+  .gicon-hero svg{width:88px;height:88px;}
 </style>
 </head>
 <body>
@@ -100,6 +102,7 @@
     <h1>Bul <span style="font-size:15px;color:var(--text-dim);font-family:var(--font-body);">/ Puluc</span></h1>
     <div class="sub">A Maya running-fight game</div>
     <p>Two sides race five stones up the same narrow lane. Land on an enemy stone to capture it &mdash; it rides beneath you from then on. Carry your captives all the way to the enemy's city and they're destroyed for good, while your own stone heads home to go out again. Lose all five stones, captured or destroyed, and the lane falls.</p>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="21.00" y="6.00" width="22.00" height="52.00" rx="3" fill="#d8a24e"/><rect x="21.00" y="11.78" width="22.00" height="5.78" fill="#4a3016"/><rect x="21.00" y="23.33" width="22.00" height="5.78" fill="#4a3016"/><rect x="21.00" y="34.89" width="22.00" height="5.78" fill="#4a3016"/><rect x="21.00" y="46.44" width="22.00" height="5.78" fill="#4a3016"/><line x1="21.00" y1="11.78" x2="43.00" y2="11.78" stroke="#4a3016" stroke-width="0.6"/><line x1="21.00" y1="17.56" x2="43.00" y2="17.56" stroke="#4a3016" stroke-width="0.6"/><line x1="21.00" y1="23.33" x2="43.00" y2="23.33" stroke="#4a3016" stroke-width="0.6"/><line x1="21.00" y1="29.11" x2="43.00" y2="29.11" stroke="#4a3016" stroke-width="0.6"/><line x1="21.00" y1="34.89" x2="43.00" y2="34.89" stroke="#4a3016" stroke-width="0.6"/><line x1="21.00" y1="40.67" x2="43.00" y2="40.67" stroke="#4a3016" stroke-width="0.6"/><line x1="21.00" y1="46.44" x2="43.00" y2="46.44" stroke="#4a3016" stroke-width="0.6"/><line x1="21.00" y1="52.22" x2="43.00" y2="52.22" stroke="#4a3016" stroke-width="0.6"/><rect x="21.00" y="6.00" width="22.00" height="52.00" rx="3" fill="none" stroke="#d8a24e" stroke-width="1.8"/><line x1="15.00" y1="50.00" x2="15.00" y2="18.50" stroke="#d8a24e" stroke-width="2.0" stroke-linecap="round"/><polygon points="15.00,14.00 11.80,18.50 18.20,18.50" fill="#d8a24e"/><line x1="49.00" y1="14.00" x2="49.00" y2="45.50" stroke="#d8a24e" stroke-width="2.0" stroke-linecap="round"/><polygon points="49.00,50.00 45.80,45.50 52.20,45.50" fill="#d8a24e"/></svg></div>
     <button id="startbtn">Start Game</button>
   </div>
 </div>

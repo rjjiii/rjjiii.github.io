@@ -143,9 +143,38 @@
     .cell, .cancel{ transition:none !important; }
     .banner.show{ animation:none !important; }
   }
+  .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:50; -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  .overlay.hidden{ display:none; }
+  .card{ background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:30px 34px; max-width:400px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.6); }
+  .card h1{ font-family:var(--font-display, "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif); font-size:28px; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
+  .card .sub{ color:#b9a978; font-size:14px; margin-bottom:12px; }
+  .card p{ color:var(--text); font-size:13.5px; line-height:1.5; margin:0 0 6px; }
+  .start{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); margin-top:8px; -webkit-appearance:none; appearance:none; }
+  .start:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px; border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .fsbtn .fs-exit{ display:none; }
+  .fsbtn.fs-on .fs-enter{ display:none; }
+  .fsbtn.fs-on .fs-exit{ display:block; }
+  .gicon-hero{display:flex;justify-content:center;margin:6px 0 16px;}
+  .gicon-hero svg{width:88px;height:88px;}
 </style>
 </head>
 <body>
+<div class="overlay" id="setup">
+  <button class="fsbtn" id="fsbtn" type="button" aria-label="Toggle fullscreen">
+    <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="card">
+    <h1>Tic-Tac-Toe</h1>
+    <p class="sub">Three in a row wins</p>
+    <p>Take turns tapping a square to draw your mark. First to line up three in a row wins the round.</p>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="5" fill="#d8a24e"/><line x1="23.67" y1="15.00" x2="23.67" y2="49.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="40.33" y1="15.00" x2="40.33" y2="49.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="15.00" y1="23.67" x2="49.00" y2="23.67" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="15.00" y1="40.33" x2="49.00" y2="40.33" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <button class="start" id="startbtn" type="button">Start Game</button>
+  </div>
+</div>
 
   <div class="boardwrap">
     <div class="frame">
@@ -513,6 +542,27 @@ document.addEventListener("DOMContentLoaded", function(){
   startingPlayer = null;   // newRound() sets the first starter to X
   newRound();
 });
+
+/* ---- fullscreen + intro: setup covers the board until Start; auto-exits on game end ---- */
+window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
+window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+(function(){
+  var g=function(id){ return document.getElementById(id); };
+  var b=g("fsbtn");
+  if(b){
+    var sync=function(){ b.classList.toggle("fs-on", !!window.fsElement()); };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    b.onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+  }
+  var sb=g("startbtn"); if(sb){ sb.onclick=function(){ var s=g("setup"); if(s) s.classList.add("hidden"); }; }
+  var ag=g("again"); if(ag){ ag.addEventListener("click", function(){ var s=g("setup"); if(s) s.classList.remove("hidden"); }); }
+  var bn=g("banner");
+  if(bn && window.MutationObserver){
+    new MutationObserver(function(){ if(bn.classList.contains("show")) window.fsExit(); }).observe(bn,{attributes:true,attributeFilter:["class"]});
+  }
+})();
 </script>
 </body>
 </html>

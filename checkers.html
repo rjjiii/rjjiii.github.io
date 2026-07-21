@@ -239,9 +239,38 @@
     .square.is-move::after,
     .piece.is-target .piece__body::before{ animation:none !important; }
   }
+  .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:50; -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  .overlay.hidden{ display:none; }
+  .card{ background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:30px 34px; max-width:400px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.6); }
+  .card h1{ font-family:var(--font-display, "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif); font-size:28px; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
+  .card .sub{ color:#b9a978; font-size:14px; margin-bottom:12px; }
+  .card p{ color:var(--text); font-size:13.5px; line-height:1.5; margin:0 0 6px; }
+  .start{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); margin-top:8px; -webkit-appearance:none; appearance:none; }
+  .start:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px; border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .fsbtn .fs-exit{ display:none; }
+  .fsbtn.fs-on .fs-enter{ display:none; }
+  .fsbtn.fs-on .fs-exit{ display:block; }
+  .gicon-hero{display:flex;justify-content:center;margin:6px 0 16px;}
+  .gicon-hero svg{width:88px;height:88px;}
 </style>
 </head>
 <body>
+<div class="overlay" id="setup">
+  <button class="fsbtn" id="fsbtn" type="button" aria-label="Toggle fullscreen">
+    <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="card">
+    <h1>Checkers</h1>
+    <p class="sub">Capture to win</p>
+    <p>Move diagonally and jump your opponent’s pieces to capture them. Take all their pieces, or leave them with no move, to win.</p>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="4" fill="#d8a24e"/><rect x="13.25" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="4" fill="none" stroke="#d8a24e" stroke-width="1.7"/></svg></div>
+    <button class="start" id="startbtn" type="button">Start Game</button>
+  </div>
+</div>
 
   <main class="table">
     <!-- Red's captured pieces (top in portrait, left rail in landscape) -->
@@ -464,7 +493,7 @@ document.addEventListener("DOMContentLoaded", function(){
         const sq = document.createElement("div");
         sq.className = "square " + (isDark(r,c) ? "square--dark" : "square--light");
         sq.dataset.r = r; sq.dataset.c = c;
-        sq.addEventListener("click", () => onSquareClick(r,c));
+        sq.addEventListener("pointerdown", () => onSquareClick(r,c));
         squaresEl.appendChild(sq);
         squareEls[r][c] = sq;
       }
@@ -480,7 +509,7 @@ document.addEventListener("DOMContentLoaded", function(){
     const body = document.createElement("div");
     body.className = "piece__body piece__body--" + color;
     el.appendChild(body);
-    el.addEventListener("click", e => { e.stopPropagation(); onPieceClick(id); });
+    el.addEventListener("pointerdown", e => { e.stopPropagation(); onPieceClick(id); });
     piecesEl.appendChild(el);
     pieceEls.set(id, el);
   }
@@ -773,6 +802,26 @@ document.addEventListener("DOMContentLoaded", function(){
   buildSquares();
   setupGame();
 });
+
+/* ---- fullscreen + intro: setup covers the board until Start; auto-exits on game end ---- */
+window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
+window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+(function(){
+  var g=function(id){ return document.getElementById(id); };
+  var b=g("fsbtn");
+  if(b){
+    var sync=function(){ b.classList.toggle("fs-on", !!window.fsElement()); };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    b.onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+  }
+  var sb=g("startbtn"); if(sb){ sb.onclick=function(){ var s=g("setup"); if(s) s.classList.add("hidden"); }; }
+  var bn=g("banner");
+  if(bn && window.MutationObserver){
+    new MutationObserver(function(){ if(bn.classList.contains("show")) window.fsExit(); }).observe(bn,{attributes:true,attributeFilter:["class"]});
+  }
+})();
 </script>
 </body>
 </html>

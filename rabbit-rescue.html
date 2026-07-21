@@ -83,6 +83,8 @@
   .card p{ color:#c8bd9f; font-size:14px; margin:0 0 18px; line-height:1.55; }
   .pcounts{ display:flex; gap:10px; justify-content:center; }
   .pcount{ width:56px;height:56px; font-size:22px; }
+  .pcount.sel{ background:linear-gradient(145deg,#ffe9a8,#f2c94c); color:#2a2016; border-color:#ffd75e; box-shadow:0 0 0 2px rgba(255,215,94,0.35), 0 2px 8px rgba(0,0,0,0.45); }
+  .startbtn{ margin-top:16px; padding:11px 34px; font-size:15px; }
   svg text{ -webkit-user-select:none; user-select:none; }
 
   #meadowHi{ opacity:0; }
@@ -114,6 +116,17 @@
   .deselect.show{ opacity:1; pointer-events:auto; }
   .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
   @media (prefers-reduced-motion:reduce){ .deselect{ transition:none; } }
+  .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px;
+    border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36);
+    color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .fsbtn .fs-exit{ display:none; }
+  .fsbtn.fs-on .fs-enter{ display:none; }
+  .fsbtn.fs-on .fs-exit{ display:block; }
+  .gicon-hero{display:flex;justify-content:center;margin:2px 0 14px;}
+  .gicon-hero svg{width:88px;height:88px;}
+  .card .qprompt{margin:0 0 12px;}
 </style>
 </head>
 <body>
@@ -154,15 +167,22 @@
 <div id="foxstack" class="foxstack"></div>
 
 <div class="overlay" id="setup">
+      <button class="fsbtn" id="fsbtn" type="button" aria-label="Toggle fullscreen">
+        <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
   <div class="card">
     <h1>Rabbits &amp; Fox</h1>
-    <p>A cooperative dash through the forest. Move every rabbit from the den to the meadow before the fox slips out the far side.<br><br>How many players?</p>
+    <p>A cooperative dash through the forest. Move every rabbit from the den to the meadow before the fox slips out the far side.</p>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="9.0" y="5.0" width="46.0" height="54.0" rx="4" fill="#d8a24e"/><path d="M 16.00,50.00 L 48.00,50.00 L 48.00,41.00 L 16.00,41.00 L 16.00,32.00 L 48.00,32.00 L 48.00,23.00 L 16.00,23.00 L 16.00,14.00 L 48.00,14.00" fill="none" stroke="#4a3016" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><line x1="31.15" y1="41.34" x2="36.15" y2="24.34" stroke="#4a3016" stroke-width="1.2"/><line x1="28.85" y1="40.66" x2="33.85" y2="23.66" stroke="#4a3016" stroke-width="1.2"/><line x1="32.40" y1="37.09" x2="30.10" y2="36.41" stroke="#4a3016" stroke-width="1.0"/><line x1="33.65" y1="32.84" x2="31.35" y2="32.16" stroke="#4a3016" stroke-width="1.0"/><line x1="34.90" y1="28.59" x2="32.60" y2="27.91" stroke="#4a3016" stroke-width="1.0"/><circle cx="16.00" cy="50.00" r="2.7" fill="#d8a24e" stroke="#4a3016" stroke-width="1.4"/><line x1="48.00" y1="14.00" x2="48.00" y2="9.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><polygon points="48.00,5.50 45.00,10.00 51.00,10.00" fill="#4a3016"/><rect x="9.0" y="5.0" width="46.0" height="54.0" rx="4" fill="none" stroke="#d8a24e" stroke-width="1.7"/></svg></div>
+    <p class="qprompt">How many players?</p>
     <div class="pcounts">
       <button class="pcount" data-n="1">1</button>
       <button class="pcount" data-n="2">2</button>
       <button class="pcount" data-n="3">3</button>
       <button class="pcount" data-n="4">4</button>
     </div>
+    <button id="startbtn" class="startbtn">Start Game</button>
   </div>
 </div>
 
@@ -565,12 +585,12 @@ function renderHit(){
   const g=document.getElementById('hitG'); clear(g);
   for(let pos=1;pos<=64;pos++){ const c=cellCenter(pos);
     const r=E('rect',{x:c.x-U/2,y:c.y-U/2,width:U,height:U,fill:'transparent',style:'cursor:pointer'},g);
-    (function(p){ r.addEventListener('click',function(){ onCellClick(p); }); })(pos);
+    (function(p){ r.addEventListener('pointerdown',function(){ onCellClick(p); }); })(pos);
   }
   if(phase==='move' && !busy){
     denLayout().forEach(function(p){ if(p.t==='rabbit'){
       const rr=E('rect',{x:p.x-32,y:p.y-42,width:64,height:84,fill:'transparent',style:'cursor:pointer'},g);
-      (function(i){ rr.addEventListener('click',function(){ selectRabbit(i); }); })(p.i);
+      (function(i){ rr.addEventListener('pointerdown',function(){ selectRabbit(i); }); })(p.i);
     }});
   }
 }
@@ -594,12 +614,12 @@ function renderGhosts(){
       const gg=E('g',{style:'cursor:pointer','class':'ghostpulse'},g);
       E('rect',{x:BX,y:FR,width:8*U,height:MEAD,rx:4,fill:'rgba(255,215,94,0.2)',stroke:'#ffd75e','stroke-width':4},gg);
       const t2=E('text',{x:BX+400,y:FR+MEAD/2+9,'text-anchor':'middle','font-size':27,fill:'#fff3d0','font-weight':800,'letter-spacing':'2px'},gg); t2.textContent='SAFE!';
-      (function(idx){ gg.addEventListener('click',function(){ useValue(idx); }); })(k); continue;
+      (function(idx){ gg.addEventListener('pointerdown',function(){ useValue(idx); }); })(k); continue;
     }
     const cc=cellCenter(landing); const gg=E('g',{style:'cursor:pointer','class':'ghostpulse'},g);
     E('circle',{cx:cc.x,cy:cc.y,r:30,fill:'rgba(255,215,94,0.13)',stroke:'#ffd75e','stroke-width':3,'stroke-dasharray':'5 5'},gg);
     const t2=E('text',{x:cc.x,y:cc.y+8,'text-anchor':'middle','font-size':25,fill:'#ffe9a8','font-weight':800},gg); t2.textContent=(c.kind==='plus'?'+1':c.v);
-    (function(idx){ gg.addEventListener('click',function(){ useValue(idx); }); })(k);
+    (function(idx){ gg.addEventListener('pointerdown',function(){ useValue(idx); }); })(k);
   }
 }
 
@@ -620,7 +640,7 @@ function renderRails(){
   }
   if(phase==='token' && !busy){
     const all=document.querySelectorAll('.ptok.playable');
-    for(let j=0;j<all.length;j++){ (function(el){ el.onclick=function(){ if(parseInt(el.getAttribute('data-p'),10)===turn) playHandToken(parseInt(el.getAttribute('data-i'),10)); }; })(all[j]); }
+    for(let j=0;j<all.length;j++){ (function(el){ el.onpointerdown=function(){ if(parseInt(el.getAttribute('data-p'),10)===turn) playHandToken(parseInt(el.getAttribute('data-i'),10)); }; })(all[j]); }
   }
 }
 
@@ -639,14 +659,14 @@ function renderFoxStack(){
 /* ============================ Dice / played / controls / status ============================ */
 function pips(v){ const m={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]}; let s=''; for(let i=0;i<9;i++){ s+='<span class="pip'+(m[v].indexOf(i)>=0?' on':'')+'"></span>'; } return s; }
 function renderDice(){
-  const el=document.getElementById('dice'); el.className='dice'; el.onclick=null; el.innerHTML='';
-  if(diceReady() && !diceAnim){ el.classList.add('ready'); el.onclick=doRoll; }
+  const el=document.getElementById('dice'); el.className='dice'; el.onpointerdown=null; el.innerHTML='';
+  if(diceReady() && !diceAnim){ el.classList.add('ready'); el.onpointerdown=doRoll; }
   for(let i=0;i<2;i++){
     const d=document.createElement('div'); d.className='die';
     if(diceAnim){ d.classList.add('rolling'); d.innerHTML=pips(1+Math.floor(Math.random()*6)); el.appendChild(d); continue; }
     if((phase==='move'||phase==='fox') && dice[i]!==undefined){
       d.innerHTML=pips(dice[i]);
-      if(phase==='move'){ if(vals[i] && vals[i].used){ d.classList.add('used'); } else if(vals[i]){ d.onclick=(function(idx){return function(){ useValue(idx); };})(i); if(selected!==null) d.classList.add('glow'); } }
+      if(phase==='move'){ if(vals[i] && vals[i].used){ d.classList.add('used'); } else if(vals[i]){ d.onpointerdown=(function(idx){return function(){ useValue(idx); };})(i); if(selected!==null) d.classList.add('glow'); } }
     } else { d.classList.add('blank'); }
     el.appendChild(d);
   }
@@ -657,7 +677,7 @@ function renderPlayed(){
   if(!playedToken || phase==='token' || phase==='setup' || phase==='gameover') return;
   const d=document.createElement('div'); d.className='ptoken '+(playedToken.type==='plus'?'plus':'num');
   d.textContent = playedToken.type==='plus' ? '+1' : playedToken.value;
-  if(phase==='move' && vals[2]){ if(vals[2].used){ d.classList.add('used'); } else { d.onclick=function(){ useValue(2); }; if(selected!==null) d.classList.add('glow'); } }
+  if(phase==='move' && vals[2]){ if(vals[2].used){ d.classList.add('used'); } else { d.onpointerdown=function(){ useValue(2); }; if(selected!==null) d.classList.add('glow'); } }
   el.appendChild(d);
 }
 function renderControls(){ const _db=document.getElementById('deselect'); if(_db) _db.classList.toggle('show', selected!==null); }
@@ -686,7 +706,11 @@ function renderAll(){ renderTokens(); renderPawns(); renderHit(); renderGhosts()
 function init(){
   buildStatic();
   const els=document.querySelectorAll('.pcount');
-  for(let i=0;i<els.length;i++){ (function(b){ b.onclick=function(){ ac(); newGame(parseInt(b.getAttribute('data-n'),10)); }; })(els[i]); }
+  let selN=null;
+  function selectN(b){ selN=parseInt(b.getAttribute('data-n'),10); for(let i=0;i<els.length;i++) els[i].classList.toggle('sel', els[i]===b); }
+  for(let i=0;i<els.length;i++){ (function(b){ b.onclick=function(){ ac(); selectN(b); }; })(els[i]); }
+  if(els.length) selectN(els[0]);
+  document.getElementById('startbtn').onclick=function(){ ac(); if(selN!=null) newGame(selN); };
   document.getElementById('deselect').onclick=function(){ if(selected!==null){ selected=null; renderAll(); } };
   document.getElementById('againbtn').onclick=function(){
     document.getElementById('banner').classList.add('hidden');
@@ -694,6 +718,24 @@ function init(){
   };
 }
 init();
+
+/* ---- fullscreen: setup screen only; auto-exits when a game ends ---- */
+window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
+window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+(function(){
+  var b=document.getElementById("fsbtn");
+  if(b){
+    var sync=function(){ b.classList.toggle("fs-on", !!window.fsElement()); };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    b.onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+  }
+  var bn=document.getElementById("banner");
+  if(bn && window.MutationObserver){
+    new MutationObserver(function(){ if(!bn.classList.contains("hidden")) window.fsExit(); }).observe(bn,{attributes:true,attributeFilter:["class"]});
+  }
+})();
 </script>
 </body>
 </html>

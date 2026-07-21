@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fox &amp; Hounds</title>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    color:#e9e3d4; font-family:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+    min-height:100%; -webkit-tap-highlight-color:transparent; overflow:hidden;
+  }
+  .table{ position:fixed; inset:0; overflow:hidden; }
+  .core{ position:absolute; inset:46px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+  #boardsvg{
+    height:min(calc(100dvh - 168px), calc(100vw - 36px));
+    aspect-ratio:1/1; width:auto; display:block; filter:drop-shadow(0 10px 30px rgba(0,0,0,0.5));
+  }
+  .hud{ width:auto; max-width:calc(100vw - 60px); display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .status{ font-family:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif; font-size:14.5px; text-align:center; color:#f3ead0; line-height:1.32; min-height:20px; max-width:540px; }
+  .slot{ position:absolute; left:0; right:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .slot .ptray{ pointer-events:auto; }
+  .slot-bottom{ bottom:5px; height:42px; }
+  .slot-top{ top:5px; height:42px; }
+  .ptray{ display:flex; align-items:center; gap:8px; padding:5px 14px; border-radius:9px; background:linear-gradient(160deg,rgba(58,52,40,0.66),rgba(34,30,22,0.66)); border:1.5px solid rgba(120,100,60,0.4); white-space:nowrap; transition:opacity .25s, border-color .25s; }
+  .ptray:not(.active){ opacity:0.5; }
+  .ptray.active{ border-color:rgba(255,215,94,0.65); box-shadow:0 0 14px rgba(255,215,94,0.18); }
+  .pnum{ font-family:Georgia,serif; font-weight:700; font-size:15px; color:#e8dcbb; }
+  .tdot{ width:13px; height:13px; border-radius:50%; display:inline-block; box-shadow:inset 0 1px 1px rgba(255,255,255,0.35), 0 1px 2px rgba(0,0,0,0.4); }
+  button{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  button:hover{ border-color:rgba(255,215,94,0.85); }
+  button:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
+  .overlay,.banner{ position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:20; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+  .hidden{ display:none !important; }
+  .card{ background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:24px 30px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.6); max-width:min(92vw,460px); }
+  .card h1{ font-family:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif; font-weight:700; font-size:25px; margin:0 0 8px; color:#ffe9a8; letter-spacing:.5px; }
+  .card p.lead{ color:#c8bd9f; font-size:13.5px; margin:0 0 14px; line-height:1.5; text-align:center; }
+  .rules{ color:#bcb094; font-size:12.5px; line-height:1.5; text-align:left; margin:0 0 16px; padding-left:2px; }
+  .rules li{ margin:3px 0; }
+  .choices{ display:flex; flex-direction:column; gap:9px; align-items:stretch; }
+  .choices button{ font-size:15px; padding:11px 16px; }
+  svg text{ -webkit-user-select:none; user-select:none; }
+  .selring{ animation:selpulse 1s ease-in-out infinite; }
+  @keyframes selpulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+  .ghostpulse{ animation:gpulse 1.3s ease-in-out infinite; }
+  @keyframes gpulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.55; } }
+  .glowpulse{ animation:glowpulse 1.6s ease-in-out infinite; }
+  @keyframes glowpulse{ 0%,100%{ opacity:0.5; } 50%{ opacity:0.16; } }
+  @media (orientation:portrait){
+    .hud{ gap:6px; }
+    #boardsvg{ height:auto; width:min(calc(100vw - 30px), calc(100dvh - 168px)); }
+  }
+  :focus-visible{ outline:2px solid #ffd75e; outline-offset:3px; border-radius:6px; }
+  .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px; border-radius:11px;
+    border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8;
+    cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .fsbtn .fs-exit{ display:none; }
+  .fsbtn.fs-on .fs-enter{ display:none; }
+  .fsbtn.fs-on .fs-exit{ display:block; }
+  .deselect{ margin-top:2px; display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border-radius:999px;
+    font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.03em; color:#a59c86;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); cursor:pointer;
+    -webkit-appearance:none; appearance:none; opacity:0; pointer-events:none;
+    transition:opacity .2s ease, color .2s, border-color .2s, background .2s; }
+  .deselect.show{ opacity:1; pointer-events:auto; }
+  .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
+  @media (prefers-reduced-motion:reduce){ .selring,.ghostpulse,.glowpulse{ animation:none !important; } .deselect{ transition:none; } }
+  .gicon-hero{display:flex;justify-content:center;margin:6px 0 16px;}
+  .gicon-hero svg{width:88px;height:88px;}
+</style>
+</head>
+<body>
+<div class="table">
+  <div class="slot slot-top" id="trayTop"></div>
+  <div class="slot slot-bottom" id="trayBottom"></div>
+  <div class="core">
+    <svg id="boardsvg" viewBox="0 0 684 684" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="wood" x1="0" y1="0" x2="0.85" y2="1"><stop offset="0%" stop-color="#855f3a"/><stop offset="38%" stop-color="#5e4128"/><stop offset="100%" stop-color="#311e0d"/></linearGradient>
+        <pattern id="grain" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(63)"><rect width="6.5" height="13" fill="rgba(0,0,0,0.10)"/><rect x="6.5" width="6.5" height="13" fill="rgba(255,240,210,0.03)"/></pattern>
+        <radialGradient id="glowhalo" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="35%" stop-color="#ffc846" stop-opacity="0.7"/>
+          <stop offset="100%" stop-color="#ffc846" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="psh" x="-45%" y="-25%" width="190%" height="155%"><feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.45"/></filter>
+      </defs>
+      <g id="staticG"></g>
+      <g id="ghostG"></g>
+      <g id="pieceG"></g>
+      <g id="moveG"></g>
+      <g id="hitG"></g>
+    </svg>
+    <div class="hud">
+      <div class="status" id="status"></div>
+      <button class="deselect" id="deselect" type="button" aria-label="Deselect the current piece">✕ Deselect</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="setup">
+  <button class="fsbtn" id="fsbtn" type="button" aria-label="Toggle fullscreen">
+    <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="card">
+    <h1>Fox &amp; Hounds</h1>
+    <p class="lead">A lone fox runs for freedom while four hounds close in. The chase is played on the dark squares of the board.</p>
+    <ul class="rules">
+      <li>The fox moves one square diagonally, in <b>any</b> direction.</li>
+      <li>Each hound moves one square diagonally <b>forward only</b> — hounds can never retreat.</li>
+      <li>There are no captures; pieces simply block one another.</li>
+      <li>The hounds win by cornering the fox so it has no move left.</li>
+      <li>The fox wins by slipping past the pack to the hounds' home row (or if the hounds get stuck). The fox moves first.</li>
+    </ul>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="4" fill="#d8a24e"/><rect x="13.25" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><circle cx="16.38" cy="10.12" r="2.1" fill="#d8a24e" stroke="#4a3016" stroke-width="1.1"/><circle cx="28.88" cy="10.12" r="2.1" fill="#d8a24e" stroke="#4a3016" stroke-width="1.1"/><circle cx="41.38" cy="10.12" r="2.1" fill="#d8a24e" stroke="#4a3016" stroke-width="1.1"/><circle cx="53.88" cy="10.12" r="2.1" fill="#d8a24e" stroke="#4a3016" stroke-width="1.1"/><circle cx="35.12" cy="53.88" r="2.1" fill="#d8a24e" stroke="#4a3016" stroke-width="1.1"/><circle cx="35.12" cy="53.88" r="0.8" fill="#4a3016"/><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="4" fill="none" stroke="#d8a24e" stroke-width="1.7"/></svg></div>
+    <div class="choices">
+      <button id="playbtn">Play</button>
+    </div>
+  </div>
+</div>
+<div class="banner hidden" id="banner">
+  <div class="card"><h1 id="bannertitle"></h1><p class="lead" id="bannertext"></p><button id="againbtn">Play again</button></div>
+</div>
+<script>
+/* ============================ Audio ============================ */
+let AC=null;
+function ac(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return AC; }
+function tone(freq,dur,opts){ opts=opts||{}; const a=ac(); if(!a) return; const t=a.currentTime+(opts.delay||0);
+  const o=a.createOscillator(), g=a.createGain(); o.type=opts.type||'sine'; o.frequency.setValueAtTime(freq,t);
+  if(opts.glideTo) o.frequency.exponentialRampToValueAtTime(opts.glideTo,t+dur);
+  const vol=opts.vol||0.2; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+dur+0.03);
+}
+function noise(dur,opts){ opts=opts||{}; const a=ac(); if(!a) return; const t=a.currentTime+(opts.delay||0);
+  const n=Math.floor(a.sampleRate*dur); const buf=a.createBuffer(1,n,a.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=Math.random()*2-1; const src=a.createBufferSource(); src.buffer=buf;
+  const f=a.createBiquadFilter(); f.type='bandpass'; f.frequency.value=opts.freq||1000; f.Q.value=opts.q||1;
+  const g=a.createGain(); const vol=opts.vol||0.2; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(f); f.connect(g); g.connect(a.destination); src.start(t); src.stop(t+dur+0.03);
+}
+const SND={
+  select(){ tone(560,0.05,{type:'sine',vol:0.10}); },
+  move(){ noise(0.13,{vol:0.07,freq:560,q:0.6}); tone(300,0.09,{type:'sine',vol:0.06}); },
+  land(){ tone(235,0.12,{type:'sine',vol:0.12,glideTo:175}); noise(0.05,{vol:0.07,freq:200,q:1}); },
+  escape(){ [659,880,1175,1568].forEach(function(f,i){tone(f,0.3,{type:'triangle',vol:0.16,delay:i*0.11});}); tone(1976,0.4,{type:'sine',vol:0.08,delay:0.46}); },
+  caught(){ tone(200,0.5,{type:'sawtooth',vol:0.12,glideTo:120}); tone(150,0.6,{type:'sine',vol:0.12,delay:0.12}); noise(0.32,{vol:0.08,freq:170,q:0.6,delay:0.18}); }
+};
+/* ============================ Pure logic (verified) ============================ */
+const N=8;
+function inB(r,c){ return r>=0&&r<N&&c>=0&&c<N; }
+function sideOf(p){ return p==='F'?'F':(p==='H'?'H':null); }
+function emptyB(){ return Array.from({length:N},function(){return Array(N).fill(null);}); }
+function cloneB(b){ return b.map(function(row){return row.slice();}); }
+function initBoard(){ const b=emptyB();
+  [[0,0],[0,2],[0,4],[0,6]].forEach(function(p){b[p[0]][p[1]]='H';});
+  b[7][3]='F'; return b;
+}
+function pieceMoves(b,r,c){ const p=b[r][c]; if(!p) return [];
+  const dirs=(p==='F')?[[1,-1],[1,1],[-1,-1],[-1,1]]:[[1,-1],[1,1]];
+  const res=[];
+  for(let i=0;i<dirs.length;i++){ const nr=r+dirs[i][0],nc=c+dirs[i][1];
+    if(inB(nr,nc) && b[nr][nc]===null) res.push([nr,nc]); }
+  return res;
+}
+function applyMove(b,from,to){ const p=b[from[0]][from[1]]; b[to[0]][to[1]]=p; b[from[0]][from[1]]=null; }
+function allMoves(b,side){ const mv=[];
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const p=b[r][c]; if(p&&sideOf(p)===side){ const ds=pieceMoves(b,r,c); for(let i=0;i<ds.length;i++) mv.push({from:[r,c],to:ds[i]}); } }
+  return mv; }
+function foxPos(b){ for(let r=0;r<N;r++)for(let c=0;c<N;c++) if(b[r][c]==='F') return [r,c]; return null; }
+function foxEscaped(b){ const f=foxPos(b); return !!(f && f[0]===0); }
+/* ============================ Game state ============================ */
+const BX=22, BY=22, U=80;
+let board=null, turn='F', busy=false, over=false, winner=null, selected=null, anim=null;
+function cc(rc){ const r=rc[0],c=rc[1]; return {x:BX+c*U+U/2, y:BY+r*U+U/2}; }
+/* ============================ SVG helpers ============================ */
+const SVGNS='http://www.w3.org/2000/svg';
+function E(tag,attrs,parent){ const el=document.createElementNS(SVGNS,tag); if(attrs){ for(const k in attrs) el.setAttribute(k,attrs[k]); } if(parent) parent.appendChild(el); return el; }
+function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+/* ============================ Static board ============================ */
+function buildStatic(){
+  const g=document.getElementById('staticG'); clear(g);
+  const W=BX*2+N*U;
+  E('rect',{x:0,y:0,width:W,height:W,rx:26,fill:'url(#wood)'},g);
+  E('rect',{x:0,y:0,width:W,height:W,rx:26,fill:'url(#grain)'},g);
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const x=BX+c*U,y=BY+r*U; const dark=((r+c)%2===0);
+    E('rect',{x:x,y:y,width:U,height:U,fill: dark?'#46301c':'#5c3f24'},g); }
+  for(let i=0;i<=N;i++){
+    E('line',{x1:BX+i*U,y1:BY,x2:BX+i*U,y2:BY+N*U,stroke:'rgba(0,0,0,0.22)','stroke-width':1.4},g);
+    E('line',{x1:BX,y1:BY+i*U,x2:BX+N*U,y2:BY+i*U,stroke:'rgba(0,0,0,0.22)','stroke-width':1.4},g);
+  }
+  E('rect',{x:BX,y:BY,width:N*U,height:N*U,fill:'none',stroke:'rgba(0,0,0,0.5)','stroke-width':3},g);
+}
+/* ============================ Piece shapes (carved wood) ============================ */
+function drawFox(g){ const body='#e07e34',base='#a85d22',collar='#f2e3c4',hi='#f8e8c8',head='#e07e34',knob='#e07e34';
+  E('ellipse',{cx:0,cy:27,rx:19,ry:5.5,fill:'rgba(0,0,0,0.28)'},g);
+  E('ellipse',{cx:0,cy:25,rx:16,ry:4.5,fill:base},g);
+  E('path',{d:'M -8 -2 C -12 7 -16 16 -16 25 L 16 25 C 16 16 12 7 8 -2 C 4.5 0.5 -4.5 0.5 -8 -2 Z',fill:body},g);
+  E('ellipse',{cx:-6,cy:11,rx:3.4,ry:8.5,fill:hi,opacity:0.30},g);
+  E('ellipse',{cx:0,cy:-3,rx:9.5,ry:3.2,fill:collar},g);
+  E('ellipse',{cx:0,cy:-4,rx:8,ry:1.6,fill:hi,opacity:0.6},g);
+  E('circle',{cx:0,cy:-15,r:9,fill:head},g);
+  E('circle',{cx:0,cy:-24,r:3.2,fill:knob},g);
+  E('ellipse',{cx:-3,cy:-18,rx:3.4,ry:4.4,fill:hi,opacity:0.5},g);
+}
+function drawHound(g){ const body='#bdc6cf',base='#7a8590',collar='#c6a17a',hi='#e8eef3',head='#bdc6cf',knob='#c6a17a',tick='#333b45';
+  E('ellipse',{cx:0,cy:27,rx:19,ry:5.5,fill:'rgba(0,0,0,0.28)'},g);
+  E('ellipse',{cx:0,cy:25,rx:16,ry:4.5,fill:base},g);
+  E('path',{d:'M -8 -2 C -12 7 -16 16 -16 25 L 16 25 C 16 16 12 7 8 -2 C 4.5 0.5 -4.5 0.5 -8 -2 Z',fill:body},g);
+  E('ellipse',{cx:-6,cy:11,rx:3.4,ry:8.5,fill:hi,opacity:0.28},g);
+  const bt=[[-6,4,1.0],[1,5,1.0],[6,5,1.0],[-8,9,1.0],[-2,10,1.0],[4,9,1.0],[8,10,1.0],[-9,15,1.1],[-3,16,1.1],[3,15,1.0],[9,16,1.0],[-6,20,1.0],[1,21,1.1],[6,20,1.0]];
+  for(let i=0;i<bt.length;i++) E('circle',{cx:bt[i][0],cy:bt[i][1],r:bt[i][2],fill:tick,opacity:0.9},g);
+  E('ellipse',{cx:0,cy:-3,rx:9.5,ry:3.2,fill:collar},g);
+  E('ellipse',{cx:0,cy:-4,rx:8,ry:1.6,fill:hi,opacity:0.45},g);
+  E('circle',{cx:0,cy:-15,r:9,fill:head},g);
+  const ht=[[-3,-13,0.9],[2,-16,0.9],[4,-12,0.8],[-1,-18,0.9],[-5,-15,0.8]];
+  for(let i=0;i<ht.length;i++) E('circle',{cx:ht[i][0],cy:ht[i][1],r:ht[i][2],fill:tick,opacity:0.9},g);
+  E('circle',{cx:0,cy:-24,r:3.2,fill:knob},g);
+  E('ellipse',{cx:-3,cy:-18,rx:3.4,ry:4.4,fill:hi,opacity:0.4},g);
+}
+function drawShape(g,piece){ if(piece==='F')drawFox(g); else drawHound(g); }
+function drawPieceAt(parent,x,y,piece,sel){
+  if(sel){ E('ellipse',{cx:x,cy:y+27,rx:19,ry:7,fill:'none',stroke:'#ffd75e','stroke-width':4,'class':'selring'},parent); }
+  const g=E('g',{transform:'translate('+x+' '+y+')',filter:'url(#psh)'},parent);
+  drawShape(g,piece);
+}
+/* ============================ Rendering ============================ */
+function renderPieces(){
+  const g=document.getElementById('pieceG'); clear(g);
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const p=board[r][c]; if(!p) continue;
+    if(anim && anim.from[0]===r && anim.from[1]===c) continue;
+    const ctr=cc([r,c]); const sel=(selected && selected[0]===r && selected[1]===c);
+    drawPieceAt(g,ctr.x,ctr.y,p,sel);
+  }
+}
+function renderGhosts(){
+  const g=document.getElementById('ghostG'); clear(g);
+  if(over||busy||!board) return;
+  if(selected){
+    const p=board[selected[0]][selected[1]];
+    const dests=pieceMoves(board,selected[0],selected[1]);
+    for(let i=0;i<dests.length;i++){ const ctr=cc(dests[i]); const win=(p==='F' && dests[i][0]===0);
+      const gg=E('g',{'class':'ghostpulse'},g);
+      if(win) E('circle',{cx:ctr.x,cy:ctr.y,r:26,fill:'rgba(255,215,94,0.16)',stroke:'#ffd75e','stroke-width':3},gg);
+      else E('circle',{cx:ctr.x,cy:ctr.y,r:13,fill:'rgba(255,215,94,0.18)',stroke:'#ffd75e','stroke-width':2.5,'stroke-dasharray':'4 4'},gg);
+    }
+  } else {
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const p=board[r][c];
+      if(p && sideOf(p)===turn && pieceMoves(board,r,c).length){ const ctr=cc([r,c]);
+        E('circle',{cx:ctr.x,cy:ctr.y,r:30,fill:'url(#glowhalo)','class':'glowpulse'},g);
+      }
+    }
+  }
+}
+function renderHit(){
+  const g=document.getElementById('hitG'); clear(g);
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const x=BX+c*U,y=BY+r*U;
+    const rect=E('rect',{x:x,y:y,width:U,height:U,fill:'transparent',style:'cursor:pointer'},g);
+    (function(rr,cc2){ rect.addEventListener('pointerdown',function(){ onCellTap(rr,cc2); }); })(r,c);
+  }
+}
+function renderTrays(){
+  const top=document.getElementById('trayTop'), bot=document.getElementById('trayBottom');
+  top.innerHTML=''; bot.innerHTML='';
+  if(!board) return;
+  function mk(side){ const active=(!over && turn===side);
+    const label=side==='F'?'Fox':'Hounds';
+    const color=side==='F'?'#e07e34':'#bdc6cf';
+    const t=document.createElement('div'); t.className='ptray'+(active?' active':'');
+    t.innerHTML='<span class="tdot" style="background:'+color+'"></span><span class="pnum">'+label+'</span>';
+    return t;
+  }
+  top.appendChild(mk('H')); bot.appendChild(mk('F'));
+}
+function updateStatus(msg){
+  const el=document.getElementById('status');
+  if(msg){ el.textContent=msg; return; }
+  if(!board){ el.textContent=''; return; }
+  if(over){ el.textContent = winner==='F'?'The fox runs free.':'The fox is cornered.'; return; }
+  const who=turn==='F'?'Fox':'Hounds';
+  if(selected) el.textContent=who+' \u2014 tap a glowing square to move, or tap again to cancel.';
+  else el.textContent=who+' to move \u2014 tap '+(turn==='F'?'the fox':'a glowing hound')+'.';
+}
+/* selection presses re-render pieces and ghosts only — the hit grid below is static */
+function render(){ renderGhosts(); renderPieces(); renderTrays(); const _db=document.getElementById('deselect'); if(_db) _db.classList.toggle('show', !over && !busy && selected!==null); updateStatus(); }
+/* ============================ Movement / turns ============================ */
+function onCellTap(r,c){
+  if(over||busy||!board) return;
+  if(selected){ const sr=selected[0],sc=selected[1];
+    if(sr===r&&sc===c){ selected=null; render(); return; }
+    if(pieceMoves(board,sr,sc).some(function(d){return d[0]===r&&d[1]===c;})){ doMove([sr,sc],[r,c]); return; }
+  }
+  const p=board[r][c];
+  if(p && sideOf(p)===turn){ selected=[r,c]; SND.select(); render(); return; }
+  selected=null; render();
+}
+function animateSlide(from,to,piece,cb){
+  anim={from:from,to:to}; render();
+  const p1=cc(from), p2=cc(to);
+  const mg=document.getElementById('moveG'); clear(mg);
+  const g=E('g',{filter:'url(#psh)'},mg); drawShape(g,piece);
+  const dur=240, t0=performance.now();
+  SND.move();
+  function frame(now){ let u=Math.min(1,(now-t0)/dur); const e=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+    const x=p1.x+(p2.x-p1.x)*e, y=p1.y+(p2.y-p1.y)*e;
+    g.setAttribute('transform','translate('+x+' '+y+')');
+    if(u<1) requestAnimationFrame(frame); else { clear(mg); anim=null; cb(); }
+  }
+  requestAnimationFrame(frame);
+}
+function doMove(from,to){
+  busy=true; selected=null;
+  const piece=board[from[0]][from[1]]; const moverSide=turn;
+  animateSlide(from,to,piece,function(){
+    applyMove(board,from,to);
+    SND.land();
+    render();
+    if(moverSide==='F' && foxEscaped(board)){ endGame('F','escape'); return; }
+    turn = (moverSide==='F')?'H':'F';
+    if(allMoves(board,turn).length===0){
+      if(turn==='F') endGame('H','trapped');   // fox cannot move -> hounds win
+      else endGame('F','stuck');               // hounds cannot move -> fox wins
+      return;
+    }
+    busy=false; render();
+  });
+}
+function endGame(w,reason){
+  over=true; winner=w; busy=false; selected=null; render();
+  if(w==='F') SND.escape(); else SND.caught();
+  const title=document.getElementById('bannertitle'), text=document.getElementById('bannertext');
+  if(w==='F' && reason==='escape'){
+    title.textContent='The Fox Escapes!';
+    text.textContent='The fox slips past the pack and reaches the far side. The fox wins.';
+  } else if(w==='F'){
+    title.textContent='The Fox Wins!';
+    text.textContent='The hounds are blocked and can no longer give chase. The fox wins.';
+  } else {
+    title.textContent='The Hounds Win!';
+    text.textContent='The pack corners the fox with nowhere left to run.';
+  }
+  document.getElementById('banner').classList.remove('hidden');
+}
+/* ============================ Start / init ============================ */
+function startGame(){
+  board=initBoard(); turn='F'; over=false; winner=null; busy=false; selected=null; anim=null;
+  renderHit();          /* static full-board hit grid: built once per game, never on a press — onCellTap routes by state */
+  clear(document.getElementById('moveG'));
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('banner').classList.add('hidden');
+  render();
+}
+function init(){
+  buildStatic();
+  document.getElementById('playbtn').onclick=function(){ ac(); startGame(); };
+  document.getElementById('againbtn').onclick=function(){
+    document.getElementById('banner').classList.add('hidden');
+    document.getElementById('setup').classList.remove('hidden');
+  };
+  document.getElementById('deselect').onclick=function(){ if(selected!==null){ selected=null; render(); } };
+}
+init();
+/* ---- fullscreen: setup screen only; auto-exits when a game ends ---- */
+window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
+window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+(function(){
+  var b=document.getElementById("fsbtn");
+  if(b){
+    var sync=function(){ b.classList.toggle("fs-on", !!window.fsElement()); };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    b.onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+  }
+  var bn=document.getElementById("banner");
+  if(bn && window.MutationObserver){
+    new MutationObserver(function(){ if(!bn.classList.contains("hidden")) window.fsExit(); }).observe(bn,{attributes:true,attributeFilter:["class"]});
+  }
+})();
+</script>
+</body>
+</html>
