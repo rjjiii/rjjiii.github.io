@@ -6,151 +6,105 @@
 <title>Tic-Tac-Toe</title>
 <style>
   :root{
-    --wood:       #5a3d28;
-    --wood-dark:  #3a2616;
-    --wood-edge:  #74522f;
-    --cell-face:  #6b4a30;
-    --line:       #281a0e;
-    --gold:       #ffd75e;
-    --ink-x:      #ef5b50;   /* X draws in red  */
-    --ink-o:      #f0e6cc;   /* O draws in cream */
-    --text:       #e9e3d4;
-    --text-dim:   #a59c86;
-    --gap: clamp(4px, 1.2vmin, 7px);
-    /* One square size for every orientation: the smaller of the width and height
-       budgets (the height budget reserves room for the floating Cancel chip), so
-       the board is always fully on screen and never scrolls. */
-    --cell: clamp(56px, min(calc((100vw - 40px) / 3.5), calc((100vh - 120px) / 3.5)), 150px);
-    --wood-fill:
-      repeating-linear-gradient(64deg, rgba(0,0,0,.10) 0 6px, rgba(255,255,255,.025) 6px 12px),
-      linear-gradient(150deg, var(--wood-edge), var(--wood) 36%, var(--wood-dark));
-    --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+    --gold:#ffd75e; --text:#e9e3d4; --text-dim:#a59c86; --brass:#b9a978;
+    --pad:clamp(14px,3vw,32px);
+    /* Per-player ink: one custom property per seat, applied by a class on the drawing
+       group so the guide, the handwriting and the winning strike all read one place.
+       Measured on the cream sheet: red 3.47, blue 6.85, 1.97 against each other. */
+    --ink-x:#c64a3b;   /* X draws in red  */
+    --ink-o:#24467e;   /* O draws in blue */
+    /* The strike knockout. A winning line only ever crosses the winner's OWN three
+       cells, so pen-on-marks would sit at 1.00. A hair lighter than the sheet, it is
+       invisible on bare paper (1.13) and only appears where it cuts a mark — 3.91
+       against red, 7.72 against blue. Going darker instead fails: blue ink is already
+       dark, and a dark outline around it measures 1.36. */
+    --paper-knock:#f2e9d4;
     --font-display:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
+    --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
   }
-
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
-
   body{
-    min-height:100vh;
-    font-family:var(--font-body);
-    color:var(--text);
+    height:100dvh; font-family:var(--font-body); color:var(--text);
     background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
     background-attachment:fixed;
-    display:flex; align-items:center; justify-content:center;
-    padding:clamp(14px,3vh,28px) 16px;
-    -webkit-tap-highlight-color:transparent;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:var(--pad) 16px; -webkit-tap-highlight-color:transparent; overflow:hidden;
+  }
+  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:6px; }
+
+  /* CSS owns fitting: .boardwrap absorbs the leftover height and the board fills it
+     squarely. No chrome total is hardcoded, so the rail can change height freely. */
+  .table{ display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; flex:1; min-height:0; }
+  .boardwrap{ flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; }
+
+  #board{
+    width:auto; height:auto; aspect-ratio:1/1;
+    max-width:min(100%,560px); max-height:min(100%,560px); display:block;
+    filter:drop-shadow(0 12px 34px rgba(0,0,0,.55));
+    touch-action:none;                 /* we own the gesture; the browser must not pan mid-stroke */
+    -webkit-touch-callout:none;        /* iOS long-press callout would interrupt a held stroke */
+    -webkit-user-select:none; user-select:none;
   }
 
-  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:4px; }
+  /* ---- ink: colour by seat class, the arrangement this game already used ----
+     .guide is the mark traced in for you to follow; .marks is what you drew. */
+  .ink .guide path, .ink .guide circle{ fill:none; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; opacity:.34; }
+  .ink.x .guide path, .ink.x .guide circle{ stroke:var(--ink-x); }
+  .ink.o .guide path, .ink.o .guide circle{ stroke:var(--ink-o); }
+  /* Ink on paper does not glow; the old coloured bloom becomes a shadow under the nib. */
+  .ink .marks path{ fill:none; stroke-width:8.5; stroke-linecap:round; stroke-linejoin:round;
+                    filter:drop-shadow(0 1px 1.2px rgba(58,44,26,.34)); }
+  .ink.x .marks path{ stroke:var(--ink-x); }
+  .ink.o .marks path{ stroke:var(--ink-o); }
 
-  /* ---- Board ---- */
-  .boardwrap{ position:relative; }
-  .frame{
-    padding:calc(var(--cell)*0.16); border-radius:14px;
-    background:var(--wood-fill);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.10) inset,
-      0 calc(var(--cell)*0.14) calc(var(--cell)*0.34) rgba(0,0,0,.55),
-      0 2px 3px rgba(0,0,0,.5);
-  }
-  .board{
-    position:relative;
-    width:calc(var(--cell)*3 + var(--gap)*2);
-    height:calc(var(--cell)*3 + var(--gap)*2);
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    grid-template-rows:repeat(3, 1fr);
-    gap:var(--gap);
-    background:var(--line);
-    border-radius:6px;
-    box-shadow:0 0 0 2px rgba(0,0,0,.4), inset 0 0 calc(var(--cell)*0.3) rgba(0,0,0,.4);
-  }
-  .cell{
-    position:relative; overflow:hidden; cursor:pointer;
-    touch-action:none; user-select:none; -webkit-user-select:none;
-    background:radial-gradient(120% 120% at 30% 25%, #79553a, var(--cell-face));
-    box-shadow:inset 0 0 calc(var(--cell)*0.18) rgba(0,0,0,.35);
-    transition:box-shadow .2s, background .2s;
-  }
-  .cell.playable:hover{ background:radial-gradient(120% 120% at 30% 25%, #855f41, #75512f); }
-  .cell.is-active{
-    box-shadow:
-      inset 0 0 0 3px var(--gold),
-      inset 0 0 calc(var(--cell)*0.22) rgba(255,205,80,.35),
-      0 0 calc(var(--cell)*0.18) rgba(255,205,80,.4);
-  }
-  .cell.occupied{ cursor:default; }
+  .strike .knock{ fill:none; stroke:var(--paper-knock); stroke-width:16; stroke-linecap:round; }
+  .strike .pen{ fill:none; stroke-width:9; stroke-linecap:round;
+                filter:drop-shadow(0 1px 1.6px rgba(58,44,26,.42)); }
+  .strike.x .pen{ stroke:var(--ink-x); }
+  .strike.o .pen{ stroke:var(--ink-o); }
 
-  .ink{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-  .ink .ghost path, .ink .ghost circle{
-    fill:none; stroke-width:7; stroke-linecap:round; opacity:.26;
-  }
-  .ink.x .ghost path, .ink.x .ghost circle{ stroke:var(--ink-x); }
-  .ink.o .ghost path, .ink.o .ghost circle{ stroke:var(--ink-o); }
-  .ink .strokes path{ fill:none; stroke-width:8.5; stroke-linecap:round; stroke-linejoin:round; }
-  .ink.x .strokes path{ stroke:var(--ink-x); filter:drop-shadow(0 0 3px rgba(239,91,80,.45)); }
-  .ink.o .strokes path{ stroke:var(--ink-o); filter:drop-shadow(0 0 3px rgba(240,230,204,.4)); }
+  .hit{ cursor:pointer; }
+  .hit:hover{ fill:#c9762a; fill-opacity:.07; }
+  @media (hover:none){ .hit:hover{ fill-opacity:0; } }
 
-  /* winning line */
-  .winline{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4; }
-  .winline line{
-    stroke:var(--gold); stroke-width:9; stroke-linecap:round;
-    filter:drop-shadow(0 0 6px rgba(255,205,80,.7));
-  }
+  .rail{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .status{ font-family:var(--font-display); font-size:15px; color:#d9cfb6; text-align:center; min-height:20px; }
+  .status b{ color:#ffe9a8; font-weight:700; }
 
-  /* ---- Result overlay ---- */
-  .banner{
-    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-    background:rgba(15,17,22,.76); backdrop-filter:blur(3px); border-radius:6px; padding:16px; z-index:6;
-  }
-  .banner.show{ display:flex; animation:fade .25s ease; }
-  @keyframes fade{ from{ opacity:0; } to{ opacity:1; } }
-  .banner-card{ text-align:center; }
-  .result{
-    font-family:var(--font-display); font-size:clamp(26px,7vw,40px);
-    color:#f6efe0; margin:0 0 14px;
-  }
-  .again{
-    font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em;
-    color:#ffe9a8; cursor:pointer; -webkit-appearance:none; appearance:none;
-    padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45);
-    background:linear-gradient(145deg,#3a4150,#272c36); box-shadow:0 2px 6px rgba(0,0,0,0.4);
-  }
-  .again:hover{ border-color:rgba(255,215,94,0.85); }
-  .again:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
+  .deselect{ margin-top:2px; display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border-radius:999px;
+    font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.03em; color:#a59c86;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); cursor:pointer;
+    -webkit-appearance:none; appearance:none; opacity:0; pointer-events:none;
+    transition:opacity .2s ease, color .2s, border-color .2s, background .2s; }
+  .deselect.show{ opacity:1; pointer-events:auto; }
+  .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
+  .deselect svg{ width:12px; height:12px; }
+  @media (prefers-reduced-motion:reduce){ .deselect{ transition:none; } }
 
-  /* ---- Subtle Cancel chip, floating at bottom centre (out of flow so the board stays centred) ---- */
-  .cancel{
-    position:fixed; left:50%;
-    bottom:calc(clamp(14px,3vh,28px) + env(safe-area-inset-bottom, 0px));
-    transform:translateX(-50%);
-    display:inline-flex; align-items:center; gap:7px;
-    padding:7px 15px; border-radius:999px;
-    font-family:var(--font-body); font-size:12.5px; font-weight:600; letter-spacing:.03em;
-    color:var(--text-dim);
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.12);
-    cursor:pointer; -webkit-appearance:none; appearance:none;
-    opacity:0; pointer-events:none;
-    transition:opacity .2s ease, color .2s, border-color .2s, background .2s;
-  }
-  .cancel.show{ opacity:1; pointer-events:auto; }
-  .cancel.show:hover{ opacity:1; color:var(--text); border-color:rgba(255,215,94,.5); background:rgba(255,255,255,.07); }
-  .cancel svg{ width:12px; height:12px; }
+  @keyframes pulseGlow{ 0%,100%{opacity:.22} 50%{opacity:.68} }
+  @keyframes pulseRing{ 0%,100%{opacity:.45} 50%{opacity:1.0} }
+  .pulseGlow{ animation:pulseGlow 1.5s ease-in-out infinite; }
+  .pulseRing{ animation:pulseRing 1.5s ease-in-out infinite; }
+  @media (prefers-reduced-motion:reduce){ .pulseGlow, .pulseRing{ animation:none !important; } }
 
-  @media (prefers-reduced-motion:reduce){
-    .cell, .cancel{ transition:none !important; }
-    .banner.show{ animation:none !important; }
-  }
+  @media (orientation: landscape) and (max-height: 560px){ .table{ gap:8px; } }
+
   .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:50; -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
   .overlay.hidden{ display:none; }
   .card{ background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:30px 34px; max-width:400px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.6); }
-  .card h1{ font-family:var(--font-display, "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif); font-size:28px; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
-  .card .sub{ color:#b9a978; font-size:14px; margin-bottom:12px; }
+  .card h1{ font-family:var(--font-display); font-size:28px; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
+  .card .sub{ color:var(--brass); font-size:14px; margin-bottom:12px; }
   .card p{ color:var(--text); font-size:13.5px; line-height:1.5; margin:0 0 6px; }
-  .start{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); margin-top:8px; -webkit-appearance:none; appearance:none; }
-  .start:hover{ border-color:rgba(255,215,94,0.85); }
+  .pens{ display:flex; gap:16px; justify-content:center; margin:12px 0 2px; font-size:12px; color:var(--text-dim); }
+  .pens span{ display:inline-flex; align-items:center; gap:6px; }
+  .pens i{ width:11px; height:11px; border-radius:50%; display:block; box-shadow:inset 0 0 0 1px rgba(0,0,0,.35); }
+  .pens .px{ background:var(--ink-x); } .pens .po{ background:var(--ink-o); }
+  button{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  button:hover{ border-color:rgba(255,215,94,0.85); }
+  button:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
+  .start{ margin-top:8px; }
+
   .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px; border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
   .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
   .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
@@ -163,405 +117,562 @@
 </head>
 <body>
 <div class="overlay" id="setup">
-  <button class="fsbtn" id="fsbtn" type="button" aria-label="Toggle fullscreen">
-    <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <button class="fsbtn" id="fsbtn" type="button">
+    <svg class="fs-enter" viewBox="0 0 24 24"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
   <div class="card">
     <h1>Tic-Tac-Toe</h1>
     <p class="sub">Three in a row wins</p>
-    <p>Take turns tapping a square to draw your mark. First to line up three in a row wins the round.</p>
-    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="5" fill="#d8a24e"/><line x1="23.67" y1="15.00" x2="23.67" y2="49.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="40.33" y1="15.00" x2="40.33" y2="49.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="15.00" y1="23.67" x2="49.00" y2="23.67" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="15.00" y1="40.33" x2="49.00" y2="40.33" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <p>Tap a square to claim it, then draw your mark over the guide. First to line up three in a row wins the round; the winning line is struck through in that player's pen.</p>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="5" fill="#d8a24e"/><line x1="23.67" y1="15.00" x2="23.67" y2="49.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="40.33" y1="15.00" x2="40.33" y2="49.00" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="15.00" y1="23.67" x2="49.00" y2="23.67" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/><line x1="15.00" y1="40.33" x2="49.00" y2="40.33" stroke="#4a3016" stroke-width="1.8" stroke-linecap="round"/></svg></div>
     <button class="start" id="startbtn" type="button">Start Game</button>
   </div>
 </div>
 
+<main class="table">
   <div class="boardwrap">
-    <div class="frame">
-      <div class="board" id="board">
-        <svg class="winline" id="winline" viewBox="0 0 300 300" aria-hidden="true"></svg>
-        <div class="banner" id="banner">
-          <div class="banner-card">
-            <p class="result" id="result"></p>
-            <button class="again" id="again" type="button">Play again</button>
-          </div>
-        </div>
-      </div>
-    </div>
+  <svg id="board" viewBox="0 0 380 380" xmlns="http://www.w3.org/2000/svg" tabindex="0">
+    <defs>
+      <linearGradient id="wood" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#855f3a"/><stop offset="38%" stop-color="#5e4128"/><stop offset="100%" stop-color="#311e0d"/></linearGradient>
+      <pattern id="grain" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(63)"><rect width="6.5" height="13" fill="#000000" fill-opacity="0.10"/><rect x="6.5" width="6.5" height="13" fill="#fff0d2" fill-opacity="0.03"/></pattern>
+      <!-- The play surface is a sheet of paper inlaid in the wood. Canon covers a light
+           plank palette but has no entry for paper, so this is a new surface: a
+           directional hatch would read as grain, and the tooth is non-directional. -->
+      <linearGradient id="paper" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#f2e9d4"/><stop offset="45%" stop-color="#e8dcc0"/><stop offset="100%" stop-color="#d6c7a6"/></linearGradient>
+      <pattern id="tooth" patternUnits="userSpaceOnUse" width="7" height="7">
+        <circle cx="1.6" cy="1.9" r="0.85" fill="#8a7a58" fill-opacity="0.10"/>
+        <circle cx="5.1" cy="4.6" r="0.7" fill="#6d5f42" fill-opacity="0.08"/>
+        <circle cx="3.4" cy="6.2" r="0.55" fill="#fffdf4" fill-opacity="0.30"/>
+      </pattern>
+      <radialGradient id="glowhalo" cx="50%" cy="50%" r="50%"><stop offset="35%" stop-color="#ffc846" stop-opacity="0.7"/><stop offset="100%" stop-color="#ffc846" stop-opacity="0"/></radialGradient>
+    </defs>
+    <g id="staticG"></g>
+    <g id="inkG" pointer-events="none"></g>
+    <g id="strikeG" pointer-events="none"></g>
+    <g id="fxG" pointer-events="none"></g>
+    <g id="cursorG" pointer-events="none"></g>
+    <g id="hitG"></g>
+  </svg>
   </div>
 
-  <button class="cancel" id="cancel" type="button" disabled aria-label="Cancel the current mark">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
-    Cancel
+  <div class="rail">
+    <div class="status" id="status"></div>
+    <button class="deselect" id="deselect" type="button" disabled>
+      <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+      Deselect
+    </button>
+  </div>
+</main>
+
+<div class="overlay hidden" id="banner">
+  <button class="fsbtn" id="fsbtn-end" type="button">
+    <svg class="fs-enter" viewBox="0 0 24 24"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
+  <div class="card">
+    <h1 id="bannertitle"></h1>
+    <p id="bannersub"></p>
+    <button class="start" id="againbtn" type="button">Play Again</button>
+  </div>
+</div>
 
 <script>
 "use strict";
-document.addEventListener("DOMContentLoaded", function(){
+(function(){
+/* ================= geometry =================
+   The board is SVG like every other game in the set. It used to be nine <div> cells in a
+   CSS grid whose gaps showed the backing colour as grid lines; a drawn hash has no gaps
+   to show, so the surface had to become one sheet with the lines painted on.
+   CELL is 100, so a cell's local drawing space is exactly 0..100 — the same space the
+   stroke code below already worked in, which is why it carries over untouched. */
+const VB=380, OFF=40, CELL=100;
+const INSET=OFF-16, INSET_W=VB-INSET*2;
+const SVGNS="http://www.w3.org/2000/svg";
+const LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+const LINE_NAMES=["across the top","across the middle","across the bottom",
+                  "down the left","down the middle","down the right",
+                  "on the leading diagonal","on the opposite diagonal"];
+const PALE_BACKING="#c9762a";   // canon's burnt orange, under gold on a pale surface
 
-  const SVGNS = "http://www.w3.org/2000/svg";
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const PAUSE=320;        // after selecting a cell, before the guide traces in
+const COMMIT_IDLE=850;  // after the last stroke, before the mark commits
+const MIN_LEN=22;       // minimum drawn length (0..100 space) to count as a mark
+const reduceMotion=!!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
-  const PAUSE = 320;        // after selecting a cell, before the guide traces in
-  const COMMIT_IDLE = 850;  // after the last stroke, before the mark commits
-  const MIN_LEN = 22;       // minimum drawn length (in 0..100 space) to count as a mark
+function E(t,a,p){ const e=document.createElementNS(SVGNS,t); if(a) for(const k in a) e.setAttribute(k,a[k]); if(p)p.appendChild(e); return e; }
+function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+function CX(i){ return OFF+(i%3)*CELL; }              // cell origin x
+function CY(i){ return OFF+Math.floor(i/3)*CELL; }
+function centre(i){ return { x:CX(i)+50, y:CY(i)+50 }; }
 
-  const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+/* ================= DOM ================= */
+const boardEl=document.getElementById("board");
+const staticG=document.getElementById("staticG");
+const inkG=document.getElementById("inkG");
+const strikeG=document.getElementById("strikeG");
+const fxG=document.getElementById("fxG");
+const cursorG=document.getElementById("cursorG");
+const hitG=document.getElementById("hitG");
+const statusEl=document.getElementById("status");
+const deselectBtn=document.getElementById("deselect");
 
-  /* ---------------- DOM ---------------- */
-  const boardEl   = document.getElementById("board");
-  const winlineEl = document.getElementById("winline");
-  const bannerEl  = document.getElementById("banner");
-  const resultEl  = document.getElementById("result");
-  const againBtn  = document.getElementById("again");
-  const cancelBtn = document.getElementById("cancel");
+/* ================= state ================= */
+let owner, turn, startingPlayer=null, gameOver;
+let activeCell=null, armAt=0, drawing=false, strokes=[];
+let cellGroups=[], guideGroups=[], markGroups=[];
+let ghostTimer=null, commitTimer=null;
+let dragId=null;
+let cursor=0, cursorShown=false;
 
-  /* ---------------- state ---------------- */
-  let owner;            // owner[0..8] = 'x' | 'o' | null
-  let turn;             // 'x' | 'o'
-  let startingPlayer;   // alternates each round
-  let gameOver;
+/* ================= sound (synth, no files) ================= */
+let actx=null, master=null;
+function audio(){ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+    actx=new AC(); master=actx.createGain(); master.gain.value=0.45; master.connect(actx.destination); }
+  if(actx.state==="suspended") actx.resume(); return actx; }
+function tone(o){ const ctx=audio(); if(!ctx) return; const t0=ctx.currentTime+(o.delay||0);
+  const osc=ctx.createOscillator(), g=ctx.createGain(); osc.type=o.type||"triangle"; osc.frequency.setValueAtTime(o.freq,t0);
+  if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to,t0+o.dur);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(o.vol,t0+(o.attack||0.005)); g.gain.exponentialRampToValueAtTime(0.0001,t0+o.dur);
+  osc.connect(g).connect(master); osc.start(t0); osc.stop(t0+o.dur+0.03); }
+function noise(o){ const ctx=audio(); if(!ctx) return; const t0=ctx.currentTime+(o.delay||0);
+  const len=Math.floor(ctx.sampleRate*o.dur); const buf=ctx.createBuffer(1,len,ctx.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1; const src=ctx.createBufferSource(); src.buffer=buf;
+  const filt=ctx.createBiquadFilter(); filt.type=o.filter||"highpass"; filt.frequency.value=o.freq||1800; filt.Q.value=o.q||0.7;
+  const g=ctx.createGain(); g.gain.setValueAtTime(o.vol,t0); g.gain.exponentialRampToValueAtTime(0.0001,t0+o.dur);
+  src.connect(filt).connect(g).connect(master); src.start(t0); src.stop(t0+o.dur+0.02); }
+const Sound={
+  select(){ tone({freq:440,to:560,dur:0.06,vol:0.13,type:"sine"}); },
+  tick(){ tone({freq:600,dur:0.03,vol:0.07,type:"sine"}); },
+  commit(){ tone({freq:200,to:120,dur:0.13,vol:0.5,type:"triangle"});
+            noise({freq:2200,dur:0.02,vol:0.14,filter:"highpass"});
+            tone({freq:520,dur:0.18,vol:0.14,type:"sine",delay:0.03}); },
+  deselect(){ tone({freq:340,to:230,dur:0.09,vol:0.12,type:"sine"}); },
+  win(){ [523,659,784,1047].forEach((f,i)=>tone({freq:f,dur:0.55,vol:0.32,type:"triangle",delay:i*0.1,attack:0.01}));
+         tone({freq:262,dur:0.8,vol:0.2,type:"sine",delay:0.1}); },
+  tie(){ tone({freq:392,dur:0.26,vol:0.2,type:"triangle"});
+         tone({freq:294,dur:0.4,vol:0.2,type:"triangle",delay:0.15}); },
+  nudge(){ tone({freq:96,to:72,dur:0.12,vol:0.2,type:"sine"}); }
+};
 
-  let activeCell = null;     // index currently selected for drawing
-  let armAt = 0;             // time after which drawing is allowed in the active cell
-  let drawing = false;       // a stroke is in progress
-  let strokes = [];          // [{ points:[{x,y}], el }] for the active cell
-  let ghostTimer = null, commitTimer = null;
-
-  const cells = [];          // cell elements
-  const ghostGroups = [];    // <g class="ghost"> per cell
-  const strokeGroups = [];   // <g class="strokes"> per cell
-  const inkSvgs = [];        // <svg class="ink"> per cell
-
-  /* ---------------- sound (synth, no files) ---------------- */
-  let actx = null, master = null;
-  function audio(){
-    if(!actx){
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if(!AC) return null;
-      actx = new AC();
-      master = actx.createGain(); master.gain.value = 0.45; master.connect(actx.destination);
-    }
-    if(actx.state === "suspended") actx.resume();
-    return actx;
+/* ==== PURE LOGIC START ====
+   No DOM in here; the test harness extracts this block verbatim. */
+const other = p => p==="x" ? "o" : "x";
+function winningLine(owner,player){
+  for(let k=0;k<LINES.length;k++){
+    const L=LINES[k];
+    if(owner[L[0]]===player && owner[L[1]]===player && owner[L[2]]===player) return { line:L, name:LINE_NAMES[k] };
   }
-  function tone(o){
-    const ctx = audio(); if(!ctx) return;
-    const t0 = ctx.currentTime + (o.delay || 0);
-    const osc = ctx.createOscillator(), g = ctx.createGain();
-    osc.type = o.type || "triangle";
-    osc.frequency.setValueAtTime(o.freq, t0);
-    if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t0 + o.dur);
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(o.vol, t0 + (o.attack || 0.005));
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
-    osc.connect(g).connect(master); osc.start(t0); osc.stop(t0 + o.dur + 0.03);
+  return null;
+}
+function boardFull(owner){ return owner.every(function(o){ return o!==null; }); }
+/* Tic-tac-toe genuinely can draw, unlike dots and boxes with its odd box count, so the
+   draw is a real end state and has to be detected rather than declared impossible. */
+function outcome(owner,player){
+  const w=winningLine(owner,player);
+  if(w) return { kind:"win", player:player, line:w.line, name:w.name };
+  if(boardFull(owner)) return { kind:"draw" };
+  return null;
+}
+/* ==== PURE LOGIC END ==== */
+
+/* ================= static board (built ONCE) ================= */
+function buildStatic(){
+  clear(staticG);
+  E("rect",{x:0,y:0,width:VB,height:VB,rx:20,fill:"url(#wood)"},staticG);
+  E("rect",{x:0,y:0,width:VB,height:VB,rx:20,fill:"url(#grain)"},staticG);
+  E("rect",{x:11,y:11,width:VB-22,height:VB-22,rx:15,fill:"none",stroke:"#ffe1aa","stroke-opacity":0.10,"stroke-width":1.5},staticG);
+  /* the sheet, inlaid: a cut shadow beneath it, the paper, its tooth, a lit lip, a dark edge */
+  E("rect",{x:INSET-3,y:INSET-3,width:INSET_W+6,height:INSET_W+6,rx:12,fill:"#000000","fill-opacity":0.42},staticG);
+  E("rect",{x:INSET,y:INSET,width:INSET_W,height:INSET_W,rx:9,fill:"url(#paper)"},staticG);
+  E("rect",{x:INSET,y:INSET,width:INSET_W,height:INSET_W,rx:9,fill:"url(#tooth)"},staticG);
+  E("rect",{x:INSET+1.2,y:INSET+1.2,width:INSET_W-2.4,height:INSET_W-2.4,rx:8,fill:"none",stroke:"#ffffff","stroke-opacity":0.22,"stroke-width":1.6},staticG);
+  E("rect",{x:INSET,y:INSET,width:INSET_W,height:INSET_W,rx:9,fill:"none",stroke:"#20130a","stroke-opacity":0.5,"stroke-width":2},staticG);
+  /* The hash is ruled, not handwritten: the grid belongs to the board, the marks belong
+     to the players. It overshoots the grid slightly so it reads as drawn on rather than
+     as a table border. */
+  const a=OFF-4, b=OFF+3*CELL+4;
+  for(let k=1;k<=2;k++){
+    E("line",{x1:OFF+k*CELL,y1:a,x2:OFF+k*CELL,y2:b,stroke:"#5a5346","stroke-width":6.5,"stroke-linecap":"round","stroke-opacity":0.9},staticG);
+    E("line",{x1:a,y1:OFF+k*CELL,x2:b,y2:OFF+k*CELL,stroke:"#5a5346","stroke-width":6.5,"stroke-linecap":"round","stroke-opacity":0.9},staticG);
   }
-  function noise(o){
-    const ctx = audio(); if(!ctx) return;
-    const t0 = ctx.currentTime + (o.delay || 0);
-    const len = Math.floor(ctx.sampleRate * o.dur);
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for(let i=0;i<len;i++) d[i] = Math.random()*2 - 1;
-    const src = ctx.createBufferSource(); src.buffer = buf;
-    const filt = ctx.createBiquadFilter();
-    filt.type = o.filter || "highpass"; filt.frequency.value = o.freq || 1800; filt.Q.value = o.q || 0.7;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(o.vol, t0);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
-    src.connect(filt).connect(g).connect(master); src.start(t0); src.stop(t0 + o.dur + 0.02);
+}
+
+/* ================= per-cell ink groups (built ONCE, then only their contents change) */
+function buildCells(){
+  clear(inkG); cellGroups=[]; guideGroups=[]; markGroups=[];
+  for(let i=0;i<9;i++){
+    const g=E("g",{transform:"translate("+CX(i)+" "+CY(i)+")","class":"ink"},inkG);
+    guideGroups.push(E("g",{"class":"guide"},g));
+    markGroups.push(E("g",{"class":"marks"},g));
+    cellGroups.push(g);
   }
-  const Sound = {
-    select(){ tone({freq:440, to:560, dur:0.06, vol:0.13, type:"sine"}); },
-    tick(){   tone({freq:600, dur:0.03, vol:0.07, type:"sine"}); },
-    commit(){
-      tone({freq:200, to:120, dur:0.13, vol:0.5, type:"triangle"});
-      noise({freq:2200, dur:0.02, vol:0.14, filter:"highpass"});
-      tone({freq:520, dur:0.18, vol:0.14, type:"sine", delay:0.03}); },
-    cancel(){ tone({freq:340, to:230, dur:0.09, vol:0.12, type:"sine"}); },
-    win(){
-      [523,659,784,1047].forEach((f,i)=> tone({freq:f, dur:0.55, vol:0.32, type:"triangle", delay:i*0.1, attack:0.01}));
-      tone({freq:262, dur:0.8, vol:0.2, type:"sine", delay:0.1}); },
-    tie(){
-      tone({freq:392, dur:0.26, vol:0.2, type:"triangle"});
-      tone({freq:294, dur:0.4, vol:0.2, type:"triangle", delay:0.15}); },
-    nudge(){ tone({freq:96, to:72, dur:0.12, vol:0.2, type:"sine"}); }
-  };
-
-  /* ---------------- helpers ---------------- */
-  const other = p => p === "x" ? "o" : "x";
-  function svgEl(tag, attrs){
-    const el = document.createElementNS(SVGNS, tag);
-    for(const k in attrs) el.setAttribute(k, attrs[k]);
-    return el;
+}
+/* One transparent rect per empty cell, for the pointer cursor and the hover wash. Pointer
+   handling lives on the board root and hit-tests by coordinate, so rebuilding this layer
+   mid-gesture cannot strand a stroke in progress. */
+function buildHits(){
+  clear(hitG);
+  if(gameOver) return;
+  for(let i=0;i<9;i++){
+    if(owner[i]!==null) continue;
+    E("rect",{x:CX(i)+3,y:CY(i)+3,width:CELL-6,height:CELL-6,rx:6,fill:"transparent","class":"hit"},hitG);
   }
-  // pointer position -> 0..100 within a cell
-  function cellPoint(cellEl, e){
-    const r = cellEl.getBoundingClientRect();
-    let x = (e.clientX - r.left) / r.width * 100;
-    let y = (e.clientY - r.top) / r.height * 100;
-    return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
-  }
-  function strokeD(points){
-    if(points.length === 0) return "";
-    if(points.length === 1){ const p = points[0]; return "M " + p.x + " " + p.y + " L " + (p.x+0.01) + " " + p.y; }
-    let d = "M " + points[0].x + " " + points[0].y;
-    for(let i=1;i<points.length-1;i++){
-      const mx = (points[i].x + points[i+1].x)/2, my = (points[i].y + points[i+1].y)/2;
-      d += " Q " + points[i].x + " " + points[i].y + " " + mx + " " + my;
-    }
-    const last = points[points.length-1];
-    d += " L " + last.x + " " + last.y;
-    return d;
-  }
-  function totalLength(strokeList){
-    let len = 0;
-    for(const s of strokeList){
-      for(let i=1;i<s.points.length;i++){
-        const dx = s.points[i].x - s.points[i-1].x, dy = s.points[i].y - s.points[i-1].y;
-        len += Math.hypot(dx, dy);
-      }
-    }
-    return len;
-  }
+}
 
-  /* ---------------- build ---------------- */
-  function buildBoard(){
-    for(let i=0;i<9;i++){
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.dataset.i = i;
+/* ================= markers =================
+   Canon's pale-square rule: the board declares which cells are pale and every marker draw
+   site consults it. The whole play surface is the sheet, so this is true everywhere —
+   gold measures 1.02 on cream, the figure canon records for riptide's yellow wash. The
+   backing carries the contrast at 2.53; the ring stays gold because that is its meaning. */
+function isPaleCell(){ return true; }
+function drawFx(){
+  clear(fxG);
+  const show = activeCell!==null && !gameOver;
+  deselectBtn.classList.toggle("show", show);
+  deselectBtn.disabled = !show;
+  if(show){
+    const x=CX(activeCell), y=CY(activeCell);
+    E("rect",{x:x+6,y:y+6,width:CELL-12,height:CELL-12,rx:10,fill:"url(#glowhalo)",opacity:0.25,"class":"pulseGlow"},fxG);
+    if(isPaleCell())
+	E("rect",{x:x,y:y,width:CELL,height:CELL,rx:0,fill:"none",stroke:"#ffd75e","stroke-width":3.5,opacity:0.97},fxG);  }
+  drawCursor();
+  updateStatus();
+}
+function drawCursor(){
+  clear(cursorG);
+  if(!cursorShown||gameOver) return;
+  const x=CX(cursor), y=CY(cursor);
+  const box={x:x+13,y:y+13,width:CELL-26,height:CELL-26,rx:7,fill:"none"};
+  if(isPaleCell()) E("rect",Object.assign({},box,{stroke:PALE_BACKING,"stroke-width":6.5}),cursorG);
+  E("rect",Object.assign({},box,{stroke:"#ffd75e","stroke-width":3}),cursorG);
+}
+function updateStatus(){
+  if(gameOver){ statusEl.innerHTML=""; return; }
+  const who='<b>'+turn.toUpperCase()+'</b>';
+  statusEl.innerHTML = activeCell!==null
+    ? who+' \u2014 draw your mark over the guide.'
+    : who+' to move \u2014 tap a square, then draw.';
+}
 
-      const svg = svgEl("svg", { class:"ink", viewBox:"0 0 100 100", preserveAspectRatio:"xMidYMid meet" });
-      const ghost = svgEl("g", { class:"ghost" });
-      const strokesG = svgEl("g", { class:"strokes" });
-      svg.appendChild(ghost); svg.appendChild(strokesG);
-      cell.appendChild(svg);
-
-      cell.addEventListener("pointerdown", e => onPointerDown(i, e));
-      cell.addEventListener("pointermove", e => onPointerMove(i, e));
-      cell.addEventListener("pointerup",   e => onPointerUp(i, e));
-      cell.addEventListener("pointercancel", e => onPointerUp(i, e));
-
-      boardEl.insertBefore(cell, winlineEl);   // before the winline/banner overlays
-      cells.push(cell); ghostGroups.push(ghost); strokeGroups.push(strokesG); inkSvgs.push(svg);
-    }
-  }
-
-  /* ---------------- guide (ghost) ---------------- */
-  function showGhost(i){
-    if(activeCell !== i) return;
-    const g = ghostGroups[i];
-    g.innerHTML = "";
-    inkSvgs[i].classList.remove("x","o"); inkSvgs[i].classList.add(turn);
-    g.style.opacity = "1";
-
-    const parts = [];
-    if(turn === "x"){
-      parts.push(svgEl("path", { d:"M 26 26 L 74 74" }));
-      parts.push(svgEl("path", { d:"M 74 26 L 26 74" }));
-    } else {
-      parts.push(svgEl("circle", { cx:50, cy:50, r:27 }));
-    }
-    parts.forEach((p, idx) => {
-      g.appendChild(p);
-      const len = (turn === "x") ? 68 : 2 * Math.PI * 27;
-      p.style.strokeDasharray = len;
-      if(reduceMotion){ p.style.strokeDashoffset = 0; return; }
-      p.style.strokeDashoffset = len;
-      p.style.transition = "stroke-dashoffset .5s ease";
-      p.style.transitionDelay = (idx * 0.18) + "s";
-      requestAnimationFrame(() => requestAnimationFrame(() => { p.style.strokeDashoffset = 0; }));
-    });
-  }
-
-  /* ---------------- selection / drawing ---------------- */
-  function selectCell(i){
-    activeCell = i;
-    armAt = performance.now() + PAUSE;
-    strokes = [];
-    cells.forEach(c => c.classList.remove("is-active"));
-    cells[i].classList.add("is-active");
-    ghostGroups[i].innerHTML = ""; strokeGroups[i].innerHTML = "";
-    clearTimeout(ghostTimer); clearTimeout(commitTimer);
-    ghostTimer = window.setTimeout(() => showGhost(i), PAUSE);
-    refreshUI();
-    Sound.select();
-  }
-
-  function clearActiveCell(){
-    if(activeCell === null) return;
-    const i = activeCell;
-    ghostGroups[i].innerHTML = ""; strokeGroups[i].innerHTML = "";
-    cells[i].classList.remove("is-active");
-    activeCell = null; strokes = []; drawing = false;
-    clearTimeout(ghostTimer); clearTimeout(commitTimer);
-  }
-
-  function onPointerDown(i, e){
-    if(gameOver) return;
-    audio();
-    if(owner[i] !== null){ Sound.nudge(); return; }   // occupied
-
-    if(activeCell === null){ selectCell(i); return; }  // first gesture = select only
-
-    if(activeCell === i){
-      if(performance.now() < armAt) return;            // still in the brief pause
-      startStroke(i, e);
-      return;
-    }
-    // a different cell is active
-    if(strokes.length === 0){ clearActiveCell(); selectCell(i); }  // switch (nothing drawn yet)
-    else Sound.nudge();                                            // mid-drawing elsewhere
-  }
-
-  function startStroke(i, e){
-    drawing = true;
-    try { cells[i].setPointerCapture(e.pointerId); } catch(_){}
-    clearTimeout(commitTimer);
-    ghostGroups[i].style.opacity = "0.5";   // fade the guide as the player draws over it
-    const path = svgEl("path", { d:"" });
-    strokeGroups[i].appendChild(path);
-    const stroke = { points:[cellPoint(cells[i], e)], el:path };
-    strokes.push(stroke);
-    path.setAttribute("d", strokeD(stroke.points));
-    Sound.tick();
-  }
-  function onPointerMove(i, e){
-    if(!drawing || activeCell !== i) return;
-    const stroke = strokes[strokes.length-1];
-    if(!stroke) return;
-    stroke.points.push(cellPoint(cells[i], e));
-    stroke.el.setAttribute("d", strokeD(stroke.points));
-  }
-  function onPointerUp(i, e){
-    if(!drawing || activeCell !== i) return;
-    drawing = false;
-    try { cells[i].releasePointerCapture(e.pointerId); } catch(_){}
-    clearTimeout(commitTimer);
-    commitTimer = window.setTimeout(commitActive, COMMIT_IDLE);
-  }
-
-  function commitActive(){
-    if(activeCell === null || gameOver) return;
-    if(totalLength(strokes) < MIN_LEN) return;   // not enough yet — keep waiting
-    const i = activeCell, player = turn;
-
-    owner[i] = player;
-    cells[i].classList.remove("is-active");
-    cells[i].classList.add("occupied");
-    const g = ghostGroups[i];                     // fade the guide out, keep the ink
-    g.style.transition = "opacity .3s ease"; g.style.opacity = "0";
-    window.setTimeout(() => { g.innerHTML = ""; }, 320);
-
-    activeCell = null; strokes = [];
-    clearTimeout(ghostTimer); clearTimeout(commitTimer);
-    Sound.commit();
-
-    const line = winningLine(player);
-    if(line){ finishRound(player, line); }
-    else if(owner.every(o => o !== null)){ finishRound(null, null); }
-    else { turn = other(player); }
-    refreshUI();
-  }
-
-  function cancelActive(){
-    if(activeCell === null || gameOver) return;
-    clearActiveCell();
-    refreshUI();
-    Sound.cancel();
-  }
-
-  /* ---------------- win / round ---------------- */
-  function winningLine(player){
-    for(const L of LINES){ if(owner[L[0]]===player && owner[L[1]]===player && owner[L[2]]===player) return L; }
-    return null;
-  }
-  function center(idx){ return { x:(idx % 3)*100 + 50, y:Math.floor(idx/3)*100 + 50 }; }
-
-  function finishRound(winner, line){
-    gameOver = true;
-    cells.forEach(c => c.classList.remove("playable"));
-    if(winner && line){
-      const a = center(line[0]), b = center(line[2]);
-      const dx = b.x - a.x, dy = b.y - a.y, m = Math.hypot(dx, dy) || 1;
-      const ex = dx / m * 22, ey = dy / m * 22;   // extend past the end marks
-      const ln = svgEl("line", { x1:a.x-ex, y1:a.y-ey, x2:b.x+ex, y2:b.y+ey });
-      winlineEl.appendChild(ln);
-      if(!reduceMotion){
-        const total = Math.hypot((b.x+ex)-(a.x-ex), (b.y+ey)-(a.y-ey));
-        ln.style.strokeDasharray = total; ln.style.strokeDashoffset = total;
-        ln.style.transition = "stroke-dashoffset .45s ease";
-        requestAnimationFrame(() => requestAnimationFrame(() => { ln.style.strokeDashoffset = 0; }));
-      }
-      resultEl.textContent = winner.toUpperCase() + " wins";
-      Sound.win();
-    } else {
-      resultEl.textContent = "Draw";
-      Sound.tie();
-    }
-    window.setTimeout(() => bannerEl.classList.add("show"), winner ? 480 : 220);
-  }
-
-  function newRound(){
-    owner = new Array(9).fill(null);
-    startingPlayer = startingPlayer ? other(startingPlayer) : "x";
-    turn = startingPlayer;
-    gameOver = false;
-    activeCell = null; strokes = []; drawing = false;
-    clearTimeout(ghostTimer); clearTimeout(commitTimer);
-
-    cells.forEach((c, i) => {
-      c.classList.remove("is-active","occupied");
-      ghostGroups[i].innerHTML = ""; ghostGroups[i].style.opacity = ""; ghostGroups[i].style.transition = "";
-      strokeGroups[i].innerHTML = "";
-    });
-    winlineEl.innerHTML = "";
-    bannerEl.classList.remove("show");
-    refreshUI();
-  }
-
-  /* ---------------- ui refresh ---------------- */
-  function refreshUI(){
-    cells.forEach((c, i) => c.classList.toggle("playable", !gameOver && owner[i] === null));
-    const showCancel = activeCell !== null && !gameOver;
-    cancelBtn.classList.toggle("show", showCancel);
-    cancelBtn.disabled = !showCancel;
-  }
-
-  /* ---------------- controls ---------------- */
-  againBtn.addEventListener("click", () => { audio(); newRound(); });
-  cancelBtn.addEventListener("click", () => { if(!cancelBtn.disabled){ audio(); cancelActive(); } });
-  document.addEventListener("keydown", e => {
-    if(e.key === "Escape" && activeCell !== null && !gameOver){ e.preventDefault(); audio(); cancelActive(); }
+/* ================= the guide ================= */
+function markParts(player){
+  return player==="x"
+    ? [ {tag:"path",attrs:{d:"M 26 26 L 74 74"},len:68},
+        {tag:"path",attrs:{d:"M 74 26 L 26 74"},len:68} ]
+    : [ {tag:"circle",attrs:{cx:50,cy:50,r:27},len:2*Math.PI*27} ];
+}
+function showGuide(i){
+  if(activeCell!==i) return;
+  const g=guideGroups[i];
+  clear(g);
+  cellGroups[i].setAttribute("class","ink "+turn);
+  g.style.opacity="1";
+  markParts(turn).forEach(function(part,idx){
+    const el=E(part.tag,part.attrs,g);
+    if(reduceMotion) return;
+    el.style.strokeDasharray=part.len; el.style.strokeDashoffset=part.len;
+    el.style.transition="stroke-dashoffset .5s ease";
+    el.style.transitionDelay=(idx*0.18)+"s";
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ el.style.strokeDashoffset=0; }));
   });
+}
 
-  /* ---------------- go ---------------- */
-  buildBoard();
-  startingPlayer = null;   // newRound() sets the first starter to X
-  newRound();
+/* ================= selection and drawing ================= */
+function selectCell(i){
+  /* The occupancy guard lives here, at the chokepoint, not only in the callers. Both the
+     pointer path and the keyboard path already check, but a rule enforced in two places
+     and not the one they both funnel through is a rule waiting to be bypassed. */
+  if(gameOver||owner[i]!==null){ Sound.nudge(); return false; }
+  activeCell=i; cursor=i;
+  armAt=(window.performance?performance.now():Date.now())+PAUSE;
+  strokes=[];
+  clear(guideGroups[i]); clear(markGroups[i]);
+  guideGroups[i].style.opacity=""; guideGroups[i].style.transition="";
+  clearTimers();
+  ghostTimer=window.setTimeout(function(){ showGuide(i); }, PAUSE);
+  drawFx(); Sound.select();
+  return true;
+}
+function clearActive(){
+  if(activeCell===null) return;
+  const i=activeCell;
+  clear(guideGroups[i]); clear(markGroups[i]);
+  guideGroups[i].style.opacity=""; guideGroups[i].style.transition="";
+  cellGroups[i].setAttribute("class","ink");
+  activeCell=null; strokes=[]; drawing=false;
+  clearTimers();
+}
+function userDeselect(){
+  if(activeCell===null||gameOver) return;
+  clearActive(); drawFx(); Sound.deselect();
+}
+function clearTimers(){
+  window.clearTimeout(ghostTimer); window.clearTimeout(commitTimer);
+  ghostTimer=commitTimer=null;
+}
+/* pointer position -> 0..100 inside the cell being drawn in */
+function cellPoint(i,p){
+  const x=p.x-CX(i), y=p.y-CY(i);
+  const pad = 10; // The amount of padding to keep the ink away from the edges
+  return { 
+    x: Math.max(pad, Math.min(100 - pad, x)), 
+    y: Math.max(pad, Math.min(100 - pad, y)) 
+  };
+}
+function strokeD(points){
+  if(points.length===0) return "";
+  if(points.length===1){ const p=points[0]; return "M "+p.x+" "+p.y+" L "+(p.x+0.01)+" "+p.y; }
+  let d="M "+points[0].x+" "+points[0].y;
+  for(let i=1;i<points.length-1;i++){
+    const mx=(points[i].x+points[i+1].x)/2, my=(points[i].y+points[i+1].y)/2;
+    d+=" Q "+points[i].x+" "+points[i].y+" "+mx+" "+my;
+  }
+  const last=points[points.length-1];
+  d+=" L "+last.x+" "+last.y;
+  return d;
+}
+function totalLength(list){
+  let len=0;
+  for(const s of list) for(let i=1;i<s.points.length;i++)
+    len+=Math.hypot(s.points[i].x-s.points[i-1].x, s.points[i].y-s.points[i-1].y);
+  return len;
+}
+function startStroke(i,p){
+  drawing=true;
+  window.clearTimeout(commitTimer);
+  guideGroups[i].style.opacity="0.5";        // fade the guide as the player draws over it
+  const el=E("path",{d:""},markGroups[i]);
+  const s={ points:[p], el:el };
+  strokes.push(s);
+  el.setAttribute("d", strokeD(s.points));
+  Sound.tick();
+}
+function extendStroke(p){
+  const s=strokes[strokes.length-1]; if(!s) return;
+  s.points.push(p);
+  s.el.setAttribute("d", strokeD(s.points));
+}
+function endStroke(){
+  drawing=false;
+  window.clearTimeout(commitTimer);
+  commitTimer=window.setTimeout(commitActive, COMMIT_IDLE);
+}
+/* keyboard players cannot draw, so Enter on an armed cell prints the mark instead */
+function stampActive(){
+  if(activeCell===null||gameOver) return;
+  const i=activeCell;
+  clear(markGroups[i]);
+  markParts(turn).forEach(function(part){
+    if(part.tag==="path") E("path",{d:part.attrs.d},markGroups[i]);
+    else E("path",{d:circlePath(part.attrs.cx,part.attrs.cy,part.attrs.r)},markGroups[i]);
+  });
+  strokes=[{ points:[{x:0,y:0},{x:100,y:100}], el:null }];   // clears the MIN_LEN gate
+  commitActive();
+}
+function circlePath(cx,cy,r){
+  return "M "+(cx+r)+" "+cy
+       +" A "+r+" "+r+" 0 0 1 "+cx+" "+(cy+r)
+       +" A "+r+" "+r+" 0 0 1 "+(cx-r)+" "+cy
+       +" A "+r+" "+r+" 0 0 1 "+cx+" "+(cy-r)
+       +" A "+r+" "+r+" 0 0 1 "+(cx+r)+" "+cy;
+}
+
+function commitActive(){
+  if(activeCell===null||gameOver) return;
+  if(totalLength(strokes)<MIN_LEN) return;    // not enough drawn yet — keep waiting
+  const i=activeCell, player=turn;
+  owner[i]=player;
+  cellGroups[i].setAttribute("class","ink "+player);
+  const g=guideGroups[i];                      // fade the guide out, keep the ink
+  g.style.transition="opacity .3s ease"; g.style.opacity="0";
+  window.setTimeout(function(){ clear(g); }, 320);
+
+  activeCell=null; strokes=[]; drawing=false;
+  clearTimers();
+  Sound.commit();
+
+  const res=outcome(owner,player);
+  if(res) finishRound(res);
+  else turn=other(player);
+  buildHits(); drawFx();
+}
+
+/* ================= pointer =================
+   One handler set on the board root, hit-testing by coordinate through a single
+   screen->viewBox transform, with capture so move and up still arrive off-board. */
+function toBoard(e){
+  const m=boardEl.getScreenCTM(); if(!m) return null;
+  const inv=m.inverse();
+  if(window.DOMPoint) return new DOMPoint(e.clientX,e.clientY).matrixTransform(inv);
+  const sp=boardEl.createSVGPoint(); sp.x=e.clientX; sp.y=e.clientY;      // older Safari
+  return sp.matrixTransform(inv);
+}
+function cellAt(p){
+  if(!p) return null;
+  const c=Math.floor((p.x-OFF)/CELL), r=Math.floor((p.y-OFF)/CELL);
+  if(r<0||r>2||c<0||c>2) return null;
+  return r*3+c;
+}
+function onPress(i,p,e){
+  if(owner[i]!==null){ Sound.nudge(); return; }          // selectCell guards this too
+  if(activeCell===null){ selectCell(i); return; }        // first gesture selects only
+  if(activeCell===i){
+    if((window.performance?performance.now():Date.now())<armAt) return;   // guide still tracing in
+    dragId=e.pointerId;
+    try{ boardEl.setPointerCapture(e.pointerId); }catch(err){}
+    startStroke(i,cellPoint(i,p));
+    return;
+  }
+  if(strokes.length===0){ clearActive(); selectCell(i); }  // switch, nothing drawn yet
+  else Sound.nudge();                                      // mid-drawing somewhere else
+}
+
+boardEl.addEventListener("pointerdown", function(e){
+  if(gameOver) return;
+  if(e.pointerType==="mouse" && e.button!==0) return;
+  const p=toBoard(e); if(!p) return;
+  const i=cellAt(p); if(i===null) return;
+  e.preventDefault();
+  boardEl.focus({preventScroll:true});
+  audio(); hideCursor();
+  if(dragId!==null) return;                                // ignore a second finger
+  onPress(i,p,e);
+});
+boardEl.addEventListener("pointermove", function(e){
+  if(dragId===null||e.pointerId!==dragId||!drawing||activeCell===null) return;
+  const p=toBoard(e); if(!p) return;
+  extendStroke(cellPoint(activeCell,p));
+});
+function releaseDrag(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  try{ boardEl.releasePointerCapture(e.pointerId); }catch(err){}
+  dragId=null;
+  if(drawing) endStroke();
+}
+boardEl.addEventListener("pointerup", releaseDrag);
+/* palm rejection, an incoming call, or the browser claiming the gesture all land here.
+   Ending the stroke normally keeps a half-drawn mark instead of leaking drag state. */
+boardEl.addEventListener("pointercancel", releaseDrag);
+
+/* ================= end of round =================
+   Two ways out, so the banner has to say which happened: a line of three, or a full
+   grid with no line. */
+function finishRound(res){
+  gameOver=true;
+  clearActive(); clearTimers();
+  clear(hitG); clear(cursorG); drawFx();
+  const title=document.getElementById("bannertitle");
+  const sub=document.getElementById("bannersub");
+  if(res.kind==="win"){
+    drawStrike(res.player,res.line);
+    title.textContent=res.player.toUpperCase()+" wins";
+    sub.textContent="Three in a row "+res.name+".";
+    Sound.win();
+  } else {
+    title.textContent="A draw";
+    sub.textContent="All nine squares filled with no line of three.";
+    Sound.tie();
+  }
+  window.setTimeout(function(){
+    document.getElementById("banner").classList.remove("hidden");
+    if(window.fsExit) window.fsExit();       // the end card is where fullscreen stops
+  }, res.kind==="win" ? 620 : 260);
+}
+/* The strike is drawn in the winner's own pen, under a knockout a hair lighter than the
+   sheet. The knockout is invisible on bare paper and only shows where the line crosses a
+   mark — which is every mark on the line, since a winning line only crosses its owner's. */
+function drawStrike(player,line){
+  clear(strikeG);
+  const a=centre(line[0]), b=centre(line[2]);
+  const dx=b.x-a.x, dy=b.y-a.y, m=Math.hypot(dx,dy)||1;
+  const ex=dx/m*22, ey=dy/m*22;                       // extend past the end marks
+  const x1=a.x-ex, y1=a.y-ey, x2=b.x+ex, y2=b.y+ey;
+  const g=E("g",{"class":"strike "+player},strikeG);
+  const knock=E("line",{x1:x1,y1:y1,x2:x2,y2:y2,"class":"knock"},g);
+  const pen=E("line",{x1:x1,y1:y1,x2:x2,y2:y2,"class":"pen"},g);
+  if(!reduceMotion){
+    const total=Math.hypot(x2-x1,y2-y1);
+    [knock,pen].forEach(function(el){
+      el.style.strokeDasharray=total; el.style.strokeDashoffset=total;
+      el.style.transition="stroke-dashoffset .45s ease";
+    });
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      knock.style.strokeDashoffset=0; pen.style.strokeDashoffset=0;
+    }));
+  }
+}
+
+/* ================= keyboard ================= */
+boardEl.addEventListener("keydown", function(e){
+  if(gameOver) return;
+  const k=e.key;
+  if(k==="Escape"){ e.preventDefault(); audio(); userDeselect(); return; }
+  if(k!=="ArrowUp"&&k!=="ArrowDown"&&k!=="ArrowLeft"&&k!=="ArrowRight"&&k!=="Enter"&&k!==" ") return;
+  e.preventDefault(); audio(); cursorShown=true;
+  if(k==="Enter"||k===" "){
+    if(activeCell===cursor){ stampActive(); }
+    else if(owner[cursor]===null){ if(activeCell!==null&&strokes.length===0) clearActive();
+                                   if(activeCell===null) selectCell(cursor); else Sound.nudge(); }
+    else Sound.nudge();
+    cursorShown=true; drawCursor(); return;
+  }
+  let r=Math.floor(cursor/3), c=cursor%3;
+  if(k==="ArrowUp") r=Math.max(0,r-1);
+  else if(k==="ArrowDown") r=Math.min(2,r+1);
+  else if(k==="ArrowLeft") c=Math.max(0,c-1);
+  else if(k==="ArrowRight") c=Math.min(2,c+1);
+  cursor=r*3+c; drawCursor();
+});
+function hideCursor(){ if(cursorShown){ cursorShown=false; drawCursor(); } }
+
+deselectBtn.addEventListener("click", function(){
+  if(deselectBtn.disabled) return;
+  audio(); userDeselect();
 });
 
-/* ---- fullscreen + intro: setup covers the board until Start; auto-exits on game end ---- */
+/* ================= round setup ================= */
+function newRound(){
+  owner=new Array(9).fill(null);
+  startingPlayer = startingPlayer ? other(startingPlayer) : "x";
+  turn=startingPlayer;
+  gameOver=false;
+  activeCell=null; strokes=[]; drawing=false; dragId=null;
+  cursor=0; cursorShown=false;
+  clearTimers();
+  for(let i=0;i<9;i++){
+    clear(guideGroups[i]); clear(markGroups[i]);
+    guideGroups[i].style.opacity=""; guideGroups[i].style.transition="";
+    cellGroups[i].setAttribute("class","ink");
+  }
+  clear(strikeG);
+  document.getElementById("banner").classList.add("hidden");
+  buildHits(); drawFx();
+}
+
+buildStatic();
+buildCells();
+newRound();
+window.__ttt={ get owner(){return owner;}, get turn(){return turn;}, get activeCell(){return activeCell;},
+  get gameOver(){return gameOver;}, get strokes(){return strokes;},
+  selectCell, stampActive, userDeselect, newRound, outcome, winningLine };   // test hook
+
+/* ---- fullscreen + intro ---- */
 window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
 window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
 window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
 (function(){
   var g=function(id){ return document.getElementById(id); };
-  var b=g("fsbtn");
-  if(b){
-    var sync=function(){ b.classList.toggle("fs-on", !!window.fsElement()); };
-    document.addEventListener("fullscreenchange", sync);
-    document.addEventListener("webkitfullscreenchange", sync);
-    b.onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+  var btns=document.querySelectorAll(".fsbtn");
+  if(btns.length){
+    var sync=function(){ var on=!!window.fsElement();
+      for(var i=0;i<btns.length;i++) btns[i].classList.toggle("fs-on", on); };
+    document.addEventListener("fullscreenchange", sync); document.addEventListener("webkitfullscreenchange", sync);
+    for(var j=0;j<btns.length;j++) btns[j].onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
   }
-  var sb=g("startbtn"); if(sb){ sb.onclick=function(){ var s=g("setup"); if(s) s.classList.add("hidden"); }; }
-  var ag=g("again"); if(ag){ ag.addEventListener("click", function(){ var s=g("setup"); if(s) s.classList.remove("hidden"); }); }
-  var bn=g("banner");
-  if(bn && window.MutationObserver){
-    new MutationObserver(function(){ if(bn.classList.contains("show")) window.fsExit(); }).observe(bn,{attributes:true,attributeFilter:["class"]});
-  }
+  var ab=g("againbtn"); if(ab){ ab.onclick=function(){ audio(); g("banner").classList.add("hidden"); g("setup").classList.remove("hidden"); }; }
+  var sb=g("startbtn"); if(sb){ sb.onclick=function(){ audio(); newRound(); var s=g("setup"); if(s) s.classList.add("hidden"); boardEl.focus(); }; }
+})();
 })();
 </script>
 </body>

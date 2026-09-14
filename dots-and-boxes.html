@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Dots and Boxes</title>
+<style>
+  :root{
+    --gold:#ffd75e; --text:#e9e3d4; --text-dim:#a59c86; --brass:#b9a978;
+    --pad:clamp(14px,3vw,32px);
+    /* Per-player ink, the tic-tac-toe pattern: one custom property per seat, applied
+       by a class on the drawing group so every ink surface (edges, guide, handwriting,
+       ghost, score pip) reads its colour from one place.
+       Measured on the cream sheet: red 3.47, blue 6.85, and 1.97 against each other —
+       a hue separation rather than a value one, which holds up under simulated colour
+       blindness at worst-case dE 80.0. The old cream ink measured 1.10 on this surface
+       and had to go; that coupling is why the paper and the pens changed together. */
+    --ink-a:#c64a3b;   /* first player draws in red  */
+    --ink-b:#24467e;   /* second player draws in blue */
+    --font-display:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
+    --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    height:100dvh; font-family:var(--font-body); color:var(--text);
+    background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    background-attachment:fixed;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:var(--pad) 16px; -webkit-tap-highlight-color:transparent; overflow:hidden;
+  }
+  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:6px; }
+
+  /* CSS owns fitting: .table takes the column, .boardwrap absorbs the leftover height,
+     and the board fills that box squarely. No chrome total is hardcoded, so the score
+     row and rail can change height freely. min-height:0 is what lets a flex item shrink. */
+  .table{ display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; flex:1; min-height:0; }
+  .boardwrap{ flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; }
+
+  /* score chips — canon card gradient; the mover's chip takes the gold border and glow */
+  .scores{ display:flex; gap:10px; justify-content:center; width:min(100%, var(--boardw, 620px)); }
+  .score{
+    flex:1 1 0; min-width:0; display:flex; align-items:center; gap:9px;
+    padding:7px 13px; border-radius:12px;
+    background:linear-gradient(160deg,#2c2620,#1c1813);
+    border:1px solid rgba(255,225,170,.14);
+    box-shadow:0 2px 6px rgba(0,0,0,.35);
+    transition:border-color .25s, box-shadow .25s;
+  }
+  .score.is-active{
+    border-color:rgba(255,215,94,.55);
+    box-shadow:0 0 0 1px rgba(255,215,94,.4), 0 0 20px rgba(205,164,52,.28), 0 2px 6px rgba(0,0,0,.35);
+  }
+  .pen{ width:14px; height:14px; flex:0 0 auto; border-radius:50%;
+        box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.32), 0 1px 2px rgba(0,0,0,.5); }
+  .pen--a{ background:radial-gradient(120% 120% at 32% 28%, #e2705f, var(--ink-a)); }
+  .pen--b{ background:radial-gradient(120% 120% at 32% 28%, #4a6ea8, var(--ink-b)); }
+  .who{ font-family:var(--font-display); font-size:14.5px; color:#d9cfb6;
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .num{ margin-left:auto; font-family:var(--font-display); font-size:19px; color:#ffe9a8; font-weight:700; }
+
+  /* board */
+  #board{
+    width:auto; height:auto; aspect-ratio:1/1;
+    max-width:min(100%,620px); max-height:min(100%,620px); display:block;
+    filter:drop-shadow(0 12px 34px rgba(0,0,0,.55));
+    touch-action:none;                 /* we own the gesture; 'manipulation' lets the browser
+                                          claim a pan mid-drag and fire pointercancel */
+    -webkit-touch-callout:none;        /* iOS long-press callout would interrupt a held drag */
+    -webkit-user-select:none; user-select:none;
+  }
+
+  /* ---- ink: colour by seat class, exactly the tic-tac-toe arrangement ----
+     .guide is the traced-in guess of your initials; .marks is what you actually drew. */
+  /* .26 was tuned for bright ink glowing on dark wood. Dark ink laid on a pale sheet
+     needs more body to read as a guide at all: .34 measures 1.51 red / 1.74 blue. */
+  .ink .guide path{ fill:none; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; opacity:.34; }
+  .ink.a .guide path{ stroke:var(--ink-a); }
+  .ink.b .guide path{ stroke:var(--ink-b); }
+  /* Ink on paper does not glow. The old drop-shadows were coloured blooms that read as
+     light sources on dark wood; on the sheet they become a soft shadow under the nib. */
+  .ink .marks path{ fill:none; stroke-width:8.5; stroke-linecap:round; stroke-linejoin:round;
+                    filter:drop-shadow(0 1px 1.2px rgba(58,44,26,.34)); }
+  .ink.a .marks path{ stroke:var(--ink-a); }
+  .ink.b .marks path{ stroke:var(--ink-b); }
+
+  .edge{ stroke-linecap:round; filter:drop-shadow(0 1px 1.2px rgba(58,44,26,.32)); }
+  .edge.a{ stroke:var(--ink-a); }
+  .edge.b{ stroke:var(--ink-b); }
+  .ghostline{ stroke-linecap:round; }
+  .ghostline.a{ stroke:var(--ink-a); }
+  .ghostline.b{ stroke:var(--ink-b); }
+  .boxfill.a{ fill:var(--ink-a); }
+  .boxfill.b{ fill:var(--ink-b); }
+
+  .rail{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .status{ font-family:var(--font-display); font-size:15px; color:#d9cfb6; text-align:center; min-height:20px; }
+  .status b{ color:#ffe9a8; font-weight:700; }
+
+  .deselect{ margin-top:2px; display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border-radius:999px;
+    font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.03em; color:#a59c86;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); cursor:pointer;
+    -webkit-appearance:none; appearance:none; opacity:0; pointer-events:none;
+    transition:opacity .2s ease, color .2s, border-color .2s, background .2s; }
+  .deselect.show{ opacity:1; pointer-events:auto; }
+  .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
+  .deselect svg{ width:12px; height:12px; }
+  @media (prefers-reduced-motion:reduce){ .deselect{ transition:none; } }
+
+  /* Reveals animate FROM hidden TO the natural state, so the natural state is visible.
+     The old form set stroke-dashoffset to the full length inline and relied on a double
+     requestAnimationFrame to put it back to zero — if that callback never landed, the
+     line stayed permanently invisible. A keyframe cannot fail that way. */
+  @keyframes drawIn{ from{ stroke-dashoffset:var(--len); } to{ stroke-dashoffset:0; } }
+  .drawIn{ stroke-dasharray:var(--len); animation:drawIn .24s ease-out; }
+  @media (prefers-reduced-motion:reduce){ .drawIn{ animation:none; } }
+  @keyframes pulseGlow{ 0%,100%{opacity:.22} 50%{opacity:.68} }
+  @keyframes pulseRing{ 0%,100%{opacity:.45} 50%{opacity:1.0} }
+  .pulseGlow{ animation:pulseGlow 1.5s ease-in-out infinite; }
+  .pulseRing{ animation:pulseRing 1.5s ease-in-out infinite; }
+  @media (prefers-reduced-motion:reduce){ .pulseGlow, .pulseRing{ animation:none !important; } }
+
+  @media (orientation: landscape) and (max-height: 560px){
+    .table{ gap:8px; }
+    .score{ padding:5px 11px; }
+  }
+
+  .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:50; -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  .overlay.hidden{ display:none; }
+  .card{ background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:30px 34px; max-width:400px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.6); }
+  .card h1{ font-family:var(--font-display); font-size:28px; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
+  .card .sub{ color:var(--brass); font-size:14px; margin-bottom:12px; }
+  .card p{ color:var(--text); font-size:13.5px; line-height:1.5; margin:0 0 6px; }
+  button{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  button:hover{ border-color:rgba(255,215,94,0.85); }
+  button:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
+  .start{ margin-top:8px; }
+
+  /* setup: who is holding which pen */
+  .pens{ display:flex; gap:10px; justify-content:center; margin:14px 0 4px; }
+  .pens label{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:6px;
+               font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
+  .pens input{
+    width:100%; max-width:96px; text-align:center; text-transform:uppercase;
+    font-family:var(--font-display); font-size:20px; font-weight:700; letter-spacing:.08em;
+    padding:7px 6px; border-radius:9px; color:#ffe9a8;
+    background:rgba(0,0,0,.32); border:1.5px solid rgba(255,215,94,.28);
+    -webkit-appearance:none; appearance:none;
+  }
+  .pens input:focus{ outline:2px solid var(--gold); outline-offset:2px; }
+  .pens .swatch{ width:100%; max-width:96px; height:3px; border-radius:2px; }
+  .pens .swatch--a{ background:var(--ink-a); }
+  .pens .swatch--b{ background:var(--ink-b); }
+
+  .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px; border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .fsbtn .fs-exit{ display:none; }
+  .fsbtn.fs-on .fs-enter{ display:none; }
+  .fsbtn.fs-on .fs-exit{ display:block; }
+  .gicon-hero{display:flex;justify-content:center;margin:6px 0 16px;}
+  .gicon-hero svg{width:88px;height:88px;}
+</style>
+</head>
+<body>
+<div class="overlay" id="setup">
+  <button class="fsbtn" id="fsbtn" type="button">
+    <svg class="fs-enter" viewBox="0 0 24 24"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="card">
+    <h1>Dots and Boxes</h1>
+    <p class="sub">Close a box, sign it, go again</p>
+    <p>Drag from one dot to a neighbouring dot to draw a line. Close the fourth side of a box and it is yours — write your initials in it and take another turn. Most boxes when the grid is full wins.</p>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="7" y="7" width="50" height="50" rx="5" fill="#d8a24e"/><rect x="17" y="17" width="15" height="15" fill="#4a3016"/><g stroke="#4a3016" stroke-width="2.6" stroke-linecap="round"><path d="M17 17 H32"/><path d="M32 17 V32"/><path d="M32 32 H17"/><path d="M17 32 V17"/><path d="M32 32 H47"/><path d="M32 47 H47"/><path d="M47 17 V32"/></g><g fill="#4a3016"><circle cx="17" cy="17" r="3.1"/><circle cx="32" cy="17" r="3.1"/><circle cx="47" cy="17" r="3.1"/><circle cx="17" cy="32" r="3.1"/><circle cx="32" cy="32" r="3.1"/><circle cx="47" cy="32" r="3.1"/><circle cx="17" cy="47" r="3.1"/><circle cx="32" cy="47" r="3.1"/><circle cx="47" cy="47" r="3.1"/></g></svg></div>
+    <div class="pens">
+      <label>Red pen
+        <input id="name-a" type="text" maxlength="2" value="A" autocomplete="off" spellcheck="false">
+        <span class="swatch swatch--a"></span>
+      </label>
+      <label>Blue pen
+        <input id="name-b" type="text" maxlength="2" value="B" autocomplete="off" spellcheck="false">
+        <span class="swatch swatch--b"></span>
+      </label>
+    </div>
+    <button class="start" id="startbtn" type="button">Start Game</button>
+  </div>
+</div>
+
+<main class="table">
+  <div class="scores">
+    <div class="score" id="score-a">
+      <span class="pen pen--a"></span><span class="who" id="who-a">A</span><span class="num" id="num-a">0</span>
+    </div>
+    <div class="score" id="score-b">
+      <span class="pen pen--b"></span><span class="who" id="who-b">B</span><span class="num" id="num-b">0</span>
+    </div>
+  </div>
+
+  <div class="boardwrap">
+  <svg id="board" viewBox="0 0 620 620" xmlns="http://www.w3.org/2000/svg" tabindex="0">
+    <defs>
+      <linearGradient id="wood" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#855f3a"/><stop offset="38%" stop-color="#5e4128"/><stop offset="100%" stop-color="#311e0d"/></linearGradient>
+      <pattern id="grain" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(63)"><rect width="6.5" height="13" fill="#000000" fill-opacity="0.10"/><rect x="6.5" width="6.5" height="13" fill="#fff0d2" fill-opacity="0.03"/></pattern>
+      <radialGradient id="glowhalo" cx="50%" cy="50%" r="50%"><stop offset="35%" stop-color="#ffc846" stop-opacity="0.7"/><stop offset="100%" stop-color="#ffc846" stop-opacity="0"/></radialGradient>
+      <!-- The play surface is a sheet of paper inlaid in the wood, not a lighter wood.
+           Canon covers a light plank palette but has no entry for paper, so this is a new
+           surface: a directional hatch would read as grain, and the tooth below is
+           deliberately non-directional to say cartridge rather than timber. -->
+      <linearGradient id="paper" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#f2e9d4"/><stop offset="45%" stop-color="#e8dcc0"/><stop offset="100%" stop-color="#d6c7a6"/></linearGradient>
+      <pattern id="tooth" patternUnits="userSpaceOnUse" width="7" height="7">
+        <circle cx="1.6" cy="1.9" r="0.85" fill="#8a7a58" fill-opacity="0.10"/>
+        <circle cx="5.1" cy="4.6" r="0.7" fill="#6d5f42" fill-opacity="0.08"/>
+        <circle cx="3.4" cy="6.2" r="0.55" fill="#fffdf4" fill-opacity="0.30"/>
+      </pattern>
+      <!-- Dots invert with the surface: pencil on paper, not ivory on dark wood. -->
+      <radialGradient id="dotFace" cx="34%" cy="30%" r="72%"><stop offset="0%" stop-color="#6b6152"/><stop offset="55%" stop-color="#4a4238"/><stop offset="100%" stop-color="#2b261f"/></radialGradient>
+      <radialGradient id="dotDead" cx="34%" cy="30%" r="72%"><stop offset="0%" stop-color="#c4bba6"/><stop offset="55%" stop-color="#b0a68f"/><stop offset="100%" stop-color="#9a8f78"/></radialGradient>
+    </defs>
+    <g id="staticG"></g>
+    <g id="fillG"></g>
+    <g id="lineG"></g>
+    <g id="inkG"></g>
+    <g id="dotG"></g>
+    <g id="fxG"></g>
+    <g id="cursorG"></g>
+    <g id="ghostG" pointer-events="none"></g>
+    <g id="hitG"></g>
+  </svg>
+  </div>
+
+  <div class="rail">
+    <div class="status" id="status"></div>
+    <button class="deselect" id="deselect" type="button" disabled>
+      <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+      Deselect
+    </button>
+  </div>
+</main>
+
+<div class="overlay hidden" id="banner">
+  <button class="fsbtn" id="fsbtn-end" type="button">
+    <svg class="fs-enter" viewBox="0 0 24 24"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="card">
+    <h1 id="bannertitle"></h1>
+    <p id="bannersub"></p>
+    <button class="start" id="againbtn" type="button">Play Again</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+/* ================= geometry =================
+   Six dots a side, so five gaps a side: 25 boxes and 60 edges. CELL is 100 so a box's
+   local drawing space is exactly 0..100 — the same space tic-tac-toe draws its marks in,
+   which lets the stroke code below be lifted across unchanged. */
+const DOTS=6, GAPS=DOTS-1, VB=620, M=60, CELL=(VB-M*2)/GAPS;   // 100
+const EDGE_COUNT = DOTS*GAPS*2;      // 60
+const BOX_COUNT  = GAPS*GAPS;        // 25
+const SVGNS="http://www.w3.org/2000/svg";
+function E(t,a,p){ const e=document.createElementNS(SVGNS,t); if(a) for(const k in a) e.setAttribute(k,a[k]); if(p)p.appendChild(e); return e; }
+function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+function DX(c){ return M + c*CELL; }          // dot centre x
+function DY(r){ return M + r*CELL; }          // dot centre y
+function BX(c){ return M + c*CELL; }          // box top-left x
+function BY(r){ return M + r*CELL; }
+const DOT_R = CELL*0.085;
+const LINE_W = CELL*0.075;
+const PALE_BACKING = "#c9762a";   // canon's burnt orange, under gold on a pale surface
+
+const PAUSE = 320;        // after a box is won, before the guide traces in
+const COMMIT_IDLE = 850;  // after the last stroke, before the initials commit
+const AUTO_STAMP = 2800;  // untouched box: stamp the printed initials and move on
+const MIN_LEN = 18;       // minimum drawn length (0..100 space) to count as handwriting
+const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+/* ================= DOM ================= */
+const boardEl=document.getElementById("board");
+const staticG=document.getElementById("staticG");
+const fillG=document.getElementById("fillG");
+const lineG=document.getElementById("lineG");
+const inkG=document.getElementById("inkG");
+const dotG=document.getElementById("dotG");
+const fxG=document.getElementById("fxG");
+const cursorG=document.getElementById("cursorG");
+const ghostG=document.getElementById("ghostG");
+const hitG=document.getElementById("hitG");
+const statusEl=document.getElementById("status");
+const deselectBtn=document.getElementById("deselect");
+const scoreEls={ a:document.getElementById("score-a"), b:document.getElementById("score-b") };
+const whoEls={ a:document.getElementById("who-a"), b:document.getElementById("who-b") };
+const numEls={ a:document.getElementById("num-a"), b:document.getElementById("num-b") };
+
+/* ================= state ================= */
+let H, V, OWN, score, names, turn, selected, phase, gameOver;
+let claimQueue=[], claimBox=null, claimGroup=null, claimGuide=null, claimMarks=null;
+let strokes=[], drawing=false, armAt=0;
+let ghostTimer=null, commitTimer=null, autoTimer=null;
+let cursor={r:0,c:0}, cursorShown=false;
+
+/* ================= sound (synth, no files) ================= */
+let actx=null, master=null;
+function audio(){ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+    actx=new AC(); master=actx.createGain(); master.gain.value=0.45; master.connect(actx.destination); }
+  if(actx.state==="suspended") actx.resume(); return actx; }
+function tone(o){ const ctx=audio(); if(!ctx) return; const t0=ctx.currentTime+(o.delay||0);
+  const osc=ctx.createOscillator(), g=ctx.createGain(); osc.type=o.type||"triangle"; osc.frequency.setValueAtTime(o.freq,t0);
+  if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to,t0+o.dur);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(o.vol,t0+(o.attack||0.005)); g.gain.exponentialRampToValueAtTime(0.0001,t0+o.dur);
+  osc.connect(g).connect(master); osc.start(t0); osc.stop(t0+o.dur+0.03); }
+function noise(o){ const ctx=audio(); if(!ctx) return; const t0=ctx.currentTime+(o.delay||0);
+  const len=Math.floor(ctx.sampleRate*o.dur); const buf=ctx.createBuffer(1,len,ctx.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1; const src=ctx.createBufferSource(); src.buffer=buf;
+  const filt=ctx.createBiquadFilter(); filt.type=o.filter||"bandpass"; filt.frequency.value=o.freq||1400; filt.Q.value=o.q||0.8;
+  const g=ctx.createGain(); g.gain.setValueAtTime(o.vol,t0); g.gain.exponentialRampToValueAtTime(0.0001,t0+o.dur);
+  src.connect(filt).connect(g).connect(master); src.start(t0); src.stop(t0+o.dur+0.02); }
+const Sound={
+  select(){ tone({freq:430,to:520,dur:0.06,vol:0.12,type:"sine"}); },
+  deselect(){ tone({freq:340,to:230,dur:0.09,vol:0.12,type:"sine"}); },
+  line(){ tone({freq:210,to:150,dur:0.10,vol:0.34,type:"triangle"}); noise({freq:3000,dur:0.05,vol:0.13,filter:"highpass"}); },
+  tick(){ tone({freq:600,dur:0.03,vol:0.06,type:"sine"}); },
+  box(){ [523,659,784].forEach((f,i)=>tone({freq:f,dur:0.34,vol:0.24,type:"triangle",delay:i*0.06,attack:0.01})); },
+  commit(){ tone({freq:200,to:120,dur:0.13,vol:0.42,type:"triangle"}); noise({freq:2200,dur:0.02,vol:0.12,filter:"highpass"});
+            tone({freq:520,dur:0.18,vol:0.12,type:"sine",delay:0.03}); },
+  win(){ [523,659,784,1047].forEach((f,i)=>tone({freq:f,dur:0.55,vol:0.32,type:"triangle",delay:i*0.1,attack:0.01})); tone({freq:262,dur:0.8,vol:0.2,type:"sine",delay:0.1}); },
+  nudge(){ tone({freq:96,to:72,dur:0.12,vol:0.2,type:"sine"}); }
+};
+
+/* ==== PURE LOGIC START ====
+   No DOM in here. The edge/box arithmetic is extracted verbatim by the test harness,
+   so this block must stay free of anything a bare interpreter cannot run. */
+const other = s => s==="a" ? "b" : "a";
+function inDots(r,c){ return r>=0&&r<DOTS&&c>=0&&c<DOTS; }
+function inBoxes(r,c){ return r>=0&&r<GAPS&&c>=0&&c<GAPS; }
+
+/* h[r][c] joins dot(r,c)-dot(r,c+1)   — r 0..5, c 0..4
+   v[r][c] joins dot(r,c)-dot(r+1,c)   — r 0..4, c 0..5 */
+function edgeBetween(a,b){
+  if(!a||!b) return null;
+  if(a.r===b.r && Math.abs(a.c-b.c)===1) return { t:"h", r:a.r, c:Math.min(a.c,b.c) };
+  if(a.c===b.c && Math.abs(a.r-b.r)===1) return { t:"v", r:Math.min(a.r,b.r), c:a.c };
+  return null;                                   // not adjacent: diagonals are not edges
+}
+function edgeOwner(H,V,e){ return e.t==="h" ? H[e.r][e.c] : V[e.r][e.c]; }
+function edgeFree(H,V,a,b){ const e=edgeBetween(a,b); return !!e && !edgeOwner(H,V,e); }
+
+/* box(r,c) is bounded by h[r][c] top, h[r+1][c] bottom, v[r][c] left, v[r][c+1] right */
+function boxSides(r,c){ return [["h",r,c],["h",r+1,c],["v",r,c],["v",r,c+1]]; }
+function boxComplete(H,V,r,c){ return !!(H[r][c] && H[r+1][c] && V[r][c] && V[r][c+1]); }
+/* the one or two boxes an edge borders */
+function boxesTouching(e){
+  const out = e.t==="h" ? [{r:e.r-1,c:e.c},{r:e.r,c:e.c}]
+                        : [{r:e.r,c:e.c-1},{r:e.r,c:e.c}];
+  return out.filter(b=>inBoxes(b.r,b.c));
+}
+function freeNeighbours(H,V,r,c){
+  const out=[];
+  [[0,1],[0,-1],[1,0],[-1,0]].forEach(function(d){
+    const nr=r+d[0], nc=c+d[1];
+    if(inDots(nr,nc) && edgeFree(H,V,{r,c},{r:nr,c:nc})) out.push({r:nr,c:nc});
+  });
+  return out;
+}
+function edgesDrawn(H,V){
+  let n=0;
+  for(let r=0;r<DOTS;r++) for(let c=0;c<GAPS;c++) if(H[r][c]) n++;
+  for(let r=0;r<GAPS;r++) for(let c=0;c<DOTS;c++) if(V[r][c]) n++;
+  return n;
+}
+function newEdgeGrids(){
+  return {
+    H: Array.from({length:DOTS},()=>new Array(GAPS).fill(null)),
+    V: Array.from({length:GAPS},()=>new Array(DOTS).fill(null))
+  };
+}
+/* Apply an edge and report which boxes it closed. Returns the boxes newly owned by `who`. */
+function applyEdge(H,V,OWN,e,who){
+  if(e.t==="h") H[e.r][e.c]=who; else V[e.r][e.c]=who;
+  const won=[];
+  boxesTouching(e).forEach(function(b){
+    if(!OWN[b.r][b.c] && boxComplete(H,V,b.r,b.c)){ OWN[b.r][b.c]=who; won.push(b); }
+  });
+  return won;
+}
+/* ==== PURE LOGIC END ==== */
+
+/* ---- single-stroke letterforms, drawn in a 10 wide x 14 tall box ----
+   Polylines, not glyphs from a font: the guide has to be traceable with
+   stroke-dasharray, and a length computed from the points is exact. */
+const GLYPH={
+ A:"0,14 5,0 10,14|2,9.4 8,9.4",
+ B:"0,0 0,14|0,0 6,0 8.4,1.6 8.4,5.4 6,7 0,7|0,7 7,7 9.2,8.6 9.2,12.4 7,14 0,14",
+ C:"9.6,3 8,1 5,0 2,1.4 0.4,4.4 0.4,9.6 2,12.6 5,14 8,13 9.6,11",
+ D:"0,0 0,14|0,0 5,0 8,2 9.6,5 9.6,9 8,12 5,14 0,14",
+ E:"9,0 0,0 0,14 9,14|0,7 7,7",
+ F:"9,0 0,0 0,14|0,7 7,7",
+ G:"9.6,3 8,1 5,0 2,1.4 0.4,4.4 0.4,9.6 2,12.6 5,14 8,13 9.6,10.6 9.6,7.6 6,7.6",
+ H:"0,0 0,14|10,0 10,14|0,7 10,7",
+ I:"2,0 8,0|5,0 5,14|2,14 8,14",
+ J:"8,0 8,10.4 6.6,13.4 4,14 1.6,13 0.4,10.6",
+ K:"0,0 0,14|9.4,0 0,8|3.6,5.2 10,14",
+ L:"0,0 0,14 9,14",
+ M:"0,14 0,0 5,8 10,0 10,14",
+ N:"0,14 0,0 10,14 10,0",
+ O:"5,0 2,1.4 0.4,4.4 0.4,9.6 2,12.6 5,14 8,12.6 9.6,9.6 9.6,4.4 8,1.4 5,0",
+ P:"0,14 0,0 6,0 8.6,1.6 9,4 8,6.4 6,8 0,8",
+ Q:"5,0 2,1.4 0.4,4.4 0.4,9.6 2,12.6 5,14 8,12.6 9.6,9.6 9.6,4.4 8,1.4 5,0|6,10 10,14",
+ R:"0,14 0,0 6,0 8.6,1.6 9,4 8,6.4 6,8 0,8|5.6,8 10,14",
+ S:"9.4,2.4 7,0.5 3.4,0.5 1,2 1,5 3,6.4 7,7.5 9,9 9,12 6.5,13.8 3,13.8 0.6,11.4",
+ T:"0,0 10,0|5,0 5,14",
+ U:"0,0 0,10 1.6,13 5,14 8.4,13 10,10 10,0",
+ V:"0,0 5,14 10,0",
+ W:"0,0 2.5,14 5,5 7.5,14 10,0",
+ X:"0,0 10,14|10,0 0,14",
+ Y:"0,0 5,7 10,0|5,7 5,14",
+ Z:"0,0 10,0 0,14 10,14",
+ "0":"5,0 2,1.6 0.5,4.6 0.5,9.4 2,12.4 5,14 8,12.4 9.5,9.4 9.5,4.6 8,1.6 5,0",
+ "1":"1.8,3 5,0 5,14|2,14 8,14",
+ "2":"0.6,3 3,0.5 7,0.5 9.4,3 9,6 0.6,14 9.6,14",
+ "3":"0.6,2 3.6,0 7.4,0.6 9,3 7.4,6.4 4.4,7|4.4,7 8,7.4 9.5,10 8,13 4,14 1,12.4",
+ "4":"7.5,14 7.5,0 0,10 10,10",
+ "5":"9,0 1.6,0 0.6,6 4,5 7.4,5.6 9.4,8 9,12 6,14 2,13.4 0.6,12",
+ "6":"9,1 5,0 2,2 0.5,6 0.5,10.4 2.5,13.4 6,14 9,12 9.5,9 7.5,6.4 4,6 1,8",
+ "7":"0,0 10,0 4,14",
+ "8":"5,7 2,5.4 1.5,3 3,0.7 6.5,0.7 8.5,3 8,5.4 5,7 2,8.6 1,11 2.5,13.5 6,14 9,12.5 9.5,9.5 8,8 5,7",
+ "9":"1,13 5,14 8,12 9.5,8 9.5,3.6 7.5,0.5 4,0 1,2 0.5,5 2.5,7.5 6,8 9,6"
+};
+const GW=10, GH=14, GGAP=3;
+/* Lay a name out centred in a box's local 0..100 space. Returns [{d,len}]. */
+function initialPaths(name){
+  const chars=String(name).split("").filter(ch=>GLYPH[ch]);
+  if(!chars.length) return [];
+  const blockW = chars.length*GW + (chars.length-1)*GGAP;
+  const s = Math.min(46/GH, 64/blockW);                 // fit by height, then by width
+  const x0 = 50 - blockW*s/2, y0 = 50 - GH*s/2;
+  const out=[];
+  chars.forEach(function(ch,i){
+    const ox = x0 + i*(GW+GGAP)*s;
+    GLYPH[ch].split("|").forEach(function(poly){
+      const pts = poly.split(" ").map(function(pair){
+        const xy = pair.split(",");
+        return { x: ox + parseFloat(xy[0])*s, y: y0 + parseFloat(xy[1])*s };
+      });
+      let d="M "+pts[0].x.toFixed(2)+" "+pts[0].y.toFixed(2), len=0;
+      for(let k=1;k<pts.length;k++){
+        d += " L "+pts[k].x.toFixed(2)+" "+pts[k].y.toFixed(2);
+        len += Math.hypot(pts[k].x-pts[k-1].x, pts[k].y-pts[k-1].y);
+      }
+      out.push({ d:d, len:len });
+    });
+  });
+  return out;
+}
+
+/* ================= static board (built ONCE) ================= */
+const INSET=M-26, INSET_W=VB-INSET*2;      // the sheet clears the outer dots by 26 units
+function buildStatic(){
+  clear(staticG);
+  E("rect",{x:0,y:0,width:VB,height:VB,rx:22,fill:"url(#wood)"},staticG);
+  E("rect",{x:0,y:0,width:VB,height:VB,rx:22,fill:"url(#grain)"},staticG);
+  E("rect",{x:14,y:14,width:VB-28,height:VB-28,rx:16,fill:"none",stroke:"#ffe1aa","stroke-opacity":0.10,"stroke-width":1.5},staticG);
+  /* the sheet, inlaid: a cut shadow beneath it, the paper, its tooth, a lit lip and a dark edge */
+  E("rect",{x:INSET-3,y:INSET-3,width:INSET_W+6,height:INSET_W+6,rx:13,fill:"#000000","fill-opacity":0.42},staticG);
+  E("rect",{x:INSET,y:INSET,width:INSET_W,height:INSET_W,rx:10,fill:"url(#paper)"},staticG);
+  E("rect",{x:INSET,y:INSET,width:INSET_W,height:INSET_W,rx:10,fill:"url(#tooth)"},staticG);
+  E("rect",{x:INSET+1.2,y:INSET+1.2,width:INSET_W-2.4,height:INSET_W-2.4,rx:9,fill:"none",stroke:"#ffffff","stroke-opacity":0.22,"stroke-width":1.6},staticG);
+  E("rect",{x:INSET,y:INSET,width:INSET_W,height:INSET_W,rx:10,fill:"none",stroke:"#20130a","stroke-opacity":0.5,"stroke-width":2},staticG);
+  /* faint ruled channels showing where a line may go — now grey on paper, not near-black on wood */
+  for(let r=0;r<DOTS;r++) for(let c=0;c<GAPS;c++)
+    E("line",{x1:DX(c),y1:DY(r),x2:DX(c+1),y2:DY(r),stroke:"#6d6250","stroke-opacity":0.30,"stroke-width":2,"stroke-linecap":"round"},staticG);
+  for(let r=0;r<GAPS;r++) for(let c=0;c<DOTS;c++)
+    E("line",{x1:DX(c),y1:DY(r),x2:DX(c),y2:DY(r+1),stroke:"#6d6250","stroke-opacity":0.30,"stroke-width":2,"stroke-linecap":"round"},staticG);
+}
+
+/* ================= append-only board record =================
+   Fills, lines and ink are only ever added, never recomputed, so a player's handwriting
+   cannot be wiped by a later redraw. Only setupGame() clears these layers. */
+function paintBox(r,c,who){
+  E("rect",{x:BX(c),y:BY(r),width:CELL,height:CELL,"fill-opacity":0.16,"class":"boxfill "+who},fillG);
+}
+function paintEdge(e,who){
+  const a = e.t==="h" ? {x:DX(e.c),y:DY(e.r)} : {x:DX(e.c),y:DY(e.r)};
+  const b = e.t==="h" ? {x:DX(e.c+1),y:DY(e.r)} : {x:DX(e.c),y:DY(e.r+1)};
+  const ln=E("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,"stroke-width":LINE_W,"class":"edge "+who},lineG);
+  if(!reduceMotion){
+    ln.style.setProperty("--len", Math.hypot(b.x-a.x,b.y-a.y));
+    ln.classList.add("drawIn");
+  }
+}
+
+/* ================= dots ================= */
+function renderDots(){
+  clear(dotG);
+  for(let r=0;r<DOTS;r++) for(let c=0;c<DOTS;c++){
+    const live = !gameOver && freeNeighbours(H,V,r,c).length>0;
+    const g=E("g",{transform:"translate("+DX(c)+" "+DY(r)+")"},dotG);
+    E("circle",{cx:0,cy:0,r:DOT_R,fill:live?"url(#dotFace)":"url(#dotDead)"},g);
+    E("circle",{cx:0,cy:0,r:DOT_R,fill:"none",stroke:"#241708","stroke-opacity":live?0.32:0.15,"stroke-width":DOT_R*0.20},g);
+  }
+}
+/* One transparent disc per live dot, purely for the cursor:pointer affordance. Pointer
+   handling lives on the board root and hit-tests by coordinate, so rebuilding this layer
+   mid-gesture cannot strand a drag in progress. */
+function buildHits(){
+  clear(hitG);
+  if(gameOver||phase!=="line") return;
+  for(let r=0;r<DOTS;r++) for(let c=0;c<DOTS;c++){
+    if(!freeNeighbours(H,V,r,c).length) continue;
+    E("circle",{cx:DX(c),cy:DY(r),r:CELL*0.34,fill:"transparent",style:"cursor:pointer"},hitG);
+  }
+}
+
+/* ================= selection-dependent layers (redrawn on a press) =================
+   Canon's marker grammar, with one stated departure. A dot is "movable" whenever any of
+   its edges is still free, which at the start of a game is all thirty-six of them; haloing
+   and pulsing every dot would light the whole board and tell the player nothing. So the
+   pulse is spent where it carries information — the legal destinations of the selected
+   dot — and the standing read of what is still playable is carried by the dots themselves,
+   which go dark and lose their pointer cursor once all their edges are drawn. */
+function drawFx(){
+  clear(fxG);
+  const showDeselect = !!selected && phase==="line" && !gameOver;
+  deselectBtn.classList.toggle("show", showDeselect);
+  deselectBtn.disabled = !showDeselect;
+
+  if(selected && !gameOver){
+    E("circle",{cx:DX(selected.c),cy:DY(selected.r),r:DOT_R*2.6,fill:"url(#glowhalo)"},fxG);
+    if(isPaleCell()) E("circle",{cx:DX(selected.c),cy:DY(selected.r),r:DOT_R*1.9,fill:"none",stroke:PALE_BACKING,"stroke-width":7.5},fxG);
+    E("circle",{cx:DX(selected.c),cy:DY(selected.r),r:DOT_R*1.9,fill:"none",stroke:"#ffd75e","stroke-width":4,opacity:0.97},fxG);
+    freeNeighbours(H,V,selected.r,selected.c).forEach(n=>bullseye(DX(n.c),DY(n.r)));
+  }
+  drawCursor();
+  updateStatus();
+}
+function bullseye(x,y){
+  E("circle",{cx:x,cy:y,r:CELL*0.20,fill:"url(#glowhalo)",opacity:0.5,"class":"pulseGlow"},fxG);
+  if(isPaleCell()) E("circle",{cx:x,cy:y,r:CELL*0.155,fill:PALE_BACKING,"fill-opacity":0.95},fxG);
+  E("circle",{cx:x,cy:y,r:CELL*0.135,fill:"none",stroke:"#ffd75e","stroke-width":3,opacity:0.96},fxG);
+  E("circle",{cx:x,cy:y,r:CELL*0.05,fill:"#ffd75e",opacity:0.96},fxG);
+}
+/* Canon's pale-square rule: the board declares which cells are pale and every marker draw
+   site consults it. The whole play surface is now the sheet, so this is true everywhere —
+   gold measures 1.02 on bare paper, the same figure canon records for riptide's yellow
+   wash, and a claimed box only lifts it to 1.18 (red) or 1.26 (blue), still far under
+   readable. The backing carries the contrast at 2.53; the ring and centre stay gold,
+   because the colour is what the marker means. */
+function isPaleCell(){ return true; }
+function drawCursor(){
+  clear(cursorG);
+  if(!cursorShown||gameOver||phase!=="line") return;
+  const box={ cx:DX(cursor.c), cy:DY(cursor.r), r:DOT_R*2.2, fill:"none" };
+  if(isPaleCell()) E("circle",Object.assign({},box,{stroke:PALE_BACKING,"stroke-width":6.5}),cursorG);
+  E("circle",Object.assign({},box,{stroke:"#ffd75e","stroke-width":3}),cursorG);
+}
+
+/* ================= scores / status ================= */
+function renderScores(){
+  ["a","b"].forEach(function(s){
+    whoEls[s].textContent = names[s];
+    numEls[s].textContent = score[s];
+    scoreEls[s].classList.toggle("is-active", !gameOver && turn===s);
+  });
+}
+function updateStatus(){
+  if(gameOver){ statusEl.innerHTML=""; return; }
+  const who='<b>'+names[turn]+'</b>';
+  let msg;
+  if(phase==="claim") msg = who+' \u2014 write your initials in the box.';
+  else if(selected)   msg = who+' \u2014 drag to a neighbouring dot, or tap one.';
+  else                msg = who+' to move \u2014 drag between two dots.';
+  statusEl.innerHTML=msg;
+}
+
+/* ================= the line phase ================= */
+function selectDot(r,c){
+  if(!freeNeighbours(H,V,r,c).length){ Sound.nudge(); return; }
+  selected={r,c}; cursor={r,c};
+  Sound.select(); drawFx();
+}
+function clearSelection(){ selected=null; }
+function userDeselect(){
+  if(!selected||phase!=="line"||gameOver) return;
+  clearSelection(); Sound.deselect(); drawFx();
+}
+function onDotTap(r,c){
+  if(gameOver||phase!=="line") return;
+  audio(); hideCursor();
+  if(selected){
+    if(selected.r===r&&selected.c===c) return;             // keep it selected; a drag may follow
+    if(edgeFree(H,V,selected,{r,c})){ commitEdge(selected,{r,c}); return; }
+    selectDot(r,c); return;                                // any other dot: switch to it
+  }
+  selectDot(r,c);
+}
+
+function commitEdge(a,b){
+  const e=edgeBetween(a,b);
+  if(!e || edgeOwner(H,V,e)) { Sound.nudge(); return; }
+  const mover=turn;
+  const won=applyEdge(H,V,OWN,e,mover);
+  won.forEach(function(bx){ score[mover]++; paintBox(bx.r,bx.c,mover); });
+  paintEdge(e,mover);
+  clearSelection();
+  renderDots(); renderScores();
+  if(won.length){ Sound.box(); } else { Sound.line(); }
+
+  if(won.length){
+    /* A box was closed, so the turn does not pass — but it must be signed first.
+       One line can close two boxes at once; they are signed one after the other. */
+    claimQueue = won.slice();
+    beginClaim();
+    return;
+  }
+  turn=other(turn);
+  renderScores(); buildHits(); drawFx();
+  if(edgesDrawn(H,V)>=EDGE_COUNT) finish();
+}
+
+/* ================= the claim phase (tic-tac-toe's drawing mechanic) =================
+   The box is already yours by rule; the signing is the record of it. Draw over the guide
+   and your own hand is kept. Touch nothing, or scrawl less than MIN_LEN, and the printed
+   initials are stamped instead — without that fallback a chain of eight boxes would be
+   eight compulsory signatures, and a player who simply waits would stall the game. */
+function beginClaim(){
+  phase="claim";
+  claimBox=claimQueue.shift();
+  strokes=[]; drawing=false;
+  armAt = (window.performance?performance.now():Date.now()) + PAUSE;
+  claimGroup=E("g",{transform:"translate("+BX(claimBox.c)+" "+BY(claimBox.r)+")","class":"ink "+turn},inkG);
+  claimGuide=E("g",{"class":"guide"},claimGroup);
+  claimMarks=E("g",{"class":"marks"},claimGroup);
+  clearTimers();
+  ghostTimer=window.setTimeout(showGuide, PAUSE);
+  autoTimer =window.setTimeout(stampClaim, PAUSE+AUTO_STAMP);
+  buildHits(); drawFx();
+}
+function showGuide(){
+  if(phase!=="claim"||!claimGuide) return;
+  clear(claimGuide);
+  initialPaths(names[turn]).forEach(function(p,i){
+    const el=E("path",{d:p.d},claimGuide);
+    if(reduceMotion) return;
+    el.style.setProperty("--len", p.len);
+    el.style.animationDelay=(i*0.14)+"s";
+    el.classList.add("drawIn");
+  });
+}
+/* pointer position -> 0..100 inside the box being signed */
+function boxPoint(p){
+  const x=p.x-BX(claimBox.c), y=p.y-BY(claimBox.r);
+  return { x:Math.max(0,Math.min(100,x)), y:Math.max(0,Math.min(100,y)) };
+}
+function strokeD(points){
+  if(points.length===0) return "";
+  if(points.length===1){ const p=points[0]; return "M "+p.x+" "+p.y+" L "+(p.x+0.01)+" "+p.y; }
+  let d="M "+points[0].x+" "+points[0].y;
+  for(let i=1;i<points.length-1;i++){
+    const mx=(points[i].x+points[i+1].x)/2, my=(points[i].y+points[i+1].y)/2;
+    d+=" Q "+points[i].x+" "+points[i].y+" "+mx+" "+my;
+  }
+  const last=points[points.length-1];
+  d+=" L "+last.x+" "+last.y;
+  return d;
+}
+function totalLength(list){
+  let len=0;
+  for(const s of list) for(let i=1;i<s.points.length;i++)
+    len+=Math.hypot(s.points[i].x-s.points[i-1].x, s.points[i].y-s.points[i-1].y);
+  return len;
+}
+function startStroke(p){
+  drawing=true;
+  window.clearTimeout(autoTimer); window.clearTimeout(commitTimer);
+  claimGuide.style.opacity="0.5";                 // fade the guide as the player draws over it
+  const el=E("path",{d:""},claimMarks);
+  const stroke={ points:[p], el:el };
+  strokes.push(stroke);
+  el.setAttribute("d", strokeD(stroke.points));
+  Sound.tick();
+}
+function extendStroke(p){
+  const s=strokes[strokes.length-1]; if(!s) return;
+  s.points.push(p);
+  s.el.setAttribute("d", strokeD(s.points));
+}
+function endStroke(){
+  drawing=false;
+  window.clearTimeout(commitTimer);
+  commitTimer=window.setTimeout(function(){
+    if(phase!=="claim") return;
+    if(totalLength(strokes)>=MIN_LEN) finishClaim(false);
+    else stampClaim();
+  }, COMMIT_IDLE);
+}
+/* no usable handwriting: keep the printed letterforms instead of the scrawl */
+function stampClaim(){
+  if(phase!=="claim") return;
+  clear(claimMarks); strokes=[];
+  initialPaths(names[turn]).forEach(function(p){ E("path",{d:p.d},claimMarks); });
+  finishClaim(true);
+}
+function finishClaim(stamped){
+  clearTimers();
+  drawing=false; strokes=[];
+  const guide=claimGuide;
+  if(guide){
+    guide.style.transition="opacity .3s ease"; guide.style.opacity="0";
+    window.setTimeout(function(){ if(guide.parentNode) clear(guide); }, 320);
+  }
+  claimBox=null; claimGroup=null; claimGuide=null; claimMarks=null;
+  if(!stamped) Sound.commit();
+
+  if(claimQueue.length){ beginClaim(); return; }
+  phase="line";
+  if(edgesDrawn(H,V)>=EDGE_COUNT){ finish(); return; }
+  buildHits(); drawFx();                             // same player draws again
+}
+function clearTimers(){
+  window.clearTimeout(ghostTimer); window.clearTimeout(commitTimer); window.clearTimeout(autoTimer);
+  ghostTimer=commitTimer=autoTimer=null;
+}
+
+/* ================= drag to draw =================
+   The gesture lives on the board root, not on the hit discs, and every position comes from
+   one screen->viewBox transform. Pointer capture keeps move/up arriving off-board, and the
+   ghost and the drop test read the same numbers so they cannot disagree at a boundary. */
+let dragId=null, dragFrom=null, dragGhost=null;
+
+function toBoard(e){
+  const m=boardEl.getScreenCTM(); if(!m) return null;
+  const inv=m.inverse();
+  if(window.DOMPoint) return new DOMPoint(e.clientX,e.clientY).matrixTransform(inv);
+  const sp=boardEl.createSVGPoint(); sp.x=e.clientX; sp.y=e.clientY;      // older Safari
+  return sp.matrixTransform(inv);
+}
+function dotAt(p){
+  if(!p) return null;
+  const c=Math.round((p.x-M)/CELL), r=Math.round((p.y-M)/CELL);
+  if(!inDots(r,c)) return null;
+  if(Math.hypot(p.x-DX(c), p.y-DY(r)) > CELL*0.42) return null;
+  return {r,c};
+}
+/* Where a release would land: the free neighbour in the direction the pointer has gone.
+   Taking the dominant axis rather than the nearest dot makes a short flick enough, and
+   the ghost snapping to that dot shows exactly which line is about to be drawn. */
+function dragTarget(p){
+  if(!selected||!p) return null;
+  const vx=p.x-DX(selected.c), vy=p.y-DY(selected.r);
+  if(Math.hypot(vx,vy) < CELL*0.26) return null;                    // still at home
+  let dr=0, dc=0;
+  if(Math.abs(vx)>=Math.abs(vy)) dc = vx>0?1:-1; else dr = vy>0?1:-1;
+  const n={ r:selected.r+dr, c:selected.c+dc };
+  if(!inDots(n.r,n.c)) return null;
+  if(!edgeFree(H,V,selected,n)) return null;
+  return n;
+}
+function ghostTo(x,y){
+  if(!dragGhost){
+    dragGhost=E("line",{x1:DX(dragFrom.c),y1:DY(dragFrom.r),x2:x,y2:y,
+      "stroke-width":LINE_W,opacity:0.4,"class":"ghostline "+turn},ghostG);
+    return;
+  }
+  dragGhost.style.display="";
+  dragGhost.setAttribute("x2",x); dragGhost.setAttribute("y2",y);
+}
+function ghostHide(){ if(dragGhost) dragGhost.style.display="none"; }
+function endDrag(){
+  if(dragId!==null){ try{ boardEl.releasePointerCapture(dragId); }catch(err){} }
+  dragId=null; dragFrom=null; dragGhost=null; clear(ghostG);
+}
+
+boardEl.addEventListener("pointerdown", function(e){
+  if(gameOver) return;
+  if(e.pointerType==="mouse" && e.button!==0) return;    // right/middle also opens a context menu
+  const p=toBoard(e); if(!p) return;
+
+  if(phase==="claim"){
+    if(!claimBox) return;
+    if((window.performance?performance.now():Date.now()) < armAt) return;   // guide is still tracing in
+    e.preventDefault();
+    if(dragId!==null) return;
+    dragId=e.pointerId;
+    try{ boardEl.setPointerCapture(e.pointerId); }catch(err){}
+    audio(); startStroke(boxPoint(p));
+    return;
+  }
+
+  if(dragId!==null) return;                             // ignore a second finger mid-drag
+  const dot=dotAt(p);
+  if(!dot) return;
+  e.preventDefault();
+  boardEl.focus({preventScroll:true});
+  onDotTap(dot.r,dot.c);
+  // a drag starts only if that press left this very dot selected
+  if(selected&&selected.r===dot.r&&selected.c===dot.c&&phase==="line"&&!gameOver){
+    dragId=e.pointerId; dragFrom={r:dot.r,c:dot.c};
+    try{ boardEl.setPointerCapture(e.pointerId); }catch(err){}
+  }
+});
+
+boardEl.addEventListener("pointermove", function(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  const p=toBoard(e); if(!p) return;
+  if(phase==="claim"){ if(drawing) extendStroke(boxPoint(p)); return; }
+  if(!selected){ endDrag(); return; }
+  const t=dragTarget(p);
+  if(t) ghostTo(DX(t.c),DY(t.r));                       // snap onto the dot the line would reach
+  else if(Math.hypot(p.x-DX(dragFrom.c),p.y-DY(dragFrom.r)) < CELL*0.26) ghostHide();  // no ghost at home
+  else ghostTo(p.x,p.y);                                // otherwise ride the pointer
+});
+
+boardEl.addEventListener("pointerup", function(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  if(phase==="claim"){
+    try{ boardEl.releasePointerCapture(e.pointerId); }catch(err){}
+    dragId=null;
+    if(drawing) endStroke();
+    return;
+  }
+  const p=toBoard(e);
+  const t=dragTarget(p);
+  const from=selected;
+  endDrag();
+  if(!t||!from||gameOver||phase!=="line") return;        // released off-target: stays selected
+  commitEdge(from,t);
+});
+
+/* palm rejection, an incoming call, or the browser claiming the gesture all land here.
+   Degrading to "still selected" keeps the board usable instead of leaking drag state. */
+boardEl.addEventListener("pointercancel", function(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  if(phase==="claim"){ dragId=null; if(drawing) endStroke(); return; }
+  endDrag();
+});
+
+/* ================= end condition =================
+   The grid holds 25 boxes, an odd number, so the scores can never be level and this game
+   has no draw to detect. It ends exactly one way: the last of the 60 edges is drawn. */
+function finish(){
+  gameOver=true; phase="over";
+  clearTimers(); clearSelection(); endDrag();
+  clear(hitG); clear(cursorG); drawFx(); renderScores();
+  const win = score.a>score.b ? "a" : "b";
+  document.getElementById("bannertitle").textContent = names[win]+" wins";
+  document.getElementById("bannersub").textContent =
+    "Final tally "+score[win]+"\u2013"+score[other(win)]+", from "+BOX_COUNT+" boxes.";
+  document.getElementById("banner").classList.remove("hidden");
+  if(window.fsExit) window.fsExit();          // the end card is where fullscreen stops
+  Sound.win();
+}
+
+/* ================= keyboard ================= */
+boardEl.addEventListener("keydown", function(e){
+  if(gameOver) return;
+  const k=e.key;
+  if(phase==="claim"){
+    if(k==="Enter"||k===" "){ e.preventDefault(); audio(); stampClaim(); }
+    return;
+  }
+  if(k==="Escape"){ e.preventDefault(); audio(); userDeselect(); return; }
+  if(k!=="ArrowUp"&&k!=="ArrowDown"&&k!=="ArrowLeft"&&k!=="ArrowRight"&&k!=="Enter"&&k!==" ") return;
+  e.preventDefault(); audio(); cursorShown=true;
+  if(k==="Enter"||k===" "){ onDotTap(cursor.r,cursor.c); cursorShown=true; drawCursor(); return; }
+  let r=cursor.r,c=cursor.c;
+  if(k==="ArrowUp") r=Math.max(0,r-1);
+  else if(k==="ArrowDown") r=Math.min(DOTS-1,r+1);
+  else if(k==="ArrowLeft") c=Math.max(0,c-1);
+  else if(k==="ArrowRight") c=Math.min(DOTS-1,c+1);
+  cursor={r,c}; drawCursor();
+});
+function hideCursor(){ if(cursorShown){ cursorShown=false; drawCursor(); } }
+
+deselectBtn.addEventListener("click", function(){
+  if(deselectBtn.disabled) return;
+  audio(); userDeselect();
+});
+
+/* ================= setup ================= */
+function readName(id, fallback){
+  const el=document.getElementById(id);
+  const v=(el&&el.value?el.value:"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,2);
+  return v||fallback;
+}
+function setupGame(){
+  const grids=newEdgeGrids();
+  H=grids.H; V=grids.V;
+  OWN=Array.from({length:GAPS},()=>new Array(GAPS).fill(null));
+  score={a:0,b:0};
+  names={ a:readName("name-a","A"), b:readName("name-b","B") };
+  turn="a"; selected=null; phase="line"; gameOver=false;
+  claimQueue=[]; claimBox=null; claimGroup=null; claimGuide=null; claimMarks=null;
+  strokes=[]; drawing=false;
+  cursor={r:0,c:0}; cursorShown=false;
+  clearTimers(); endDrag();
+  clear(fillG); clear(lineG); clear(inkG); clear(cursorG);
+  document.getElementById("banner").classList.add("hidden");
+  renderDots(); buildHits(); renderScores(); drawFx();
+}
+
+/* The board is sized entirely by CSS. This only mirrors its rendered width onto the score
+   row so they stay flush; nothing about fitting the viewport depends on it. */
+(function(){
+  if(!window.ResizeObserver) return;
+  let last=0;
+  new ResizeObserver(function(){
+    const w=Math.round(boardEl.getBoundingClientRect().width);
+    if(w && Math.abs(w-last)>=1){ last=w; document.documentElement.style.setProperty("--boardw", w+"px"); }
+  }).observe(boardEl);
+})();
+
+["name-a","name-b"].forEach(function(id){
+  const el=document.getElementById(id);
+  if(el) el.addEventListener("input", function(){
+    el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,2);
+  });
+});
+
+buildStatic();
+setupGame();
+window.__db={ get H(){return H;}, get V(){return V;}, get OWN(){return OWN;}, get score(){return score;},
+  get turn(){return turn;}, get phase(){return phase;}, get selected(){return selected;},
+  get gameOver(){return gameOver;}, onDotTap, stampClaim, setupGame };   // test hook
+
+/* ---- fullscreen + intro ---- */
+window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
+window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+(function(){
+  var g=function(id){ return document.getElementById(id); };
+  var btns=document.querySelectorAll(".fsbtn");
+  if(btns.length){
+    var sync=function(){ var on=!!window.fsElement();
+      for(var i=0;i<btns.length;i++) btns[i].classList.toggle("fs-on", on); };
+    document.addEventListener("fullscreenchange", sync); document.addEventListener("webkitfullscreenchange", sync);
+    for(var j=0;j<btns.length;j++) btns[j].onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+  }
+  var ab=g("againbtn"); if(ab){ ab.onclick=function(){ audio(); g("banner").classList.add("hidden"); g("setup").classList.remove("hidden"); }; }
+  var sb=g("startbtn"); if(sb){ sb.onclick=function(){ audio(); setupGame(); var s=g("setup"); if(s) s.classList.add("hidden"); boardEl.focus(); }; }
+})();
+})();
+</script>
+</body>
+</html>

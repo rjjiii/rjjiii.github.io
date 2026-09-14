@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sea Battle</title>
+<style>
+  :root{
+    --gold:#ffd75e; --text:#e9e3d4; --text-dim:#a59c86; --brass:#b9a978;
+    --pad:clamp(12px,2.4vw,26px);
+    /* Per-player ink, the family arrangement: one property per seat, applied by a class
+       on the drawing group. Measured on the cream sheet: red 3.47, blue 6.85. */
+    --ink-a:#c64a3b;
+    --ink-b:#24467e;
+    --graphite:#6d6250;
+    --font-display:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
+    --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    height:100dvh; font-family:var(--font-body); color:var(--text);
+    background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
+    background-attachment:fixed;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:var(--pad) 14px; -webkit-tap-highlight-color:transparent; overflow:hidden;
+  }
+  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:6px; }
+
+  .table{ display:flex; flex-direction:column; align-items:center; gap:9px; width:100%; flex:1; min-height:0; }
+  .boardwrap{ flex:1; min-height:0; width:100%; max-width:1000px; display:flex; align-items:center; justify-content:center; }
+  /* aspect-ratio is written from JS to match whichever layout is live: square while a
+     fleet is being drawn, wide or tall once both waters are on screen together. */
+  #board{
+    width:auto; height:auto; aspect-ratio:1/1;
+    max-width:100%; max-height:100%; display:block;
+    filter:drop-shadow(0 12px 34px rgba(0,0,0,.55));
+    touch-action:none; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+  }
+
+
+  /* One rail per seat. The top one is turned so it faces the player sitting there.
+     Both slots stay reserved and only the moving player's rail is shown, so the board
+     never grows and shrinks as the turn passes.
+     The height is FIXED, not a minimum. The status gains a second line the moment there
+     is a turn report to show, and with .boardwrap on flex:1 the board was absorbing that
+     difference and resizing under the player mid-game. A fixed box cannot do that. */
+  .rail{ display:flex; flex-direction:column; align-items:center; gap:6px;
+         height:62px; justify-content:center; overflow:hidden; width:100%; }
+  .rail-top{ transform:rotate(180deg); }
+  .rail.is-hidden{ visibility:hidden; }
+  /* One line, fixed. The turn report is gone, so nothing can add a second line and the
+     box can be sized to exactly what it holds. nowrap because a fixed box that wraps is a
+     box that clips - which is what the two-line version was doing to long status text. */
+  .status{ font-family:var(--font-display); font-size:15px; line-height:22px; color:#d9cfb6;
+           text-align:center; height:22px; padding:0 8px; white-space:nowrap;
+           overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .status b{ color:#ffe9a8; font-weight:700; }
+  .tools{ display:flex; gap:7px; flex-wrap:wrap; justify-content:center; }
+  .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 13px; border-radius:999px;
+    font-family:inherit; font-size:12px; font-weight:600; letter-spacing:.03em; color:#a59c86;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); cursor:pointer;
+    -webkit-appearance:none; appearance:none; transition:opacity .2s ease, color .2s, border-color .2s, background .2s; }
+  .chip:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
+  .chip.hidden{ display:none; }
+  .chip svg{ width:12px; height:12px; }
+  @media (prefers-reduced-motion:reduce){ .chip{ transition:none; } }
+
+  @keyframes pulseGlow{ 0%,100%{opacity:.22} 50%{opacity:.68} }
+  @keyframes pulseRing{ 0%,100%{opacity:.45} 50%{opacity:1.0} }
+  .pulseGlow{ animation:pulseGlow 1.5s ease-in-out infinite; }
+  .pulseRing{ animation:pulseRing 1.5s ease-in-out infinite; }
+  @media (prefers-reduced-motion:reduce){ .pulseGlow, .pulseRing{ animation:none !important; } }
+
+  /* board ink, coloured by seat class exactly as the other two games do */
+  .hull{ fill:none; stroke-width:4; }
+  .hull.a{ stroke:var(--ink-a); } .hull.b{ stroke:var(--ink-b); }
+  .wash.a{ fill:var(--ink-a); } .wash.b{ fill:var(--ink-b); }
+  .shot-hit.a{ fill:var(--ink-a); } .shot-hit.b{ fill:var(--ink-b); }
+  .shot-miss{ fill:none; stroke:var(--graphite); stroke-width:3.4; }
+  .ghost.a{ stroke:var(--ink-a); } .ghost.b{ stroke:var(--ink-b); }
+  .trayship.a{ fill:var(--ink-a); } .trayship.b{ fill:var(--ink-b); }
+  .trayline.a{ stroke:var(--ink-a); } .trayline.b{ stroke:var(--ink-b); }
+
+  @media (orientation: landscape) and (max-height: 620px){
+    .table{ gap:6px; }
+    .rail{ height:54px; }
+    .status{ font-size:13.5px; line-height:20px; height:20px; }
+  }
+
+  .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.93); display:flex; align-items:center; justify-content:center; z-index:50; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+  .overlay.hidden{ display:none; }
+  .card{ background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:28px 32px; max-width:420px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.6); }
+  .card h1{ font-family:var(--font-display); font-size:27px; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
+  .card .sub{ color:var(--brass); font-size:14px; margin-bottom:12px; }
+  .card p{ color:var(--text); font-size:13.5px; line-height:1.5; margin:0 0 6px; }
+  .card .report{ color:var(--brass); font-size:13px; line-height:1.55; margin:10px 0 2px; }
+  button{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  button:hover{ border-color:rgba(255,215,94,0.85); }
+  button:disabled{ opacity:0.32; cursor:default; border-color:rgba(255,215,94,0.25); }
+  .start{ margin-top:10px; }
+  .names{ display:flex; gap:10px; justify-content:center; margin:12px 0 6px; }
+  .names label{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:5px;
+                font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); }
+  .names input{ width:100%; max-width:120px; text-align:center; font-family:var(--font-display);
+    font-size:16px; font-weight:700; padding:6px; border-radius:9px; color:#ffe9a8;
+    background:rgba(0,0,0,.32); border:1.5px solid rgba(255,215,94,.28); -webkit-appearance:none; appearance:none; }
+  .names .sw{ width:100%; max-width:120px; height:3px; border-radius:2px; }
+  .names .sa{ background:var(--ink-a); } .names .sb{ background:var(--ink-b); }
+  .modes{ display:flex; flex-direction:column; gap:7px; margin:12px 0 2px; }
+  .mode{ display:flex; flex-direction:column; gap:2px; padding:9px 13px; border-radius:11px; text-align:left;
+    background:rgba(0,0,0,.26); border:1.5px solid rgba(255,255,255,.10); cursor:pointer;
+    font-family:inherit; color:var(--text); }
+  .mode:hover{ border-color:rgba(255,215,94,.5); }
+  .mode.on{ border-color:rgba(255,215,94,.65); background:rgba(255,215,94,.08); }
+  .mode .t{ font-family:var(--font-display); font-size:15px; color:#ffe9a8; font-weight:700; }
+  .mode .d{ font-size:12px; color:var(--text-dim); line-height:1.4; }
+
+  .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px; border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
+  .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .fsbtn .fs-exit{ display:none; }
+  .fsbtn.fs-on .fs-enter{ display:none; }
+  .fsbtn.fs-on .fs-exit{ display:block; }
+  .gicon-hero{display:flex;justify-content:center;margin:4px 0 12px;}
+  .gicon-hero svg{width:80px;height:80px;}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="setup">
+  <button class="fsbtn" id="fsbtn" type="button">
+    <svg class="fs-enter" viewBox="0 0 24 24"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="card">
+    <h1>Sea Battle</h1>
+    <p class="sub">Hunt the fleet across the paper</p>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="7" y="7" width="50" height="50" rx="5" fill="#d8a24e"/> <g stroke="#4a3016" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.55"> <path d="M12.0 12.0 V52.0"/> <path d="M12.0 12.0 H52.0"/> <path d="M22.0 12.0 V52.0"/> <path d="M12.0 22.0 H52.0"/> <path d="M32.0 12.0 V52.0"/> <path d="M12.0 32.0 H52.0"/> <path d="M42.0 12.0 V52.0"/> <path d="M12.0 42.0 H52.0"/> <path d="M52.0 12.0 V52.0"/> <path d="M12.0 52.0 H52.0"/> </g> <rect x="12.0" y="12.0" width="40" height="40" rx="2" fill="none" stroke="#4a3016" stroke-width="2"/> <rect x="13.4" y="23.4" width="17.2" height="7.2" rx="3.6" fill="#4a3016"/> <rect x="33.4" y="33.4" width="7.2" height="17.2" rx="3.6" fill="#4a3016"/> <circle cx="17.0" cy="27.0" r="2.6" fill="#4a3016"/> <circle cx="37.0" cy="37.0" r="2.6" fill="#4a3016"/> <circle cx="47.0" cy="17.0" r="2.6" fill="none" stroke="#4a3016" stroke-width="1.6"/> <circle cx="27.0" cy="47.0" r="2.6" fill="none" stroke="#4a3016" stroke-width="1.6"/></svg></div>
+    <div class="modes">
+      <button class="mode on" id="mode-sea" type="button">
+        <span class="t">Sea Battle</span>
+        <span class="d">One shot per turn. The classic.</span>
+      </button>
+      <button class="mode" id="mode-salvo" type="button">
+        <span class="t">Salvo</span>
+        <span class="d">One shot for every ship you still have afloat, so your fire thins as you lose.</span>
+      </button>
+    </div>
+    <div class="names">
+      <label>Red fleet
+        <input id="name-a" type="text" maxlength="8" value="Red" autocomplete="off" spellcheck="false">
+        <span class="sw sa"></span>
+      </label>
+      <label>Blue fleet
+        <input id="name-b" type="text" maxlength="8" value="Blue" autocomplete="off" spellcheck="false">
+        <span class="sw sb"></span>
+      </label>
+    </div>
+    <button class="start" id="startbtn" type="button">Start Game</button>
+  </div>
+</div>
+
+<!-- the shield: an opaque card between seats so nobody sees the other's waters -->
+<div class="overlay hidden" id="shield">
+  <div class="card">
+    <h1 id="shieldtitle"></h1>
+    <p class="sub" id="shieldsub"></p>
+    <p class="report" id="shieldreport"></p>
+    <button class="start" id="readybtn" type="button">Ready</button>
+  </div>
+</div>
+
+<main class="table">
+  <div class="rail rail-top" id="rail-a">
+    <div class="status" data-seat="a"></div>
+  </div>
+
+  <div class="boardwrap">
+  <svg id="board" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg" tabindex="0">
+    <defs>
+      <linearGradient id="wood" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#855f3a"/><stop offset="38%" stop-color="#5e4128"/><stop offset="100%" stop-color="#311e0d"/></linearGradient>
+      <pattern id="grain" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(63)"><rect width="6.5" height="13" fill="#000000" fill-opacity="0.10"/><rect x="6.5" width="6.5" height="13" fill="#fff0d2" fill-opacity="0.03"/></pattern>
+      <linearGradient id="paper" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#f2e9d4"/><stop offset="45%" stop-color="#e8dcc0"/><stop offset="100%" stop-color="#d6c7a6"/></linearGradient>
+      <pattern id="tooth" patternUnits="userSpaceOnUse" width="7" height="7">
+        <circle cx="1.6" cy="1.9" r="0.85" fill="#8a7a58" fill-opacity="0.10"/>
+        <circle cx="5.1" cy="4.6" r="0.7" fill="#6d5f42" fill-opacity="0.08"/>
+        <circle cx="3.4" cy="6.2" r="0.55" fill="#fffdf4" fill-opacity="0.30"/>
+      </pattern>
+      <radialGradient id="glowhalo" cx="50%" cy="50%" r="50%"><stop offset="35%" stop-color="#ffc846" stop-opacity="0.7"/><stop offset="100%" stop-color="#ffc846" stop-opacity="0"/></radialGradient>
+    </defs>
+    <g id="staticG"></g>
+    <g id="sideA" pointer-events="none"></g>
+    <g id="sideB" pointer-events="none"></g>
+    <g id="fxG" pointer-events="none"></g>
+    <g id="ghostG" pointer-events="none"></g>
+    <g id="hitG"></g>
+  </svg>
+  </div>
+
+  <div class="rail rail-bot" id="rail-b">
+    <div class="status" data-seat="b"></div>
+    <div class="tools">
+      <button class="chip undo" type="button" disabled>Undo</button>
+      <button class="chip ready" type="button" disabled>Ready</button>
+    </div>
+  </div>
+</main>
+</main>
+
+<div class="overlay hidden" id="banner">
+  <button class="fsbtn" id="fsbtn-end" type="button">
+    <svg class="fs-enter" viewBox="0 0 24 24"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="card">
+    <h1 id="bannertitle"></h1>
+    <p id="bannersub"></p>
+    <button class="start" id="againbtn" type="button">Play Again</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+/* ================= geometry =================
+   Two layouts. While a fleet is being drawn there is one grid and it fills the sheet.
+   Once both fleets are down, secrecy between the two grids no longer needs a toggle and
+   the player sees both of their own boards at once: the enemy waters they are firing
+   into, and their own waters taking fire. */
+const N=10;
+const SVGNS="http://www.w3.org/2000/svg";
+const PALE_BACKING="#c9762a";
+const COLS="ABCDEFGHIJ";
+/* ===== two seats, one device flat on the table =====
+   Red sits at the top, Blue at the bottom, and the board is locked vertical. Each player
+   fires into the OTHER player's waters, so those are the waters that face them: Blue's
+   waters sit at the top turned a half circle for Red to read, Red's waters sit at the
+   bottom the right way up for Blue. The grid a player interacts with is the one facing
+   them; the one holding their own hidden fleet is the far one, which they never touch. */
+const CELL=28, SPAN=N*CELL, LABELW=22;
+const BOARDW=SPAN+LABELW*2+18;
+const TRAYW=26, TRAYGAP=8;
+const VBW=TRAYW*2+TRAYGAP*2+BOARDW;
+const BOARDX=TRAYW+TRAYGAP;
+const PX=BOARDX+7, PW=BOARDW-14;
+const GOX=PX+Math.round((PW-SPAN)/2);
+const LH=17, TH=20;
+const OUTER=LH+14;                       // column letters live on the outer edges
+const DIVH=TH*2+15;                      // two names and the rule between them
+const BOARDY=8;
+const GOY_TOP=BOARDY+10+OUTER;
+const GOY_BOT=GOY_TOP+SPAN+DIVH;
+const BOARDH=10+OUTER+SPAN+DIVH+SPAN+OUTER+10;
+const VBH=BOARDY+BOARDH+8;
+/* Placing a fleet happens with the device in one player's hands, so that phase keeps a
+   single square board at the largest cell size it can manage. */
+const PTRAY_W=52, PTRAY_GAP=10;
+const PLACE={ vb:[640+PTRAY_W+PTRAY_GAP,640], inset:22, ox:70, oy:56, cell:52, bx:PTRAY_W+PTRAY_GAP };
+const PLAY ={ vb:[VBW,VBH] };
+/* Which waters sit at which end never changes; only the turn does. */
+const TOP_SIDE="b", BOT_SIDE="a";        // Blue's waters up top facing Red, Red's below
+const SEAT_TOP="a", SEAT_BOT="b";        // Red seated at the top, Blue at the bottom
+function playGrid(side){
+  return side===TOP_SIDE
+    ? { ox:GOX, oy:GOY_TOP, cell:CELL, flip:true }
+    : { ox:GOX, oy:GOY_BOT, cell:CELL, flip:false };
+}
+function placeGrid(){ return { ox:PLACE.bx+PLACE.ox, oy:PLACE.oy, cell:PLACE.cell, flip:false }; }
+function activeGridDesc(){ return phase==="place" ? placeGrid() : playGrid(other(turn)); }
+function applyLayout(){
+  const vb = phase==="place" ? PLACE.vb : PLAY.vb;
+  boardEl.setAttribute("viewBox","0 0 "+vb[0]+" "+vb[1]);
+  boardEl.style.aspectRatio=vb[0]+" / "+vb[1];
+}
+function E(t,a,p){ const e=document.createElementNS(SVGNS,t); if(a) for(const k in a) e.setAttribute(k,a[k]); if(p)p.appendChild(e); return e; }
+function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+function gx(g,c){ return g.ox+c*g.cell; }
+function gy(g,r){ return g.oy+r*g.cell; }
+
+/* ==== PURE LOGIC START ====
+   No DOM. The fleet, placement legality and shot resolution live here and the test
+   harness extracts this block verbatim. */
+const FLEET=[
+  {id:"carrier",    name:"Carrier",    len:5},
+  {id:"battleship", name:"Battleship", len:4},
+  {id:"cruiser",    name:"Cruiser",    len:3},
+  {id:"submarine",  name:"Submarine",  len:3},
+  {id:"destroyer",  name:"Destroyer",  len:2}
+];
+const FLEET_CELLS = FLEET.reduce(function(s,f){ return s+f.len; }, 0);   // 17
+const other = s => s==="a" ? "b" : "a";
+function idx(r,c){ return r*N+c; }
+function inGrid(r,c){ return r>=0&&r<N&&c>=0&&c<N; }
+/* the cells a ship of this length would occupy from an anchor */
+function shipCells(r,c,len,orient){
+  const out=[];
+  for(let k=0;k<len;k++){
+    const rr = orient==="v" ? r+k : r;
+    const cc = orient==="h" ? c+k : c;
+    if(!inGrid(rr,cc)) return null;                 // runs off the grid
+    out.push(idx(rr,cc));
+  }
+  return out;
+}
+/* The run a drag defines. It is clipped three ways — by the ship's own length, by the
+   grid edge, and by any hull already down — so the answer is always "the most squares
+   actually available in that direction", never a run that overlaps or overhangs.
+   Direction comes from the dominant axis of the drag, so a slight diagonal still reads
+   as the one the player meant. */
+function drawRun(board, anchor, cur, maxLen){
+  const ar=Math.floor(anchor/N), ac=anchor%N;
+  const cr=Math.floor(cur/N), cc=cur%N;
+  const dr=cr-ar, dc=cc-ac;
+  let sr=0, sc=0;
+  if(Math.abs(dc)>=Math.abs(dr)) sc = dc===0 ? 1 : (dc>0?1:-1);
+  else sr = dr>0?1:-1;
+  const want=Math.min(maxLen, 1 + (sc ? Math.abs(dc) : Math.abs(dr)));
+  const cells=[];
+  for(let k=0;k<want;k++){
+    const rr=ar+sr*k, ccc=ac+sc*k;
+    if(!inGrid(rr,ccc)) break;
+    const i=idx(rr,ccc);
+    if(board[i]!==null) break;
+    cells.push(i);
+  }
+  return cells;
+}
+/* No order. A run of three squares is the three-square ship, if one is still unplaced —
+   the drawing decides which hull it was, not a queue. The cap on a drag is therefore the
+   LONGEST hull still unplaced, and a run only lands if some unplaced hull is exactly that
+   long. Two ships share length three, so drawing three twice is legal. */
+function maxRun(fleet){
+  let m=0;
+  for(const s of fleet) if(!s.cells.length && s.len>m) m=s.len;
+  return m;
+}
+function shipOfLength(fleet,len){
+  for(const s of fleet) if(!s.cells.length && s.len===len) return s;
+  return null;
+}
+function unplaced(fleet){ return fleet.filter(function(s){ return !s.cells.length; }); }
+function nextShip(fleet){
+  for(const s of fleet) if(!s.cells.length) return s;      // still used to test "any left"
+  return null;
+}
+function placedCount(fleet){ return fleet.filter(function(s){ return s.cells.length>0; }).length; }
+
+/* legal if it fits and touches no other hull. Ships may sit adjacent — only overlap is
+   barred — which is the common Sea Battle rule; some house rules forbid touching too. */
+function canPlace(board,r,c,len,orient,ignoreId){
+  const cells=shipCells(r,c,len,orient);
+  if(!cells) return null;
+  for(const i of cells){ if(board[i]!==null && board[i]!==ignoreId) return null; }
+  return cells;
+}
+function placeShip(board,ship,cells){
+  ship.cells.forEach(function(i){ board[i]=null; });   // lift it from wherever it was
+  cells.forEach(function(i){ board[i]=ship.id; });
+  ship.cells=cells.slice();
+}
+function newFleet(){
+  return FLEET.map(function(f){ return { id:f.id, name:f.name, len:f.len, cells:[], hits:0, sunk:false }; });
+}
+function shipAt(fleet,i){
+  for(const s of fleet) if(s.cells.indexOf(i)>=0) return s;
+  return null;
+}
+/* Resolve one shot against a side. Returns what happened, or null if that cell was
+   already fired on — the caller must not spend a shot on a repeat. */
+function resolveShot(side,i){
+  if(side.incoming[i]!==null) return null;
+  const s=shipAt(side.fleet,i);
+  if(!s){ side.incoming[i]="miss"; return { kind:"miss" }; }
+  side.incoming[i]="hit"; s.hits++;
+  if(s.hits>=s.len && !s.sunk){ s.sunk=true; return { kind:"sunk", ship:s }; }
+  return { kind:"hit", ship:s };
+}
+function afloat(fleet){ return fleet.filter(function(s){ return !s.sunk; }).length; }
+function fleetDestroyed(fleet){ return fleet.every(function(s){ return s.sunk; }); }
+/* Sea Battle fires once; Salvo fires once for every ship the SHOOTER still has afloat,
+   so the rate of fire decays as you lose ships. */
+function shotsFor(mode,shooterFleet){
+  return mode==="salvo" ? Math.max(1, afloat(shooterFleet)) : 1;
+}
+/* A turn only ever fires at one fleet, so both can never be destroyed at once:
+   this game has no draw to detect. */
+function winnerOf(sides){
+  if(fleetDestroyed(sides.a.fleet)) return "b";
+  if(fleetDestroyed(sides.b.fleet)) return "a";
+  return null;
+}
+function randomLayout(rand){
+  const board=new Array(N*N).fill(null);
+  const fleet=newFleet();
+  for(const s of fleet){
+    let placed=false;
+    for(let tries=0;tries<500 && !placed;tries++){
+      const orient = rand()<0.5 ? "h" : "v";
+      const r=Math.floor(rand()*N), c=Math.floor(rand()*N);
+      const cells=canPlace(board,r,c,s.len,orient,s.id);
+      if(cells){ placeShip(board,s,cells); placed=true; }
+    }
+    if(!placed) return null;                       // caller retries
+  }
+  return { board:board, fleet:fleet };
+}
+/* ==== PURE LOGIC END ==== */
+
+/* ================= DOM ================= */
+const boardEl=document.getElementById("board");
+const staticG=document.getElementById("staticG");
+const sideG={ a:document.getElementById("sideA"), b:document.getElementById("sideB") };
+const fxG=document.getElementById("fxG");
+const ghostG=document.getElementById("ghostG");
+const hitG=document.getElementById("hitG");
+const statusEls={ a:document.querySelector('.status[data-seat="a"]'), b:document.querySelector('.status[data-seat="b"]') };
+const railEl={ a:document.getElementById("rail-a"), b:document.getElementById("rail-b") };
+const btn={ undo:document.querySelector(".chip.undo"), ready:document.querySelector(".chip.ready") };
+
+/* ================= state ================= */
+let mode="sea", names={a:"Red",b:"Blue"};
+let sides, phase, seat, turn, shotsLeft, turnLog, gameOver;
+let runAnchor=null, runCells=[], placedOrder=[], passTimer=null;
+let cursor=0, cursorShown=false, dragId=null, pendingShield=null;
+
+/* ================= sound ================= */
+let actx=null, master=null;
+function audio(){ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+    actx=new AC(); master=actx.createGain(); master.gain.value=0.45; master.connect(actx.destination); }
+  if(actx.state==="suspended") actx.resume(); return actx; }
+function tone(o){ const ctx=audio(); if(!ctx) return; const t0=ctx.currentTime+(o.delay||0);
+  const osc=ctx.createOscillator(), g=ctx.createGain(); osc.type=o.type||"triangle"; osc.frequency.setValueAtTime(o.freq,t0);
+  if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to,t0+o.dur);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(o.vol,t0+(o.attack||0.005)); g.gain.exponentialRampToValueAtTime(0.0001,t0+o.dur);
+  osc.connect(g).connect(master); osc.start(t0); osc.stop(t0+o.dur+0.03); }
+function noise(o){ const ctx=audio(); if(!ctx) return; const t0=ctx.currentTime+(o.delay||0);
+  const len=Math.floor(ctx.sampleRate*o.dur); const buf=ctx.createBuffer(1,len,ctx.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1; const src=ctx.createBufferSource(); src.buffer=buf;
+  const filt=ctx.createBiquadFilter(); filt.type=o.filter||"lowpass"; filt.frequency.value=o.freq||900; filt.Q.value=o.q||0.7;
+  const g=ctx.createGain(); g.gain.setValueAtTime(o.vol,t0); g.gain.exponentialRampToValueAtTime(0.0001,t0+o.dur);
+  src.connect(filt).connect(g).connect(master); src.start(t0); src.stop(t0+o.dur+0.02); }
+const Sound={
+  select(){ tone({freq:430,to:520,dur:0.06,vol:0.12,type:"sine"}); },
+  deselect(){ tone({freq:340,to:230,dur:0.09,vol:0.12,type:"sine"}); },
+  place(){ tone({freq:180,to:130,dur:0.12,vol:0.3,type:"triangle"}); },
+  miss(){ noise({freq:700,dur:0.28,vol:0.22,filter:"lowpass"}); tone({freq:150,to:90,dur:0.3,vol:0.12,type:"sine"}); },
+  hit(){ noise({freq:1600,dur:0.16,vol:0.3,filter:"bandpass",q:1.2});
+         tone({freq:120,to:60,dur:0.34,vol:0.36,type:"triangle"}); },
+  sunk(){ [330,262,196].forEach((f,i)=>tone({freq:f,dur:0.4,vol:0.3,type:"triangle",delay:i*0.11}));
+          noise({freq:400,dur:0.5,vol:0.2,filter:"lowpass"}); },
+  win(){ [523,659,784,1047].forEach((f,i)=>tone({freq:f,dur:0.55,vol:0.32,type:"triangle",delay:i*0.1,attack:0.01}));
+         tone({freq:262,dur:0.8,vol:0.2,type:"sine",delay:0.1}); },
+  nudge(){ tone({freq:96,to:72,dur:0.12,vol:0.2,type:"sine"}); }
+};
+
+/* ================= static board ================= */
+function woodPaper(x,y,w,h){
+  E("rect",{x:x,y:y,width:w,height:h,rx:16,fill:"url(#wood)"},staticG);
+  E("rect",{x:x,y:y,width:w,height:h,rx:16,fill:"url(#grain)"},staticG);
+  E("rect",{x:x+8,y:y+8,width:w-16,height:h-16,rx:11,fill:"none",stroke:"#ffe1aa","stroke-opacity":0.10,"stroke-width":1.2},staticG);
+}
+function sheet(x,y,w,h,rx){
+  E("rect",{x:x-2,y:y-2,width:w+4,height:h+4,rx:rx+2,fill:"#000000","fill-opacity":0.42},staticG);
+  E("rect",{x:x,y:y,width:w,height:h,rx:rx,fill:"url(#paper)"},staticG);
+  E("rect",{x:x,y:y,width:w,height:h,rx:rx,fill:"url(#tooth)"},staticG);
+  E("rect",{x:x+1,y:y+1,width:w-2,height:h-2,rx:rx-1,fill:"none",stroke:"#ffffff","stroke-opacity":0.22,"stroke-width":1.2},staticG);
+  E("rect",{x:x,y:y,width:w,height:h,rx:rx,fill:"none",stroke:"#20130a","stroke-opacity":0.45,"stroke-width":1.4},staticG);
+}
+/* Ruled, like the hash in tic-tac-toe: the grid belongs to the board, not the hand.
+   Column letters sit on the OUTER edge and row numbers in the gutter; a half turn moves
+   both to the opposite side, which is why the gutter exists on both. */
+function drawGrid(g,parent){
+  const w=Math.max(1,g.cell/26), wo=Math.max(1.6,g.cell/17);
+  for(let k=0;k<=N;k++){
+    const edge=(k===0||k===N);
+    E("line",{x1:gx(g,k),y1:gy(g,0),x2:gx(g,k),y2:gy(g,N),stroke:"#6d6250","stroke-opacity":edge?0.62:0.32,"stroke-width":edge?wo:w,"stroke-linecap":"round"},parent);
+    E("line",{x1:gx(g,0),y1:gy(g,k),x2:gx(g,N),y2:gy(g,k),stroke:"#6d6250","stroke-opacity":edge?0.62:0.32,"stroke-width":edge?wo:w,"stroke-linecap":"round"},parent);
+  }
+  const fs=Math.max(9,Math.round(g.cell*0.42));
+  for(let k=0;k<N;k++){
+    const a=E("text",{x:gx(g,k)+g.cell/2,y:gy(g,N)+fs+5,"text-anchor":"middle","font-size":fs,"font-family":"Georgia,serif",fill:"#6d6250","fill-opacity":0.8},parent);
+    a.textContent=COLS[k];
+    const b=E("text",{x:gx(g,0)-7,y:gy(g,k)+g.cell/2+fs*0.36,"text-anchor":"end","font-size":fs,"font-family":"Georgia,serif",fill:"#6d6250","fill-opacity":0.8},parent);
+    b.textContent=String(k+1);
+  }
+}
+/* the chosen divider: one rule, broken at the centre of the table by a small mark, with
+   a name on each side of it facing its own player */
+function drawDivider(){
+  /* The band occupies exactly the gap between the two grids. Offsetting it by the outer
+     allowance pushed it 17 units down and put both names on top of the near grid. */
+  const y=GOY_TOP+SPAN, w=SPAN, x=GOX;
+  const midY=y+DIVH/2, r=6;
+  const lab=(side,slotY,flip)=>{
+    const t=E("text",{x:x+w/2,y:slotY+TH*0.72,"text-anchor":"middle","font-size":13,
+      "font-family":"Georgia,serif",fill:"#6d6250","fill-opacity":0.95,"letter-spacing":"1.2"},staticG);
+    t.textContent=(names[side]||"").toUpperCase()+"  \u2014  WATERS";
+    if(flip) t.setAttribute("transform","rotate(180 "+(x+w/2)+" "+(slotY+TH/2)+")");
+  };
+  lab(TOP_SIDE,y,true);
+  E("line",{x1:x,y1:midY,x2:x+w/2-r-5,y2:midY,stroke:"#6d6250","stroke-opacity":0.55,"stroke-width":1.6,"stroke-linecap":"round"},staticG);
+  E("line",{x1:x+w/2+r+5,y1:midY,x2:x+w,y2:midY,stroke:"#6d6250","stroke-opacity":0.55,"stroke-width":1.6,"stroke-linecap":"round"},staticG);
+  E("path",{d:"M "+(x+w/2)+" "+(midY-r)+" L "+(x+w/2+r)+" "+midY+" L "+(x+w/2)+" "+(midY+r)+" L "+(x+w/2-r)+" "+midY+" Z",
+    fill:"none",stroke:"#6d6250","stroke-opacity":0.7,"stroke-width":1.4},staticG);
+  lab(BOT_SIDE,y+DIVH-TH,false);
+}
+/* Trays are cream, not the dark card: blue ink on the dark panel measured 1.60 and a
+   spent ship dimmed on it measured 1.07, which read as absent rather than spent. */
+function drawTray(side,x){
+  const y=BOARDY+6, h=BOARDH-12;
+  sheet(x,y,TRAYW,h,7);
+  const fleet=sides[side].fleet;
+  const units=fleet.reduce((s,f)=>s+f.len,0);
+  const unit=(h-(fleet.length-1)*8-18)/units;
+  const barW=14;
+  let cy=y+9;
+  fleet.forEach(function(sh){
+    const ht=unit*sh.len, bx=x+(TRAYW-barW)/2;
+    E("rect",{x:bx,y:cy,width:barW,height:ht,rx:barW/2,"fill-opacity":sh.sunk?0.28:1,"class":"trayship "+side},staticG);
+    if(sh.sunk){
+      E("rect",{x:bx,y:cy,width:barW,height:ht,rx:barW/2,fill:"none","stroke-opacity":0.85,"stroke-width":1.4,"class":"trayline "+side},staticG);
+      E("line",{x1:bx-2,y1:cy+ht/2,x2:bx+barW+2,y2:cy+ht/2,"stroke-width":2.2,"stroke-linecap":"round","class":"trayline "+side},staticG);
+    }
+    cy+=ht+8;
+  });
+}
+/* Beside the board while placing: the whole fleet, each hull at its own length, greyed
+   out as it goes down. With no order to follow this is the only thing telling a player
+   what is still theirs to draw, so it carries a numeral as well as a height. */
+function drawPlaceTray(side){
+  const y=6, h=PLACE.vb[1]-12;
+  sheet(0,y,PTRAY_W,h,7);
+  const fleet=sides[side].fleet;
+  const units=fleet.reduce(function(t,f){ return t+f.len; },0);
+  const unit=(h-(fleet.length-1)*10-20)/units;
+  const barW=26;
+  let cy=y+10;
+  fleet.forEach(function(sh){
+    const ht=unit*sh.len, bx=(PTRAY_W-barW)/2, placed=sh.cells.length>0;
+    if(placed){
+      E("rect",{x:bx,y:cy,width:barW,height:ht,rx:barW/2,fill:"#6d6250","fill-opacity":0.26},staticG);
+      E("rect",{x:bx,y:cy,width:barW,height:ht,rx:barW/2,fill:"none",stroke:"#6d6250",
+        "stroke-opacity":0.4,"stroke-width":1.2},staticG);
+    } else {
+      E("rect",{x:bx,y:cy,width:barW,height:ht,rx:barW/2,"class":"trayship "+side},staticG);
+    }
+    const t=E("text",{x:PTRAY_W/2,y:cy+ht/2+6,"text-anchor":"middle","font-size":17,
+      "font-family":"Georgia,serif",fill:placed?"#6d6250":"#f2e9d4",
+      "fill-opacity":placed?0.75:0.95,"class":"traynum"},staticG);
+    t.textContent=String(sh.len);
+    cy+=ht+10;
+  });
+}
+function buildStatic(){
+  clear(staticG);
+  if(phase==="place"){
+    const W=640, I=PLACE.inset;
+    woodPaper(PLACE.bx,0,W,W);
+    sheet(PLACE.bx+I,I,W-I*2,W-I*2,10);
+    drawGrid(placeGrid(),staticG);
+    drawPlaceTray(seat);
+    return;
+  }
+  woodPaper(BOARDX,BOARDY,BOARDW,BOARDH);
+  sheet(PX,BOARDY+7,PW,BOARDH-14,9);
+  const gTop=E("g",{transform:"rotate(180 "+(GOX+SPAN/2)+" "+(GOY_TOP+SPAN/2)+")"},staticG);
+  drawGrid(playGrid(TOP_SIDE),gTop);
+  drawGrid(playGrid(BOT_SIDE),staticG);
+  drawDivider();
+  drawTray("a",TRAYGAP-4);
+  drawTray("b",VBW-TRAYW-TRAYGAP+4);
+}
+
+/* ================= render ================= */
+function drawSide(g,side,reveal,hullCls,hitCls,parent){
+  side.fleet.forEach(function(sh){
+    if(!sh.cells.length) return;
+    if(reveal!=="all" && !sh.sunk) return;
+    const cells=sh.cells.slice().sort(function(p,q){ return p-q; });
+    const r0=Math.floor(cells[0]/N), c0=cells[0]%N;
+    const r1=Math.floor(cells[cells.length-1]/N), c1=cells[cells.length-1]%N;
+    const pad=Math.max(2,g.cell*0.115);
+    const x=gx(g,c0)+pad, y=gy(g,r0)+pad;
+    const wd=(c1-c0+1)*g.cell-pad*2, ht=(r1-r0+1)*g.cell-pad*2;
+    if(sh.sunk) E("rect",{x:x,y:y,width:wd,height:ht,rx:g.cell*0.34,"fill-opacity":0.20,"class":"wash "+hullCls},parent);
+    const hull=E("rect",{x:x,y:y,width:wd,height:ht,rx:g.cell*0.34,"class":"hull "+hullCls},parent);
+    hull.setAttribute("stroke-width",Math.max(2,g.cell*0.077));
+  });
+  /* Miss is a hollow ring, hit a solid disc. Graphite against either pen measures 1.26
+     and 1.56, so these cannot be told apart by colour and are separated by shape. */
+  for(let i=0;i<N*N;i++){
+    const m=side.incoming[i]; if(!m) continue;
+    const cx=gx(g,i%N)+g.cell/2, cy=gy(g,Math.floor(i/N))+g.cell/2;
+    if(m==="miss"){
+      const c=E("circle",{cx:cx,cy:cy,r:g.cell*0.17,"class":"shot-miss"},parent);
+      c.setAttribute("stroke-width",Math.max(1.4,g.cell*0.065));
+    } else {
+      E("circle",{cx:cx,cy:cy,r:g.cell*0.235,"class":"shot-hit "+hitCls},parent);
+      E("circle",{cx:cx,cy:cy,r:g.cell*0.35,fill:"none",stroke:"#20130a","stroke-opacity":0.24,
+                  "stroke-width":Math.max(1,g.cell*0.038)},parent);
+    }
+  }
+}
+/* Nothing afloat is ever drawn in play: what is on the sheet is the shot record, which
+   both players already have. Placing is the exception — that seat is looking at its own
+   waters in private, so its hulls show. */
+function renderBoard(){
+  clear(sideG.a); clear(sideG.b);
+  if(phase==="place"){
+    drawSide(placeGrid(),sides[seat],"all",seat,other(seat),sideG[seat]);
+    return;
+  }
+  ["a","b"].forEach(function(k){
+    const g=playGrid(k);
+    const host = g.flip
+      ? E("g",{transform:"rotate(180 "+(GOX+SPAN/2)+" "+(GOY_TOP+SPAN/2)+")"},sideG[k])
+      : sideG[k];
+    drawSide(g,sides[k],gameOver?"all":"sunk",k,other(k),host);
+  });
+}
+
+
+/* Canon's pale-square rule. The play surface is the sheet, so this is true everywhere:
+   gold measures 1.02 on cream and never rises above 1.39 on any hull wash. */
+function isPaleCell(){ return true; }
+function drawFx(){
+  clear(fxG);
+  if(phase==="aim"&&!gameOver){
+    /* Both waters are on the table, so the board has to say which one this player fires
+       into. The frame sits inside the gutters: the letters are 5 units off the grid and
+       the numbers 7 to its side, so a fat pad would run straight through them. */
+    const g=activeGridDesc(), pad=Math.max(3,g.cell*0.10);
+    const box={x:gx(g,0)-pad,y:gy(g,0)-pad,width:N*g.cell+pad*2,height:N*g.cell+pad*2,rx:7,fill:"none"};
+    if(isPaleCell()) E("rect",Object.assign({},box,{stroke:PALE_BACKING,"stroke-width":5}),fxG);
+    E("rect",Object.assign({},box,{stroke:"#ffd75e","stroke-width":2.2,opacity:0.95,"class":"pulseRing"}),fxG);
+  }
+  drawCursor();
+  updateStatus();
+}
+function drawCursor(){
+  if(!cursorShown||gameOver||phase==="shield") return;
+  const g=activeGridDesc();
+  let r=Math.floor(cursor/N), c=cursor%N;
+  if(g.flip){ r=N-1-r; c=N-1-c; }        // the far grid is drawn turned
+  const box={x:gx(g,c)+4,y:gy(g,r)+4,width:g.cell-8,height:g.cell-8,rx:6,fill:"none"};
+  if(isPaleCell()) E("rect",Object.assign({},box,{stroke:PALE_BACKING,"stroke-width":Math.max(4,g.cell*0.135)}),fxG);
+  E("rect",Object.assign({},box,{stroke:"#ffd75e","stroke-width":Math.max(2,g.cell*0.058)}),fxG);
+}
+/* Hit rects go only on the grid this player may act on. Pointer handling lives on the
+   board root and hit-tests by coordinate, so rebuilding this layer cannot strand a drag. */
+function buildHits(){
+  clear(hitG);
+  if(gameOver||phase==="shield") return;
+  const g=activeGridDesc();
+  for(let i=0;i<N*N;i++)
+    E("rect",{x:gx(g,i%N),y:gy(g,Math.floor(i/N)),width:g.cell,height:g.cell,fill:"transparent",style:"cursor:pointer"},hitG);
+}
+
+/* ================= status + tools =================
+   Canon's deselect pill has no job here and is deliberately absent rather than forgotten:
+   placement commits on release and firing commits on press, so there is no lingering
+   selection a pill could clear. Escape still abandons a run mid-drag. */
+/* One short line. Which player it addresses is already answered by which end of the table
+   the rail is at, and what just happened is on the board in front of both of them, so the
+   line only has to say what to do next. */
+function railText(sd){
+  if(gameOver) return "";
+  if(phase==="place") return sd===SEAT_BOT ? "Place your ships." : "";
+  if(phase==="aim" && sd===turn){
+    const total=shotsFor(mode,sides[turn].fleet);
+    const who=names[turn]+": ";
+    if(total<=1) return who+"Place your shot.";
+    const n=Math.min(total, total-shotsLeft+1);
+    return who+"Place shot "+n+" of "+total+".";
+  }
+  return "";
+}
+function updateStatus(){
+  ["a","b"].forEach(function(sd){
+    statusEls[sd].innerHTML = railText(sd);
+  });
+}
+function showTools(){
+  const placing = phase==="place";
+  btn.undo.classList.toggle("hidden",!placing);
+  btn.ready.classList.toggle("hidden",!placing);
+  if(placing){
+    btn.undo.disabled  = placedCount(sides[seat].fleet)===0;
+    btn.ready.disabled = !!nextShip(sides[seat].fleet);
+  }
+  /* Only the moving seat's rail is shown. Both keep their slot, so nothing shifts. */
+  ["a","b"].forEach(function(sd){
+    const live = !gameOver && (phase==="place" ? sd===SEAT_BOT : sd===turn);
+    railEl[sd].classList.toggle("is-hidden", !live);
+  });
+}
+let builtPhase=null;
+function renderAll(){
+  const key = phase==="place" ? "place" : "play";
+  if(builtPhase!==key){ applyLayout(); builtPhase=key; }
+  buildStatic();                       // names and tray damage live in the static layer
+  renderBoard(); buildHits(); drawFx(); showTools();
+}
+
+/* ================= placement =================
+   Drawing, not picking. The next hull in the fleet is implied by what is left, and the
+   drag defines both its direction and how far it reaches. drawRun caps the stroke at the
+   ship's length and at whatever is actually available in that direction, so a drag can
+   never overhang the sheet or cross a hull already down. */
+function beginRun(i){
+  const cap=maxRun(sides[seat].fleet);
+  if(!cap) return false;
+  if(sides[seat].board[i]!==null){ Sound.nudge(); return false; }
+  runAnchor=i;
+  runCells=drawRun(sides[seat].board, i, i, cap);
+  paintRun();
+  return true;
+}
+function extendRun(i){
+  if(runAnchor===null) return;
+  const cap=maxRun(sides[seat].fleet);
+  if(!cap) return;
+  runCells=drawRun(sides[seat].board, runAnchor, i, cap);
+  paintRun();
+}
+function paintRun(){
+  clear(ghostG);
+  if(!runCells.length){ updateStatus(); return; }
+  /* Solid when the run is currently a length you still have, faint when it is not, so a
+     four-square drag reads as unusable the moment the four-square hull is gone. */
+  const usable = !!shipOfLength(sides[seat].fleet, runCells.length);
+  const g=placeGrid();
+  runCells.forEach(function(i){
+    E("rect",{x:gx(g,i%N)+6,y:gy(g,Math.floor(i/N))+6,width:g.cell-12,height:g.cell-12,rx:g.cell*0.3,
+      fill:"none","stroke-width":5,opacity:usable?0.78:0.3,"class":"ghost "+seat},ghostG);
+  });
+  updateStatus();
+}
+function endRun(){
+  clear(ghostG);
+  const sh=shipOfLength(sides[seat].fleet, runCells.length);
+  if(sh){
+    placeShip(sides[seat].board, sh, runCells.slice());
+    placedOrder.push(sh.id);
+    Sound.place();
+    runAnchor=null; runCells=[];
+    renderAll();
+    return true;
+  }
+  if(runCells.length>1) Sound.nudge();      // no hull of that length is left
+  runAnchor=null; runCells=[];
+  renderAll();
+  return false;
+}
+function undoShip(){
+  if(phase!=="place"||!placedOrder.length) return;
+  const id=placedOrder.pop();
+  const ship=sides[seat].fleet.find(function(x){ return x.id===id; });
+  ship.cells.forEach(function(i){ sides[seat].board[i]=null; });
+  ship.cells=[];
+  Sound.deselect();
+  renderAll();
+}
+
+/* ================= firing ================= */
+function fireAt(i,key){
+  /* Which waters a shot may land in is decided here, not in the caller. Both grids are
+     on screen now, so "not your own" is a live rule rather than a geometric accident. */
+  if(phase!=="aim"||gameOver) return false;
+  if(key!==undefined&&key!==other(turn)){ Sound.nudge(); return false; }
+  if(shotsLeft<=0){ Sound.nudge(); return false; }
+  const target=sides[other(turn)];
+  const res=resolveShot(target,i);
+  if(!res){ Sound.nudge(); return false; }        // already fired there; the shot is not spent
+  shotsLeft--;
+  turnLog.push(res);
+  if(res.kind==="miss") Sound.miss();
+  else if(res.kind==="sunk") Sound.sunk();
+  else Sound.hit();
+  if(fleetDestroyed(target.fleet)){ renderAll(); finish(turn); return true; }
+  renderAll();
+  /* No button: the turn is over when the shots are. A short beat first, so the last shot
+     is seen landing before the frame moves to the other grid. */
+  if(shotsLeft<=0){
+    window.clearTimeout(passTimer);
+    passTimer=window.setTimeout(function(){ passTimer=null; endTurn(); }, 800);
+  }
+  return true;
+}
+function endTurn(){
+  window.clearTimeout(passTimer); passTimer=null;
+  if(phase!=="aim"||gameOver) return;
+  turn=other(turn);
+  beginTurn();
+}
+/* No shield here. Once both fleets are drawn there is nothing on screen that one player
+   may see and the other may not, so the device just changes hands. */
+function beginTurn(){
+  cursorShown=false;
+  shotsLeft=shotsFor(mode,sides[turn].fleet);
+  turnLog=[];
+  phase="aim";
+  renderAll();
+}
+
+/* ================= the shield =================
+   Between seats the board must be genuinely covered, not merely switched: the incoming
+   player must not catch the outgoing player's waters. The overlay is opaque and the state
+   behind it is already rerendered before it lifts. */
+function raiseShield(title,sub,report){
+  pendingShield=true;
+  document.getElementById("shieldtitle").textContent=title;
+  document.getElementById("shieldsub").textContent=sub||"";
+  const rep=document.getElementById("shieldreport");
+  rep.textContent=report||"";
+  rep.style.display = report ? "" : "none";
+  document.getElementById("shield").classList.remove("hidden");
+}
+function lowerShield(){
+  pendingShield=null;
+  document.getElementById("shield").classList.add("hidden");
+  renderAll();
+  boardEl.focus({preventScroll:true});
+}
+
+/* ================= placement handover ================= */
+function readyFleet(){
+  if(phase!=="place") return;
+  if(nextShip(sides[seat].fleet)) return;               // fleet not finished
+  runAnchor=null; runCells=[]; placedOrder=[];          // the undo stack is per seat
+  if(seat==="a"){
+    seat="b";
+    renderAll();
+    raiseShield("Pass to "+names.b, "Set out your fleet where "+names.a+" cannot see.", "");
+  } else {
+    turn="a";
+    beginTurn();
+  }
+}
+
+/* ================= end ================= */
+function finish(winner){
+  gameOver=true; phase="over";
+  clear(hitG); clear(fxG); clear(ghostG);
+  renderBoard(); showTools();
+  const loser=other(winner);
+  document.getElementById("bannertitle").textContent=names[winner]+" wins";
+  const shotsTaken=sides[loser].incoming.filter(function(m){ return m!==null; }).length;
+  document.getElementById("bannersub").textContent=
+    "Every ship in "+names[loser]+"'s fleet is sunk, found in "+shotsTaken+" shots.";
+  document.getElementById("banner").classList.remove("hidden");
+  if(window.fsExit) window.fsExit();
+  Sound.win();
+}
+
+/* ================= pointer =================
+   One handler set on the board root, hit-testing by coordinate through a single
+   screen->viewBox transform. */
+function toBoard(e){
+  const m=boardEl.getScreenCTM(); if(!m) return null;
+  const inv=m.inverse();
+  if(window.DOMPoint) return new DOMPoint(e.clientX,e.clientY).matrixTransform(inv);
+  const sp=boardEl.createSVGPoint(); sp.x=e.clientX; sp.y=e.clientY;
+  return sp.matrixTransform(inv);
+}
+/* Hit-testing checks every grid on screen and reports which one was pressed, so pressing
+   your own waters can be refused with a nudge rather than silently ignored. */
+/* Hit-testing runs over both grids and undoes the half turn on the far one, so a press
+   lands on the cell the player is actually looking at rather than its mirror. */
+function hitAt(p){
+  if(!p) return null;
+  if(phase==="place"){
+    const g=placeGrid();
+    const c=Math.floor((p.x-g.ox)/g.cell), r=Math.floor((p.y-g.oy)/g.cell);
+    return inGrid(r,c) ? { key:seat, i:idx(r,c) } : null;
+  }
+  for(const key of ["a","b"]){
+    const g=playGrid(key);
+    let c=Math.floor((p.x-g.ox)/g.cell), r=Math.floor((p.y-g.oy)/g.cell);
+    if(!inGrid(r,c)) continue;
+    if(g.flip){ r=N-1-r; c=N-1-c; }          // the far grid is drawn turned
+    return { key:key, i:idx(r,c) };
+  }
+  return null;
+}
+boardEl.addEventListener("pointerdown", function(e){
+  if(gameOver||pendingShield) return;
+  if(e.pointerType==="mouse" && e.button!==0) return;
+  const p=toBoard(e); if(!p) return;
+  const at=hitAt(p); if(at===null) return;
+  e.preventDefault();
+  boardEl.focus({preventScroll:true});
+  audio(); cursorShown=false;
+  if(dragId!==null) return;
+  dragId=e.pointerId;
+  try{ boardEl.setPointerCapture(e.pointerId); }catch(err){}
+  if(phase==="place"){ beginRun(at.i); return; }
+  if(phase==="aim"){ fireAt(at.i, at.key); }
+});
+boardEl.addEventListener("pointermove", function(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  if(phase!=="place"||runAnchor===null) return;
+  const p=toBoard(e); if(!p) return;
+  const at=hitAt(p);
+  if(at===null) return;                       // off the grid: hold the last good run
+  extendRun(at.i);
+});
+function releasePointer(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  try{ boardEl.releasePointerCapture(e.pointerId); }catch(err){}
+  dragId=null;
+  if(phase==="place"&&runAnchor!==null) endRun();
+}
+boardEl.addEventListener("pointerup", releasePointer);
+/* palm rejection or the browser claiming the gesture: drop the run, place nothing */
+boardEl.addEventListener("pointercancel", function(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  dragId=null; runAnchor=null; runCells=[]; clear(ghostG); renderAll();
+});
+
+/* ================= keyboard =================
+   A drawn hull needs a start and an end, so the keyboard places one the same way: Enter
+   sets the anchor, arrows stretch the run, Enter again commits it. */
+boardEl.addEventListener("keydown", function(e){
+  if(gameOver||pendingShield) return;
+  const k=e.key;
+  if(k==="Escape"){
+    if(phase==="place"&&runAnchor!==null){ e.preventDefault(); audio(); runAnchor=null; runCells=[]; clear(ghostG); Sound.deselect(); renderAll(); }
+    return;
+  }
+  if(k==="u"||k==="U"){ if(phase==="place"){ e.preventDefault(); audio(); undoShip(); } return; }
+  if(k!=="ArrowUp"&&k!=="ArrowDown"&&k!=="ArrowLeft"&&k!=="ArrowRight"&&k!=="Enter"&&k!==" ") return;
+  e.preventDefault(); audio(); cursorShown=true;
+  if(k==="Enter"||k===" "){
+    if(phase==="place"){
+      if(runAnchor===null) beginRun(cursor);
+      else endRun();
+    } else if(phase==="aim"){ fireAt(cursor, other(turn)); }
+    else Sound.nudge();
+    cursorShown=true; drawFx(); return;
+  }
+  let r=Math.floor(cursor/N), c=cursor%N;
+  if(k==="ArrowUp") r=Math.max(0,r-1);
+  else if(k==="ArrowDown") r=Math.min(N-1,r+1);
+  else if(k==="ArrowLeft") c=Math.max(0,c-1);
+  else if(k==="ArrowRight") c=Math.min(N-1,c+1);
+  cursor=idx(r,c);
+  if(phase==="place"&&runAnchor!==null) extendRun(cursor);
+  drawFx();
+});
+
+/* ================= controls ================= */
+btn.undo.addEventListener("click", function(){ if(!btn.undo.disabled){ audio(); undoShip(); } });
+btn.ready.addEventListener("click", function(){ if(!btn.ready.disabled){ audio(); readyFleet(); } });
+
+document.getElementById("readybtn").addEventListener("click", function(){ audio(); lowerShield(); });
+
+/* ================= new game ================= */
+function newSide(){ return { board:new Array(N*N).fill(null), fleet:newFleet(), incoming:new Array(N*N).fill(null) }; }
+function newGame(){
+  sides={ a:newSide(), b:newSide() };
+  phase="place"; seat="a"; turn="a";
+  shotsLeft=0; turnLog=[]; gameOver=false;
+  runAnchor=null; runCells=[]; placedOrder=[];
+  window.clearTimeout(passTimer); passTimer=null;
+  cursor=0; cursorShown=false; dragId=null; pendingShield=null;
+  clear(ghostG); builtPhase=null;
+  document.getElementById("banner").classList.add("hidden");
+  document.getElementById("shield").classList.add("hidden");
+  renderAll();
+}
+
+/* ================= setup card ================= */
+function readName(id,fallback){
+  const el=document.getElementById(id);
+  const v=(el&&el.value?el.value:"").replace(/[^\p{L}\p{N} '\-]/gu,"").trim().slice(0,8);
+  return v||fallback;
+}
+document.getElementById("mode-sea").addEventListener("click", function(){
+  mode="sea"; this.classList.add("on"); document.getElementById("mode-salvo").classList.remove("on");
+});
+document.getElementById("mode-salvo").addEventListener("click", function(){
+  mode="salvo"; this.classList.add("on"); document.getElementById("mode-sea").classList.remove("on");
+});
+
+newGame();
+window.__bs={ get sides(){return sides;}, get phase(){return phase;}, get seat(){return seat;},
+  get turn(){return turn;}, get shotsLeft(){return shotsLeft;}, get gameOver(){return gameOver;},
+  get mode(){return mode;}, set mode(m){mode=m;},
+  get runCells(){return runCells.slice();}, get runAnchor(){return runAnchor;},
+  get placedOrder(){return placedOrder.slice();},
+  get passPending(){return passTimer!==null;},
+  newGame, readyFleet, fireAt, endTurn, lowerShield, undoShip, hitAt, renderAll,
+  playGrid, placeGrid, TOP_SIDE, BOT_SIDE, SEAT_TOP, SEAT_BOT,
+  beginRun, extendRun, endRun, drawRun, nextShip, placedCount, maxRun, shipOfLength };
+
+/* ---- fullscreen + intro ---- */
+window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
+window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
+(function(){
+  var g=function(id){ return document.getElementById(id); };
+  var btns=document.querySelectorAll(".fsbtn");
+  if(btns.length){
+    var sync=function(){ var on=!!window.fsElement();
+      for(var i=0;i<btns.length;i++) btns[i].classList.toggle("fs-on", on); };
+    document.addEventListener("fullscreenchange", sync); document.addEventListener("webkitfullscreenchange", sync);
+    for(var j=0;j<btns.length;j++) btns[j].onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+  }
+  var ab=g("againbtn"); if(ab){ ab.onclick=function(){ audio(); g("banner").classList.add("hidden"); g("setup").classList.remove("hidden"); }; }
+  var sb=g("startbtn"); if(sb){ sb.onclick=function(){
+    audio();
+    names.a=readName("name-a","Red"); names.b=readName("name-b","Blue");
+    newGame();
+    g("setup").classList.add("hidden");
+    raiseShield("Pass to "+names.a, "Set out your fleet where "+names.b+" cannot see.", "");
+  }; }
+})();
+})();
+</script>
+</body>
+</html>
