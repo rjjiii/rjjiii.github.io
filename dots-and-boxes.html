@@ -17,6 +17,11 @@
        and had to go; that coupling is why the paper and the pens changed together. */
     --ink-a:#c64a3b;   /* first player draws in red  */
     --ink-b:#24467e;   /* second player draws in blue */
+    /* The turn glow sits on the dark score chips, where the inks themselves are too dark to
+       read (blue measures under 2:1 there). These are the lit faces of the chips' own pen
+       pips: same hues, lifted. */
+    --ink-a-glow:#e2705f;
+    --ink-b-glow:#6f93d0;
     --font-display:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
     --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
   }
@@ -30,6 +35,9 @@
     padding:var(--pad) 16px; -webkit-tap-highlight-color:transparent; overflow:hidden;
   }
   :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:6px; }
+  /* Start and every board press put focus on the board (for the keyboard controls), and the
+     browser drew its default ring for mouse and touch too. Keyboard focus keeps the gold ring above. */
+  #board:focus:not(:focus-visible){ outline:none; }
 
   /* CSS owns fitting: .table takes the column, .boardwrap absorbs the leftover height,
      and the board fills that box squarely. No chrome total is hardcoded, so the score
@@ -51,6 +59,17 @@
     border-color:rgba(255,215,94,.55);
     box-shadow:0 0 0 1px rgba(255,215,94,.4), 0 0 20px rgba(205,164,52,.28), 0 2px 6px rgba(0,0,0,.35);
   }
+  /* One swell of the new mover's ink when the turn passes — not a loop, so an unchanged chip
+     after you close a box is itself the cue that it is still your go. It carries information,
+     so it is not gated by reduced motion (canon gates decorative loops only). */
+  @keyframes turnFlashA{
+    0%,100%{ box-shadow:0 0 0 1px rgba(255,215,94,.4), 0 0 20px rgba(205,164,52,.28), 0 2px 6px rgba(0,0,0,.35); }
+    35%{ box-shadow:0 0 0 2px var(--ink-a-glow), 0 0 28px 6px var(--ink-a-glow), 0 2px 6px rgba(0,0,0,.35); } }
+  @keyframes turnFlashB{
+    0%,100%{ box-shadow:0 0 0 1px rgba(255,215,94,.4), 0 0 20px rgba(205,164,52,.28), 0 2px 6px rgba(0,0,0,.35); }
+    35%{ box-shadow:0 0 0 2px var(--ink-b-glow), 0 0 28px 6px var(--ink-b-glow), 0 2px 6px rgba(0,0,0,.35); } }
+  #score-a.turn-flash{ animation:turnFlashA 1.1s ease-out; }
+  #score-b.turn-flash{ animation:turnFlashB 1.1s ease-out; }
   .pen{ width:14px; height:14px; flex:0 0 auto; border-radius:50%;
         box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.32), 0 1px 2px rgba(0,0,0,.5); }
   .pen--a{ background:radial-gradient(120% 120% at 32% 28%, #e2705f, var(--ink-a)); }
@@ -83,15 +102,34 @@
                     filter:drop-shadow(0 1px 1.2px rgba(58,44,26,.34)); }
   .ink.a .marks path{ stroke:var(--ink-a); }
   .ink.b .marks path{ stroke:var(--ink-b); }
+  /* "sign here": a dashed frame in your own ink round each open, unsigned box. It fades the
+     moment that box has a signature, so with two boxes open, the one still to do is the
+     one still framed. */
+  .ink .sign-frame{ fill:none; stroke-width:3.4; stroke-dasharray:7 7; opacity:1; transition:opacity .25s ease; }
+  .ink.a .sign-frame{ stroke:var(--ink-a); }
+  .ink.b .sign-frame{ stroke:var(--ink-b); }
 
   .edge{ stroke-linecap:round; filter:drop-shadow(0 1px 1.2px rgba(58,44,26,.32)); }
   .edge.a{ stroke:var(--ink-a); }
   .edge.b{ stroke:var(--ink-b); }
-  .ghostline{ stroke-linecap:round; }
+  /* The drag preview is the pen itself, in three parts, each told apart by shape and not
+     by colour alone:
+       .pen-ink   the stretch already pulled — solid, near-full ink, it is the line being drawn
+       .pen-rest  the stretch a release would finish — thin and dashed, "this is where it goes"
+       stop       an edge already taken — no ink at all, a pencil cross on the drawn line
+     Canon's ghost sits at 0.4 because it previews a piece that is already on the board. Here
+     nothing exists yet: the pulled stretch IS the line, so it is drawn as ink. */
+  .ghostline{ stroke-linecap:round; fill:none; }
   .ghostline.a{ stroke:var(--ink-a); }
   .ghostline.b{ stroke:var(--ink-b); }
+  .pen-ink{ opacity:.88; }
+  .pen-rest{ opacity:.6; stroke-dasharray:1 11; }
   .boxfill.a{ fill:var(--ink-a); }
   .boxfill.b{ fill:var(--ink-b); }
+  /* box-closing preview: a hatch in the mover's ink, so the meaning rides on pattern */
+  .hatch{ stroke-width:3.6; stroke-opacity:.8; }
+  .hatch.a{ stroke:var(--ink-a); }
+  .hatch.b{ stroke:var(--ink-b); }
 
   .rail{ display:flex; flex-direction:column; align-items:center; gap:6px; }
   .status{ font-family:var(--font-display); font-size:15px; color:#d9cfb6; text-align:center; min-height:20px; }
@@ -103,6 +141,9 @@
     -webkit-appearance:none; appearance:none; opacity:0; pointer-events:none;
     transition:opacity .2s ease, color .2s, border-color .2s, background .2s; }
   .deselect.show{ opacity:1; pointer-events:auto; }
+  /* The hidden pill is also disabled, and the base button:disabled rule (opacity .32) outranks
+     .deselect's opacity:0 — which left a greyed-out pill under the board all game. */
+  .deselect:disabled{ opacity:0; }
   .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
   .deselect svg{ width:12px; height:12px; }
   @media (prefers-reduced-motion:reduce){ .deselect{ transition:none; } }
@@ -111,8 +152,10 @@
      The old form set stroke-dashoffset to the full length inline and relied on a double
      requestAnimationFrame to put it back to zero — if that callback never landed, the
      line stayed permanently invisible. A keyframe cannot fail that way. */
-  @keyframes drawIn{ from{ stroke-dashoffset:var(--len); } to{ stroke-dashoffset:0; } }
-  .drawIn{ stroke-dasharray:var(--len); animation:drawIn .24s ease-out; }
+  /* --from lets a dragged line finish from where the pen was let go rather than replay from
+     nothing; it falls back to --len, so every other caller is unchanged. */
+  @keyframes drawIn{ from{ stroke-dashoffset:var(--from, var(--len)); } to{ stroke-dashoffset:0; } }
+  .drawIn{ stroke-dasharray:var(--len); animation:drawIn var(--dur, .24s) ease-out; }
   @media (prefers-reduced-motion:reduce){ .drawIn{ animation:none; } }
   @keyframes pulseGlow{ 0%,100%{opacity:.22} 50%{opacity:.68} }
   @keyframes pulseRing{ 0%,100%{opacity:.45} 50%{opacity:1.0} }
@@ -216,9 +259,15 @@
       <!-- Dots invert with the surface: pencil on paper, not ivory on dark wood. -->
       <radialGradient id="dotFace" cx="34%" cy="30%" r="72%"><stop offset="0%" stop-color="#6b6152"/><stop offset="55%" stop-color="#4a4238"/><stop offset="100%" stop-color="#2b261f"/></radialGradient>
       <radialGradient id="dotDead" cx="34%" cy="30%" r="72%"><stop offset="0%" stop-color="#c4bba6"/><stop offset="55%" stop-color="#b0a68f"/><stop offset="100%" stop-color="#9a8f78"/></radialGradient>
+      <!-- Box-closing preview hatch, one per seat. Stroke colour comes from the .hatch.a/.b
+           classes, so the ink tokens on :root stay the only place a seat colour is written. -->
+      <pattern id="hatch-a" patternUnits="userSpaceOnUse" width="11" height="11" patternTransform="rotate(45)"><line x1="3" y1="0" x2="3" y2="11" class="hatch a"/></pattern>
+      <pattern id="hatch-b" patternUnits="userSpaceOnUse" width="11" height="11" patternTransform="rotate(45)"><line x1="3" y1="0" x2="3" y2="11" class="hatch b"/></pattern>
     </defs>
     <g id="staticG"></g>
     <g id="fillG"></g>
+    <g id="previewG" pointer-events="none"></g>
+    <g id="haloG" pointer-events="none"></g><!-- dot glows: under the lines, so ink is never tinted -->
     <g id="lineG"></g>
     <g id="inkG"></g>
     <g id="dotG"></g>
@@ -272,8 +321,14 @@ const LINE_W = CELL*0.075;
 const PALE_BACKING = "#c9762a";   // canon's burnt orange, under gold on a pale surface
 
 const PAUSE = 320;        // after a box is won, before the guide traces in
-const COMMIT_IDLE = 850;  // after the last stroke, before the initials commit
-const AUTO_STAMP = 2800;  // untouched box: stamp the printed initials and move on
+/* How long signing waits. Leaving early is the player's call (tap a dot, press Enter), so the
+   clock only has to stop an idle player stalling the game — and it has to be generous enough
+   for a slow hand. Writers with motor impairments spend half or more of their writing time
+   with the pen lifted, and the slowest touchscreen users average several seconds just to
+   land on a target; 8 s is ten times the old 0.85 s pen-up wait (WCAG 2.2.1's yardstick). */
+const START_WAIT  = 10000; // a box nobody has touched: stamp the printed initials after this
+const PEN_UP_WAIT = 8000;  // after any pen-up, however finished the ink looks
+const COUNTDOWN   = 3000;  // an unsigned box's frame drains over the last stretch before its stamp
 const MIN_LEN = 18;       // minimum drawn length (0..100 space) to count as handwriting
 const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
@@ -281,9 +336,11 @@ const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced
 const boardEl=document.getElementById("board");
 const staticG=document.getElementById("staticG");
 const fillG=document.getElementById("fillG");
+const previewG=document.getElementById("previewG");
 const lineG=document.getElementById("lineG");
 const inkG=document.getElementById("inkG");
 const dotG=document.getElementById("dotG");
+const haloG=document.getElementById("haloG");
 const fxG=document.getElementById("fxG");
 const cursorG=document.getElementById("cursorG");
 const ghostG=document.getElementById("ghostG");
@@ -296,9 +353,8 @@ const numEls={ a:document.getElementById("num-a"), b:document.getElementById("nu
 
 /* ================= state ================= */
 let H, V, OWN, score, names, turn, selected, phase, gameOver;
-let claimQueue=[], claimBox=null, claimGroup=null, claimGuide=null, claimMarks=null;
-let strokes=[], drawing=false, armAt=0;
-let ghostTimer=null, commitTimer=null, autoTimer=null;
+let claims=[], inkStroke=null, drawing=false, armAt=0;
+let ghostTimer=null, claimTimer=null;
 let cursor={r:0,c:0}, cursorShown=false;
 
 /* ================= sound (synth, no files) ================= */
@@ -326,8 +382,40 @@ const Sound={
   commit(){ tone({freq:200,to:120,dur:0.13,vol:0.42,type:"triangle"}); noise({freq:2200,dur:0.02,vol:0.12,filter:"highpass"});
             tone({freq:520,dur:0.18,vol:0.12,type:"sine",delay:0.03}); },
   win(){ [523,659,784,1047].forEach((f,i)=>tone({freq:f,dur:0.55,vol:0.32,type:"triangle",delay:i*0.1,attack:0.01})); tone({freq:262,dur:0.8,vol:0.2,type:"sine",delay:0.1}); },
-  nudge(){ tone({freq:96,to:72,dur:0.12,vol:0.2,type:"sine"}); }
+  nudge(){ tone({freq:96,to:72,dur:0.12,vol:0.2,type:"sine"}); },
+  snap(){ tone({freq:760,to:940,dur:0.05,vol:0.10,type:"sine"}); },        // pen reaches a target
+  blocked(){ tone({freq:150,to:120,dur:0.07,vol:0.08,type:"sine"}); },     // aiming at a drawn edge
+  signed(){ tone({freq:660,to:880,dur:0.09,vol:0.10,type:"sine"}); }       // one box now has a signature
 };
+
+/* The nib: a looped band of noise whose level follows how fast the pen is actually being
+   pulled along the channel, so it scratches while you draw and goes quiet when you pause. */
+let nib=null, nibBuf=null;
+function nibStart(){
+  const ctx=audio(); if(!ctx||nib) return;
+  if(!nibBuf){
+    nibBuf=ctx.createBuffer(1, Math.floor(ctx.sampleRate*0.6), ctx.sampleRate);
+    const d=nibBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  }
+  const src=ctx.createBufferSource(); src.buffer=nibBuf; src.loop=true;
+  const f=ctx.createBiquadFilter(); f.type="bandpass"; f.frequency.value=2600; f.Q.value=0.9;
+  const g=ctx.createGain(); g.gain.value=0.0001;
+  src.connect(f).connect(g).connect(master); src.start();
+  nib={src:src, g:g};
+}
+function nibLevel(v){
+  if(!nib||!actx) return;
+  const t=actx.currentTime, gp=nib.g.gain;
+  gp.cancelScheduledValues(t);
+  gp.setTargetAtTime(Math.max(0.0001,v), t, 0.02);
+  gp.setTargetAtTime(0.0001, t+0.07, 0.05);          // decays on its own if the pen stops
+}
+function nibStop(){
+  if(!nib||!actx) { nib=null; return; }
+  const n=nib, t=actx.currentTime; nib=null;
+  n.g.gain.cancelScheduledValues(t); n.g.gain.setTargetAtTime(0.0001, t, 0.03);
+  try{ n.src.stop(t+0.15); }catch(err){}
+}
 
 /* ==== PURE LOGIC START ====
    No DOM in here. The edge/box arithmetic is extracted verbatim by the test harness,
@@ -384,6 +472,17 @@ function applyEdge(H,V,OWN,e,who){
     if(!OWN[b.r][b.c] && boxComplete(H,V,b.r,b.c)){ OWN[b.r][b.c]=who; won.push(b); }
   });
   return won;
+}
+/* The boxes an edge WOULD close if drawn now, without drawing it: unowned boxes whose
+   other three sides are already set. Read-only, so the preview can never change the game. */
+function boxesClosedBy(H,V,OWN,e){
+  return boxesTouching(e).filter(function(b){
+    if(OWN[b.r][b.c]) return false;
+    return boxSides(b.r,b.c).every(function(s){
+      if(s[0]===e.t && s[1]===e.r && s[2]===e.c) return true;     // the edge being aimed
+      return !!(s[0]==="h" ? H[s[1]][s[2]] : V[s[1]][s[2]]);
+    });
+  });
 }
 /* ==== PURE LOGIC END ==== */
 
@@ -481,12 +580,17 @@ function buildStatic(){
 function paintBox(r,c,who){
   E("rect",{x:BX(c),y:BY(r),width:CELL,height:CELL,"fill-opacity":0.16,"class":"boxfill "+who},fillG);
 }
-function paintEdge(e,who){
-  const a = e.t==="h" ? {x:DX(e.c),y:DY(e.r)} : {x:DX(e.c),y:DY(e.r)};
-  const b = e.t==="h" ? {x:DX(e.c+1),y:DY(e.r)} : {x:DX(e.c),y:DY(e.r+1)};
+/* Drawn outward from the dot the player started at, so the reveal runs the way the pen did.
+   `shown` is how much of the line the drag had already pulled; the reveal finishes from
+   there instead of replaying from nothing, and takes proportionally less time. */
+function paintEdge(from,to,who,shown){
+  const a={x:DX(from.c),y:DY(from.r)}, b={x:DX(to.c),y:DY(to.r)};
   const ln=E("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,"stroke-width":LINE_W,"class":"edge "+who},lineG);
   if(!reduceMotion){
-    ln.style.setProperty("--len", Math.hypot(b.x-a.x,b.y-a.y));
+    const len=Math.hypot(b.x-a.x,b.y-a.y), have=Math.max(0,Math.min(len,shown||0));
+    ln.style.setProperty("--len", len);
+    ln.style.setProperty("--from", len-have);
+    ln.style.setProperty("--dur", Math.max(0.07, 0.24*(len-have)/len)+"s");
     ln.classList.add("drawIn");
   }
 }
@@ -506,22 +610,32 @@ function renderDots(){
    mid-gesture cannot strand a drag in progress. */
 function buildHits(){
   clear(hitG);
-  if(gameOver||phase!=="line") return;
+  if(gameOver||(phase!=="line"&&phase!=="claim")) return;
+  if(phase==="claim" && !claims.every(function(k){ return k.signed; })) return;   // dots aren't targets yet
+  const rad = phase==="claim" ? DOT_HIT_SIGNING : CELL*0.34;   // signing: the dot itself, not its surroundings
   for(let r=0;r<DOTS;r++) for(let c=0;c<DOTS;c++){
     if(!freeNeighbours(H,V,r,c).length) continue;
-    E("circle",{cx:DX(c),cy:DY(r),r:CELL*0.34,fill:"transparent",style:"cursor:pointer"},hitG);
+    E("circle",{cx:DX(c),cy:DY(r),r:rad,fill:"transparent",style:"cursor:pointer"},hitG);
   }
 }
 
 /* ================= selection-dependent layers (redrawn on a press) =================
-   Canon's marker grammar, with one stated departure. A dot is "movable" whenever any of
-   its edges is still free, which at the start of a game is all thirty-six of them; haloing
-   and pulsing every dot would light the whole board and tell the player nothing. So the
-   pulse is spent where it carries information — the legal destinations of the selected
-   dot — and the standing read of what is still playable is carried by the dots themselves,
-   which go dark and lose their pointer cursor once all their edges are drawn. */
+   Canon's marker grammar, with the movable cue as a glow only. Movable: every dot a press
+   would select has a soft pulsing halo behind it. That is every live dot in line mode with nothing
+   selected, and during signing once every open box is signed (when a dot tap moves on).
+   Selected: a solid ring, and the movable pulses give way so the bullseyes on its legal
+   neighbours are the only pulsing thing on the board. */
+function canPickDot(){
+  if(gameOver || selected) return false;
+  if(phase==="line") return true;
+  return phase==="claim" && claims.length>0 && claims.every(function(k){ return k.signed; });
+}
 function drawFx(){
-  clear(fxG);
+  clear(fxG); clear(haloG);
+  if(canPickDot()){
+    for(let r=0;r<DOTS;r++) for(let c=0;c<DOTS;c++)
+      if(freeNeighbours(H,V,r,c).length) movable(DX(c),DY(r));
+  }
   const showDeselect = !!selected && phase==="line" && !gameOver;
   deselectBtn.classList.toggle("show", showDeselect);
   deselectBtn.disabled = !showDeselect;
@@ -530,16 +644,49 @@ function drawFx(){
     E("circle",{cx:DX(selected.c),cy:DY(selected.r),r:DOT_R*2.6,fill:"url(#glowhalo)"},fxG);
     if(isPaleCell()) E("circle",{cx:DX(selected.c),cy:DY(selected.r),r:DOT_R*1.9,fill:"none",stroke:PALE_BACKING,"stroke-width":7.5},fxG);
     E("circle",{cx:DX(selected.c),cy:DY(selected.r),r:DOT_R*1.9,fill:"none",stroke:"#ffd75e","stroke-width":4,opacity:0.97},fxG);
-    freeNeighbours(H,V,selected.r,selected.c).forEach(n=>bullseye(DX(n.c),DY(n.r)));
+    freeNeighbours(H,V,selected.r,selected.c).forEach(function(n){
+      const on = !!aim && aim.state==="ok" && aim.n.r===n.r && aim.n.c===n.c;
+      bullseye(DX(n.c),DY(n.r),on);
+    });
   }
+  drawPreview();
   drawCursor();
   updateStatus();
 }
-function bullseye(x,y){
+/* Two states. Waiting: canon's bullseye, pulsing. Accepted — the pen is aimed here and a
+   release would draw this line: the pulse stops and the ring grows and thickens. The size
+   step carries the change on its own, because reduced motion already stops the pulse and
+   "pulsing vs still" would otherwise be no difference at all for those players. */
+/* A pickable dot gets a soft glow behind it that breathes — a quiet prompt, not a marker.
+   No ring: rings on all 36 dots read as busy, so the halo alone carries "you can pick this".
+   It sits in haloG, under the lines and the dots, so neither the ink nor the dot is tinted. */
+function movable(x,y){
+  E("circle",{cx:x,cy:y,r:DOT_R*3,fill:"url(#glowhalo)",opacity:0.55,"class":"pulseGlow"},haloG);
+}
+function bullseye(x,y,accepted){
+  if(accepted){
+    E("circle",{cx:x,cy:y,r:CELL*0.26,fill:"url(#glowhalo)",opacity:0.75},fxG);
+    if(isPaleCell()) E("circle",{cx:x,cy:y,r:CELL*0.205,fill:PALE_BACKING,"fill-opacity":0.95},fxG);
+    E("circle",{cx:x,cy:y,r:CELL*0.18,fill:"none",stroke:"#ffd75e","stroke-width":5.5},fxG);
+    E("circle",{cx:x,cy:y,r:CELL*0.075,fill:"#ffd75e"},fxG);
+    return;
+  }
   E("circle",{cx:x,cy:y,r:CELL*0.20,fill:"url(#glowhalo)",opacity:0.5,"class":"pulseGlow"},fxG);
   if(isPaleCell()) E("circle",{cx:x,cy:y,r:CELL*0.155,fill:PALE_BACKING,"fill-opacity":0.95},fxG);
   E("circle",{cx:x,cy:y,r:CELL*0.135,fill:"none",stroke:"#ffd75e","stroke-width":3,opacity:0.96},fxG);
   E("circle",{cx:x,cy:y,r:CELL*0.05,fill:"#ffd75e",opacity:0.96},fxG);
+}
+/* Hatch any box the aimed line would close. Only the aimed line, never every three-sided
+   box on the board — spotting those is the skill of the game, and a hint would play it. */
+function drawPreview(){
+  clear(previewG);
+  if(!aim||aim.state!=="ok"||!selected||phase!=="line"||gameOver) return;
+  const e=edgeBetween(selected,aim.n); if(!e) return;
+  boxesClosedBy(H,V,OWN,e).forEach(function(b){
+    const inset=LINE_W*0.9;
+    E("rect",{x:BX(b.c)+inset,y:BY(b.r)+inset,width:CELL-inset*2,height:CELL-inset*2,
+              fill:"url(#hatch-"+turn+")"},previewG);
+  });
 }
 /* Canon's pale-square rule: the board declares which cells are pale and every marker draw
    site consults it. The whole play surface is now the sheet, so this is true everywhere —
@@ -557,6 +704,13 @@ function drawCursor(){
 }
 
 /* ================= scores / status ================= */
+function flashTurn(){
+  ["a","b"].forEach(function(k){ scoreEls[k].classList.remove("turn-flash"); });
+  const el=scoreEls[turn];
+  void el.offsetWidth;                                  // restart the keyframes if they were mid-run
+  el.classList.add("turn-flash");
+  el.addEventListener("animationend", function(){ el.classList.remove("turn-flash"); }, {once:true});
+}
 function renderScores(){
   ["a","b"].forEach(function(s){
     whoEls[s].textContent = names[s];
@@ -568,7 +722,17 @@ function updateStatus(){
   if(gameOver){ statusEl.innerHTML=""; return; }
   const who='<b>'+names[turn]+'</b>';
   let msg;
-  if(phase==="claim") msg = who+' \u2014 write your initials in the box.';
+  const closes = aim && aim.state==="ok" && selected ? boxesClosedBy(H,V,OWN,edgeBetween(selected,aim.n)).length : 0;
+  if(phase==="claim"){
+    const n=claims.length, left=claims.filter(function(c){ return !c.signed; }).length;
+    if(n>1 && left)   msg = who+' \u2014 sign your boxes ('+left+' left).';
+    else if(left)     msg = who+' \u2014 write your initials in the box.';
+    else if(edgesDrawn(H,V)>=EDGE_COUNT) msg = who+' \u2014 signed. Tap anywhere to finish.';
+    else              msg = who+' \u2014 signed. Tap a dot to keep going.';
+  }
+  else if(closes)     msg = who+' \u2014 let go to close '+(closes>1?'two boxes':'the box')+'.';
+  else if(aim && aim.state==="ok") msg = who+' \u2014 let go to draw the line.';
+  else if(aim && aim.state==="taken") msg = who+' \u2014 that line is already drawn.';
   else if(selected)   msg = who+' \u2014 drag to a neighbouring dot, or tap one.';
   else                msg = who+' to move \u2014 drag between two dots.';
   statusEl.innerHTML=msg;
@@ -596,62 +760,101 @@ function onDotTap(r,c){
   selectDot(r,c);
 }
 
-function commitEdge(a,b){
+function commitEdge(a,b,shown){
   const e=edgeBetween(a,b);
   if(!e || edgeOwner(H,V,e)) { Sound.nudge(); return; }
   const mover=turn;
+  aim=null; clear(previewG);
   const won=applyEdge(H,V,OWN,e,mover);
   won.forEach(function(bx){ score[mover]++; paintBox(bx.r,bx.c,mover); });
-  paintEdge(e,mover);
+  paintEdge(a,b,mover,shown);
   clearSelection();
   renderDots(); renderScores();
   if(won.length){ Sound.box(); } else { Sound.line(); }
 
   if(won.length){
     /* A box was closed, so the turn does not pass — but it must be signed first.
-       One line can close two boxes at once; they are signed one after the other. */
-    claimQueue = won.slice();
-    beginClaim();
+       One line can close two boxes at once; both open for signing together. */
+    beginClaim(won);
     return;
   }
   turn=other(turn);
-  renderScores(); buildHits(); drawFx();
+  renderScores(); flashTurn(); buildHits(); drawFx();
   if(edgesDrawn(H,V)>=EDGE_COUNT) finish();
 }
 
 /* ================= the claim phase (tic-tac-toe's drawing mechanic) =================
-   The box is already yours by rule; the signing is the record of it. Draw over the guide
-   and your own hand is kept. Touch nothing, or scrawl less than MIN_LEN, and the printed
-   initials are stamped instead — without that fallback a chain of eight boxes would be
-   eight compulsory signatures, and a player who simply waits would stall the game. */
-function beginClaim(){
+   The box is already yours by rule; the signing is the record of it, and nothing in here
+   can change the score. Draw over the guide and your own hand is kept. Touch nothing, or
+   scrawl less than MIN_LEN, and the printed initials are stamped instead.
+
+   One line can close two boxes, and then BOTH are open at once. There is no "active" box:
+   each stroke belongs to the box the pen lands in, so the player may sign them in either
+   order and move between them freely. The old design queued the boxes and routed every
+   stroke to the head of the queue, which put right-box ink into the left box, dropped
+   strokes made during a hand-over, and could be stalled indefinitely by ping-ponging.
+
+   The signing ends on one shared clock (scheduleClaimEnd), on Enter, or on a press outside
+   the open boxes — the deliberate "I'm done". Ink is clipped to its box, never clamped:
+   clamping pressed stray ink into a bar along the box's edge. */
+function beginClaim(won){
   phase="claim";
-  claimBox=claimQueue.shift();
-  strokes=[]; drawing=false;
-  armAt = (window.performance?performance.now():Date.now()) + PAUSE;
-  claimGroup=E("g",{transform:"translate("+BX(claimBox.c)+" "+BY(claimBox.r)+")","class":"ink "+turn},inkG);
-  claimGuide=E("g",{"class":"guide"},claimGroup);
-  claimMarks=E("g",{"class":"marks"},claimGroup);
   clearTimers();
-  ghostTimer=window.setTimeout(showGuide, PAUSE);
-  autoTimer =window.setTimeout(stampClaim, PAUSE+AUTO_STAMP);
+  drawing=false; inkStroke=null;
+  claims = won.map(function(b){
+    const g=E("g",{transform:"translate("+BX(b.c)+" "+BY(b.r)+")","class":"ink "+turn},inkG);
+    const id="sign-"+b.r+"-"+b.c, ins=LINE_W*0.6;
+    const cp=E("clipPath",{id:id},g);
+    E("rect",{x:ins,y:ins,width:CELL-ins*2,height:CELL-ins*2},cp);
+    /* The countdown: a mask over the dashed frame, traced along the same outline from top
+       centre, clockwise. pathLength 100 makes the drain a percentage: dashoffset 0 shows the
+       whole frame, -100 shows none. The frame's own dash pattern is left untouched. */
+    const mid="drain-"+b.r+"-"+b.c;
+    const mk=E("mask",{id:mid,maskUnits:"userSpaceOnUse",x:-5,y:-5,width:CELL+10,height:CELL+10},g);
+    const drain=E("path",{d:"M 50 9 H 87 A 4 4 0 0 1 91 13 V 87 A 4 4 0 0 1 87 91 H 13 A 4 4 0 0 1 9 87 V 13 A 4 4 0 0 1 13 9 Z",
+      fill:"none",stroke:"#ffffff","stroke-width":10,pathLength:100,"stroke-dasharray":"100 100","stroke-dashoffset":0},mk);
+    /* pathLength 336 = 24 whole 7+7 dash cycles, so the dashes divide the outline evenly
+       instead of leaving a stub bunched into one corner. */
+    const frame=E("rect",{x:9,y:9,width:CELL-18,height:CELL-18,rx:4,pathLength:336,"class":"sign-frame",mask:"url(#"+mid+")"},g);
+    const guide=E("g",{"class":"guide"},g);
+    const marks=E("g",{"class":"marks","clip-path":"url(#"+id+")"},g);
+    return { box:b, g:g, frame:frame, drain:drain, drainAnim:null, guide:guide, marks:marks,
+             strokes:[], len:0, signed:false, guideShown:false };
+  });
+  armAt = now() + PAUSE;                               // only guards the "press outside = done" shortcut
+  ghostTimer=window.setTimeout(function(){ showGuides(false); }, PAUSE);
+  claimTimer=window.setTimeout(finishClaims, START_WAIT);
+  startCountdown(START_WAIT);
   buildHits(); drawFx();
 }
-function showGuide(){
-  if(phase!=="claim"||!claimGuide) return;
-  clear(claimGuide);
-  initialPaths(names[turn]).forEach(function(p,i){
-    const el=E("path",{d:p.d},claimGuide);
-    if(reduceMotion) return;
-    el.style.setProperty("--len", p.len);
-    el.style.animationDelay=(i*0.14)+"s";
-    el.classList.add("drawIn");
+/* All open boxes trace their guide together. A pen landing before the trace starts gets the
+   guides at once, fully drawn: nothing the player writes is ever held back or thrown away. */
+function showGuides(instant){
+  if(phase!=="claim") return;
+  window.clearTimeout(ghostTimer); ghostTimer=null;
+  claims.forEach(function(c){
+    if(c.guideShown) return;
+    c.guideShown=true;
+    initialPaths(names[turn]).forEach(function(p,i){
+      const el=E("path",{d:p.d},c.guide);
+      if(reduceMotion||instant) return;
+      el.style.setProperty("--len", p.len);
+      el.style.animationDelay=(i*0.14)+"s";
+      el.classList.add("drawIn");
+    });
   });
 }
-/* pointer position -> 0..100 inside the box being signed */
-function boxPoint(p){
-  const x=p.x-BX(claimBox.c), y=p.y-BY(claimBox.r);
-  return { x:Math.max(0,Math.min(100,x)), y:Math.max(0,Math.min(100,y)) };
+/* the open box under a point, or null */
+function claimAt(p){
+  for(const c of claims){
+    const x=p.x-BX(c.box.c), y=p.y-BY(c.box.r);
+    if(x>=0 && x<=CELL && y>=0 && y<=CELL) return c;
+  }
+  return null;
+}
+/* board point -> that box's own 0..100 frame, unclamped (the box clips its ink) */
+function localPoint(c,p){
+  return { x:Math.round((p.x-BX(c.box.c))*10)/10, y:Math.round((p.y-BY(c.box.r))*10)/10 };
 }
 function strokeD(points){
   if(points.length===0) return "";
@@ -671,63 +874,101 @@ function totalLength(list){
     len+=Math.hypot(s.points[i].x-s.points[i-1].x, s.points[i].y-s.points[i-1].y);
   return len;
 }
-function startStroke(p){
+function startStroke(c,p){
   drawing=true;
-  window.clearTimeout(autoTimer); window.clearTimeout(commitTimer);
-  claimGuide.style.opacity="0.5";                 // fade the guide as the player draws over it
-  const el=E("path",{d:""},claimMarks);
-  const stroke={ points:[p], el:el };
-  strokes.push(stroke);
-  el.setAttribute("d", strokeD(stroke.points));
+  window.clearTimeout(claimTimer); claimTimer=null;   // nothing ends while the pen is down
+  stopCountdown();                                     // ...and every frame is whole again
+  if(!c.guideShown) showGuides(true);
+  c.guide.style.opacity="0.5";                         // fade the guide as the player draws over it
+  const el=E("path",{d:""},c.marks);
+  inkStroke={ c:c, points:[localPoint(c,p)], el:el, t:now() };
+  c.strokes.push(inkStroke);
+  el.setAttribute("d", strokeD(inkStroke.points));
   Sound.tick();
+  nibStart();                                          // the same scratch the line pen makes
 }
 function extendStroke(p){
-  const s=strokes[strokes.length-1]; if(!s) return;
-  s.points.push(p);
-  s.el.setAttribute("d", strokeD(s.points));
+  if(!inkStroke) return;
+  const q=localPoint(inkStroke.c,p), last=inkStroke.points[inkStroke.points.length-1];
+  /* Box space is viewBox space (CELL is 100), so the line pen's speed-to-level mapping
+     carries over unchanged: the same hand speed makes the same scratch. */
+  const t=now(), v=Math.hypot(q.x-last.x, q.y-last.y)/Math.max(1, t-inkStroke.t);
+  nibLevel(Math.min(0.11, v*0.22));
+  inkStroke.t=t;
+  inkStroke.points.push(q);
+  inkStroke.el.setAttribute("d", strokeD(inkStroke.points));
 }
 function endStroke(){
   drawing=false;
-  window.clearTimeout(commitTimer);
-  commitTimer=window.setTimeout(function(){
-    if(phase!=="claim") return;
-    if(totalLength(strokes)>=MIN_LEN) finishClaim(false);
-    else stampClaim();
-  }, COMMIT_IDLE);
+  nibStop();
+  const c = inkStroke && inkStroke.c; inkStroke=null;
+  if(c){
+    c.len=totalLength(c.strokes);
+    if(!c.signed && c.len>=MIN_LEN){ c.signed=true; c.frame.style.opacity="0"; Sound.signed(); buildHits(); }
+  }
+  scheduleClaimEnd();
+  drawFx();                                            // status, and dot pulses once all are signed
 }
-/* no usable handwriting: keep the printed letterforms instead of the scrawl */
-function stampClaim(){
+/* The one clock. It only runs while the pen is up: PEN_UP_WAIT after each lift, however
+   complete the ink looks. (An earlier version committed after 0.85 s when the ink "looked
+   done", which lost an A's crossbar drawn a second after its legs.) */
+function scheduleClaimEnd(){
+  window.clearTimeout(claimTimer);
+  claimTimer=window.setTimeout(finishClaims, PEN_UP_WAIT);
+  startCountdown(PEN_UP_WAIT);
+}
+/* Drain each unsigned box's frame over the last COUNTDOWN ms before `wait` runs out. It is
+   scheduled from the same number as the timer it shows, so the frame empties as the stamp
+   lands. A signed box has no frame and no countdown: its signing ending loses nothing.
+   Not gated by reduced motion — it carries information, as canon allows. */
+function startCountdown(wait){
+  claims.forEach(function(c){
+    if(c.drainAnim){ c.drainAnim.cancel(); c.drainAnim=null; }
+    if(c.signed || !c.drain.animate) return;
+    c.drainAnim=c.drain.animate([{strokeDashoffset:0},{strokeDashoffset:-100}],
+      { duration:COUNTDOWN, delay:Math.max(0, wait-COUNTDOWN), easing:"linear", fill:"forwards" });
+  });
+}
+function stopCountdown(){
+  claims.forEach(function(c){ if(c.drainAnim){ c.drainAnim.cancel(); c.drainAnim=null; } });
+}
+/* Close the signing: handwriting is kept where a box has it, printed initials where it does not. */
+function finishClaims(){
   if(phase!=="claim") return;
-  clear(claimMarks); strokes=[];
-  initialPaths(names[turn]).forEach(function(p){ E("path",{d:p.d},claimMarks); });
-  finishClaim(true);
-}
-function finishClaim(stamped){
-  clearTimers();
-  drawing=false; strokes=[];
-  const guide=claimGuide;
-  if(guide){
+  clearTimers(); stopCountdown(); nibStop();
+  if(dragId!==null){ try{ boardEl.releasePointerCapture(dragId); }catch(err){} dragId=null; }
+  if(inkStroke){ const c=inkStroke.c; c.len=totalLength(c.strokes); if(c.len>=MIN_LEN) c.signed=true; }
+  drawing=false; inkStroke=null;
+  let wrote=false;
+  claims.forEach(function(c){
+    if(c.signed) wrote=true;
+    else{ clear(c.marks); initialPaths(names[turn]).forEach(function(p){ E("path",{d:p.d},c.marks); }); }
+    if(c.frame.parentNode) c.frame.parentNode.removeChild(c.frame);
+    const guide=c.guide;
     guide.style.transition="opacity .3s ease"; guide.style.opacity="0";
     window.setTimeout(function(){ if(guide.parentNode) clear(guide); }, 320);
-  }
-  claimBox=null; claimGroup=null; claimGuide=null; claimMarks=null;
-  if(!stamped) Sound.commit();
-
-  if(claimQueue.length){ beginClaim(); return; }
+  });
+  claims=[];
+  if(wrote) Sound.commit();
   phase="line";
   if(edgesDrawn(H,V)>=EDGE_COUNT){ finish(); return; }
   buildHits(); drawFx();                             // same player draws again
 }
+const stampClaim = finishClaims;                     // Enter/Space and the test hook
 function clearTimers(){
-  window.clearTimeout(ghostTimer); window.clearTimeout(commitTimer); window.clearTimeout(autoTimer);
-  ghostTimer=commitTimer=autoTimer=null;
+  window.clearTimeout(ghostTimer); window.clearTimeout(claimTimer);
+  ghostTimer=claimTimer=null;
 }
 
 /* ================= drag to draw =================
    The gesture lives on the board root, not on the hit discs, and every position comes from
    one screen->viewBox transform. Pointer capture keeps move/up arriving off-board, and the
    ghost and the drop test read the same numbers so they cannot disagree at a boundary. */
-let dragId=null, dragFrom=null, dragGhost=null;
+let dragId=null, dragFrom=null, pen=null, aim=null, lastPull=0, lastPullT=0;
+const HOME = CELL*0.26;                     // inside this the pen is still "at home" on its dot
+const PEN_IN  = DOT_R*1.9 + 4;              // the visible stroke starts just outside the selected ring
+const PEN_OUT = CELL*0.18 + 5;              // ...and stops just short of an accepted target ring
+function now(){ return window.performance ? performance.now() : Date.now(); }
 
 function toBoard(e){
   const m=boardEl.getScreenCTM(); if(!m) return null;
@@ -736,6 +977,16 @@ function toBoard(e){
   const sp=boardEl.createSVGPoint(); sp.x=e.clientX; sp.y=e.clientY;      // older Safari
   return sp.matrixTransform(inv);
 }
+/* While signing, a dot answers only to a press on the dot itself plus a small margin. In line
+   mode a dot takes anything within 0.42 of a cell, which would claim the corners of the box
+   being signed; the guide letters sit in the middle of the box, well clear of this radius. */
+const DOT_HIT_SIGNING = DOT_R*2.2;
+function liveDotAt(p, radius){
+  if(!p) return null;
+  const c=Math.round((p.x-M)/CELL), r=Math.round((p.y-M)/CELL);
+  if(!inDots(r,c) || Math.hypot(p.x-DX(c), p.y-DY(r)) > radius) return null;
+  return freeNeighbours(H,V,r,c).length ? {r,c} : null;
+}
 function dotAt(p){
   if(!p) return null;
   const c=Math.round((p.x-M)/CELL), r=Math.round((p.y-M)/CELL);
@@ -743,33 +994,69 @@ function dotAt(p){
   if(Math.hypot(p.x-DX(c), p.y-DY(r)) > CELL*0.42) return null;
   return {r,c};
 }
-/* Where a release would land: the free neighbour in the direction the pointer has gone.
-   Taking the dominant axis rather than the nearest dot makes a short flick enough, and
-   the ghost snapping to that dot shows exactly which line is about to be drawn. */
-function dragTarget(p){
+/* Where the pen is aimed. The dominant axis picks the direction, so a short flick is enough,
+   and `pull` is the pointer projected onto that channel — how far along the ruler the pen
+   has been drawn, clamped to one cell. Three states:
+     ok     a free edge: a release draws it          (the commit test reads exactly this)
+     taken  that edge is already drawn: a release does nothing
+     off    no dot that way, past the edge of the grid */
+function dragAim(p){
   if(!selected||!p) return null;
   const vx=p.x-DX(selected.c), vy=p.y-DY(selected.r);
-  if(Math.hypot(vx,vy) < CELL*0.26) return null;                    // still at home
+  if(Math.hypot(vx,vy) < HOME) return null;                          // still at home
   let dr=0, dc=0;
   if(Math.abs(vx)>=Math.abs(vy)) dc = vx>0?1:-1; else dr = vy>0?1:-1;
   const n={ r:selected.r+dr, c:selected.c+dc };
-  if(!inDots(n.r,n.c)) return null;
-  if(!edgeFree(H,V,selected,n)) return null;
-  return n;
+  const pull=Math.max(0, Math.min(CELL, dc ? vx*dc : vy*dr));
+  const state = !inDots(n.r,n.c) ? "off" : (edgeFree(H,V,selected,n) ? "ok" : "taken");
+  return { n:n, dr:dr, dc:dc, pull:pull, state:state };
 }
-function ghostTo(x,y){
-  if(!dragGhost){
-    dragGhost=E("line",{x1:DX(dragFrom.c),y1:DY(dragFrom.r),x2:x,y2:y,
-      "stroke-width":LINE_W,opacity:0.4,"class":"ghostline "+turn},ghostG);
+function dragTarget(p){ const a=dragAim(p); return a&&a.state==="ok" ? a.n : null; }
+function aimKey(a){ return a ? a.state+":"+a.n.r+","+a.n.c : "home"; }
+/* how much of the line the pen currently shows, measured from the source dot's centre */
+function penReach(a){ return Math.max(PEN_IN, Math.min(a.pull, CELL-PEN_OUT)); }
+
+/* The pen is built once per drag and only its attributes change on move (canon: pointermove
+   fires at display rate). `stop` is a small pencil cross, haloed in paper so it reads over
+   either ink and over bare sheet alike — shape, not colour, says "not here". */
+function penBuild(){
+  clear(ghostG);
+  const cls=" ghostline "+turn;
+  const stop=E("g",{},ghostG);
+  E("path",{d:"M -7 -7 L 7 7 M 7 -7 L -7 7",fill:"none",stroke:"#f2e9d4","stroke-width":8,"stroke-linecap":"round"},stop);
+  E("path",{d:"M -7 -7 L 7 7 M 7 -7 L -7 7",fill:"none",stroke:"#3a2f22","stroke-width":3.4,"stroke-linecap":"round"},stop);
+  pen={
+    rest: E("line",{"stroke-width":LINE_W*0.7,"class":"pen-rest"+cls},ghostG),
+    ink:  E("line",{"stroke-width":LINE_W,"class":"pen-ink"+cls},ghostG),
+    stop: stop
+  };
+  penHide();
+}
+function seg(el,a,d0,d1){
+  const x0=DX(dragFrom.c), y0=DY(dragFrom.r);
+  el.setAttribute("x1",x0+a.dc*d0); el.setAttribute("y1",y0+a.dr*d0);
+  el.setAttribute("x2",x0+a.dc*d1); el.setAttribute("y2",y0+a.dr*d1);
+  el.style.display = d1-d0 > 0.5 ? "" : "none";
+}
+function penHide(){ if(pen){ pen.ink.style.display="none"; pen.rest.style.display="none"; pen.stop.style.display="none"; } }
+function penShow(a){
+  if(!pen) return;
+  if(!a||a.state==="off"){ penHide(); return; }
+  if(a.state==="taken"){
+    pen.ink.style.display="none"; pen.rest.style.display="none";
+    pen.stop.setAttribute("transform","translate("+(DX(dragFrom.c)+a.dc*CELL*0.5)+" "+(DY(dragFrom.r)+a.dr*CELL*0.5)+")");
+    pen.stop.style.display="";
     return;
   }
-  dragGhost.style.display="";
-  dragGhost.setAttribute("x2",x); dragGhost.setAttribute("y2",y);
+  const reach=penReach(a);
+  pen.stop.style.display="none";
+  seg(pen.ink, a, PEN_IN, reach);
+  seg(pen.rest, a, reach, CELL-PEN_OUT);
 }
-function ghostHide(){ if(dragGhost) dragGhost.style.display="none"; }
 function endDrag(){
   if(dragId!==null){ try{ boardEl.releasePointerCapture(dragId); }catch(err){} }
-  dragId=null; dragFrom=null; dragGhost=null; clear(ghostG);
+  dragId=null; dragFrom=null; pen=null; aim=null; clear(ghostG); clear(previewG);
+  nibStop();
 }
 
 boardEl.addEventListener("pointerdown", function(e){
@@ -778,14 +1065,32 @@ boardEl.addEventListener("pointerdown", function(e){
   const p=toBoard(e); if(!p) return;
 
   if(phase==="claim"){
-    if(!claimBox) return;
-    if((window.performance?performance.now():Date.now()) < armAt) return;   // guide is still tracing in
+    if(!claims.length) return;
     e.preventDefault();
-    if(dragId!==null) return;
-    dragId=e.pointerId;
-    try{ boardEl.setPointerCapture(e.pointerId); }catch(err){}
-    audio(); startStroke(boxPoint(p));
-    return;
+    if(dragId!==null) return;                           // one pen at a time
+    /* A press on a live dot means "next line": signing ends and this same press carries on as
+       an ordinary press below, so it selects the dot — and, held and dragged, draws the line —
+       in one gesture. Before, the tap either became a speck of ink that restarted the commit
+       clock (original) or ended signing and was then thrown away (previous build). A dead dot
+       is not a target: on the box's corner it is part of the box like any other point. */
+    /* Only once every open box is signed can a press leave signing. Until then a press can't
+       skip the drawing: on a box — corners and their dots included — it is ink, anywhere else
+       it is ignored. (Enter, and the auto-stamp of an untouched box, still end it.) */
+    const allSigned=claims.every(function(k){ return k.signed; });
+    const target=allSigned ? liveDotAt(p, DOT_HIT_SIGNING) : null;
+    const c=target ? null : claimAt(p);
+    if(c){
+      dragId=e.pointerId;
+      try{ boardEl.setPointerCapture(e.pointerId); }catch(err){}
+      audio(); startStroke(c,p);
+      return;
+    }
+    if(!allSigned){ audio(); Sound.nudge(); return; }
+    /* Signed, then outside the open boxes or on a live dot: leave signing. Not in the first
+       PAUSE ms — a double-tap on the dot that closed the box must not skip anything. */
+    if(now()<armAt) return;
+    audio(); finishClaims();
+    if(!target || phase!=="line" || gameOver) return;   // a plain "done" press, or that was the last box
   }
 
   if(dragId!==null) return;                             // ignore a second finger mid-drag
@@ -798,18 +1103,35 @@ boardEl.addEventListener("pointerdown", function(e){
   if(selected&&selected.r===dot.r&&selected.c===dot.c&&phase==="line"&&!gameOver){
     dragId=e.pointerId; dragFrom={r:dot.r,c:dot.c};
     try{ boardEl.setPointerCapture(e.pointerId); }catch(err){}
+    penBuild(); nibStart(); lastPull=0; lastPullT=now();
   }
 });
 
 boardEl.addEventListener("pointermove", function(e){
   if(dragId===null||e.pointerId!==dragId) return;
   const p=toBoard(e); if(!p) return;
-  if(phase==="claim"){ if(drawing) extendStroke(boxPoint(p)); return; }
-  if(!selected){ endDrag(); return; }
-  const t=dragTarget(p);
-  if(t) ghostTo(DX(t.c),DY(t.r));                       // snap onto the dot the line would reach
-  else if(Math.hypot(p.x-DX(dragFrom.c),p.y-DY(dragFrom.r)) < CELL*0.26) ghostHide();  // no ghost at home
-  else ghostTo(p.x,p.y);                                // otherwise ride the pointer
+  if(phase==="claim"){ if(drawing) extendStroke(p); return; }
+  if(!selected){ endDrag(); drawFx(); return; }
+  const a=dragAim(p), changed = aimKey(a)!==aimKey(aim);
+  aim=a;
+  penShow(a);
+
+  /* scratch only while ink is actually being laid or wiped along the channel */
+  const t=now(), dt=Math.max(1,t-lastPullT);
+  if(a && a.state==="ok"){
+    const v=Math.abs(a.pull-lastPull)/dt;                    // viewBox units per ms
+    nibLevel(Math.min(0.11, v*0.22));
+    lastPull=a.pull;
+  } else lastPull = 0;
+  lastPullT=t;
+
+  if(changed){
+    if(a && a.state==="ok"){
+      Sound.snap();
+      if(e.pointerType!=="mouse" && navigator.vibrate){ try{ navigator.vibrate(8); }catch(err){} }
+    } else if(a && a.state==="taken") Sound.blocked();
+    drawFx();                                                // ring sizes, box hatch, status line
+  }
 });
 
 boardEl.addEventListener("pointerup", function(e){
@@ -820,12 +1142,12 @@ boardEl.addEventListener("pointerup", function(e){
     if(drawing) endStroke();
     return;
   }
-  const p=toBoard(e);
-  const t=dragTarget(p);
+  const a=dragAim(toBoard(e));
   const from=selected;
+  const shown = a && a.state==="ok" ? penReach(a) : 0;
   endDrag();
-  if(!t||!from||gameOver||phase!=="line") return;        // released off-target: stays selected
-  commitEdge(from,t);
+  if(!a||a.state!=="ok"||!from||gameOver||phase!=="line"){ drawFx(); return; }   // stays selected
+  commitEdge(from,a.n,shown);
 });
 
 /* palm rejection, an incoming call, or the browser claiming the gesture all land here.
@@ -833,7 +1155,7 @@ boardEl.addEventListener("pointerup", function(e){
 boardEl.addEventListener("pointercancel", function(e){
   if(dragId===null||e.pointerId!==dragId) return;
   if(phase==="claim"){ dragId=null; if(drawing) endStroke(); return; }
-  endDrag();
+  endDrag(); drawFx();
 });
 
 /* ================= end condition =================
@@ -857,7 +1179,7 @@ boardEl.addEventListener("keydown", function(e){
   if(gameOver) return;
   const k=e.key;
   if(phase==="claim"){
-    if(k==="Enter"||k===" "){ e.preventDefault(); audio(); stampClaim(); }
+    if(k==="Enter"||k===" "){ e.preventDefault(); audio(); finishClaims(); }
     return;
   }
   if(k==="Escape"){ e.preventDefault(); audio(); userDeselect(); return; }
@@ -891,13 +1213,12 @@ function setupGame(){
   score={a:0,b:0};
   names={ a:readName("name-a","A"), b:readName("name-b","B") };
   turn="a"; selected=null; phase="line"; gameOver=false;
-  claimQueue=[]; claimBox=null; claimGroup=null; claimGuide=null; claimMarks=null;
-  strokes=[]; drawing=false;
+  claims=[]; inkStroke=null; drawing=false;
   cursor={r:0,c:0}; cursorShown=false;
   clearTimers(); endDrag();
   clear(fillG); clear(lineG); clear(inkG); clear(cursorG);
   document.getElementById("banner").classList.add("hidden");
-  renderDots(); buildHits(); renderScores(); drawFx();
+  renderDots(); buildHits(); renderScores(); drawFx(); flashTurn();
 }
 
 /* The board is sized entirely by CSS. This only mirrors its rendered width onto the score
@@ -922,7 +1243,8 @@ buildStatic();
 setupGame();
 window.__db={ get H(){return H;}, get V(){return V;}, get OWN(){return OWN;}, get score(){return score;},
   get turn(){return turn;}, get phase(){return phase;}, get selected(){return selected;},
-  get gameOver(){return gameOver;}, onDotTap, stampClaim, setupGame };   // test hook
+  get gameOver(){return gameOver;}, onDotTap, stampClaim, setupGame,
+  get nibOn(){return !!nib;}, get nibGain(){return nib ? nib.g.gain.value : 0;} };   // test hook
 
 /* ---- fullscreen + intro ---- */
 window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
