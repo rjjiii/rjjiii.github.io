@@ -1,82 +1,434 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Search</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        
-        .search-container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-        }
-        
-        #searchInput {
-            width: 70%;
-            padding: 12px;
-            font-size: 16px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            margin-right: 10px;
-            outline: none;
-        }
-        
-        #searchInput:focus {
-            border-color: #ff0000;
-        }
-        
-        #searchButton {
-            padding: 12px 20px;
-            font-size: 16px;
-            background-color: #ff0000;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        #searchButton:hover {
-            background-color: #cc0000;
-        }
-        
-        #searchButton:active {
-            background-color: #990000;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  Finder-Spyder
+</title>
+<!--
+  _____ _           _               ____                  _           
+ |  ___(_)_ __   __| | ___ _ __    / ___| _ __  _   _  __| | ___ _ __ 
+ | |_  | | '_ \ / _` |/ _ \ '__|___\___ \| '_ \| | | |/ _` |/ _ \ '__|
+ |  _| | | | | | (_| |  __/ | |_____|__) | |_) | |_| | (_| |  __/ |   
+ |_|   |_|_| |_|\__,_|\___|_|      |____/| .__/ \__, |\__,_|\___|_|   
+                                         |_|    |___/                 
+
+
+Finder-Spyder
+Version 2.0
+Copyright © Robert Jones III 2026
+Licensed under the Open Software License version 3.0 
+
+Notes on the source code:
+This html document is the preferred form of Finder-Spyder for making 
+modifications. If you received a native/binary application, that application was
+a wrapper around this document. There are no separate image files.  All styles 
+and scripts are embedded into this document. 
+
+Regarding the license: 
+This software is open source and licensed under the OSL 3.0. The license is
+publicly available from the Open Source Institute (OSI). The license and a 
+summary are available on the OSI website:
+https://opensource.org/licenses/OSL-3.0
+
+Goal of Finder-Spyder:
+Online searching provides a naturally reinforcing tool for spelling and typing
+skills, but it is hampered by auto-complete, which will reinforce typing only
+the first one or two letters for preferred terms. Finder-Spyder initiates a 
+search without auto-complete. If the device has a virtual keyboard, that may 
+also need auto-complete disabled to get the full effect.
+
+Credit for web icon:
+* SVG Repo. (2021) "Cobweb Spider Web SVG Vector." 3. CC0 License. 
+   https://www.svgrepo.com/svg/200418/cobweb-spider-web. Available at Wikimedia
+   Commons as "File:Spider-web-trap-svgrepo-com.svg."
+-->
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<style>
+  body {
+  font-family: sans-serif;
+  max-width: 600px;
+  margin: 50px auto;
+  padding: 20px;
+  text-align: center;
+}
+h1 {
+  color: #333;
+  margin-bottom: 30px;
+  font-size: 40px;
+}
+
+/* Search bar */
+#searchInput {
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  vertical-align: middle;
+  width: 70%;
+  font-size: 16px;
+  border: 2px solid #ddd;
+  border-radius: 24px;
+  margin-right: 10px;
+  outline: none;
+}
+
+/* Search buttons */
+#searchButton {
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  vertical-align: middle;
+  font-size: 16px;
+  background-color: #0083dc;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#searchInput:focus {
+  border-color: #0083dc;
+}
+#searchButton:hover {
+  background-color: #006bb3;
+}
+#searchButton:active {
+  background-color: #990000;
+}
+
+/* Settings panel */
+h2 {
+  border-bottom: 1pt solid #dddddd;
+}
+#settings {
+  display: none;
+  text-align: left;
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 20px;
+}
+#settings:target {
+  display: block;
+}
+#closeSettings,
+.settings-btn {
+  display: inline-block;
+  margin-top: 16px;
+  margin-right: 8px;
+  padding: 10px 20px;
+  background: black;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+}
+#closeSettings:hover,
+.settings-btn:hover {
+  background: #006bb3;
+}
+#toggleSettings {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: transparent;
+  color: #333;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 8px;
+  line-height: 1;
+  text-decoration: none;
+}
+#toggleSettings:hover {
+  color: #000;
+}
+#settings label {
+  display: block;
+  margin-top: 40px;
+  font-weight: bold;
+}
+#settings input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  font-size: 16px;
+  border: 2px solid #ddd;
+  border-radius: 40px;
+  margin-top: 4px;
+}
+#settings input[type="color"] {
+  height: 48px;
+  padding: 4px;
+}
+input[type="color"]::-webkit-color-swatch {
+  border-radius: 20px;
+}
+input[type="color"]::-moz-color-swatch {
+  border-radius: 20px;
+}
+
+#settings button {
+  margin-top: 16px;
+  margin-right: 8px;
+  padding: 10px 20px;
+  background: black;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+#settings #save {
+  background-color: #0083dc;
+}
+#settings #clear:hover {
+  background-color: red;
+}
+#settings button:hover {
+  background: #006bb3;
+}
+#toggleSettings {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: transparent;
+  color: #333;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 8px;
+  line-height: 1;
+}
+#toggleSettings:hover {
+  color: #000;
+}
+#stored {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 16px 0;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 14px;
+}
+.note {
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+}
+</style>
 </head>
-<body>
-    <div class="search-container">
-        <h1>YouTube Search</h1>
-        <input type="text" id="searchInput" placeholder="Enter search terms..." />
-        <button id="searchButton">Search</button>
+<body id="top">
+  <h1 id="pageTitle">
+    <span style="color:#0083dc">
+      Finder
+    </span>
+    -Spyder
+  </h1>
+  <div id="searchUI">
+    <input type="text" id="searchInput" placeholder="Search">
+    <button id="searchButton">
+      <svg width="20" height="20" fill="none" stroke-linecap="round" version="1.1" viewBox="0 0 19.761 19.761" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;">
+        <circle cx="8.7" cy="8.7" r="7.2" stroke="#fff" stroke-width="3"/>
+        <line x1="12.7" x2="18.7" y1="12.7" y2="18.7" fill="none" stroke="#fff" stroke-linecap="butt" stroke-width="3"/>
+      </svg>
+    </button>
+    <br>
+    <a href="#settings" id="toggleSettings" title="Settings">
+      ⚙︎
+    </a>
+  </div>
+  <div id="settings">
+    <h2>
+      Settings
+    </h2>
+    <p>
+      Settings are stored <strong>on this device</strong> and won't transfer to another. Clearing browsing data will clear these settings as well. If you want the custom settings to persist on Apple devices beyond one week, add the web page to your home screen.
+    </p>
+    <div id="stored">
+      (If you save custom settings they will appear here.)
     </div>
+    <label for="color">
+      Accent color
+    </label>
+    <input type="color" id="color" value="#0083dc">
+    <div class="note">
+      The search form accent color can be anything you choose. It can be a color associated with the website or preferred by a client. If you don't want an accent color, just set it to black (#000000).
+    </div>
+    <label for="title">
+      Title
+    </label>
+    <input type="text" id="title" value="Finder-Spyder">
+    <div class="note">
+      This can be anything you choose. It appears above the search bar and in the browser's title bar. It could be the name of the search engine you select below. The default "Finder-Spyder" is simply the fictional search engine used in films and television in place of branded websites like YouTube, Yahoo, or Google.
+    </div>
+    <label for="url">
+      Search
+    </label>
+    <input type="text" id="url" value="https://www.youtube.com/results?search_query=dog">
+    <div class="note">
+      To get this value:
+      <ol>
+        <li>
+          Go to a website and perform a search for "dog". Just type the three-letter word and search.
+        </li>
+        <li>
+          Copy the URL from your browser's address bar when the search results load.
+        </li>
+        <li>
+          Paste that URL into the box above. You may see a lot of random information tacked onto the search URL, but if it contains the word "dog", it should work.
+        </li>
+        <li>
+          Click Save below.
+        </li>
+      </ol>
+      <p>
+	      <i>(Dogs and Spiders were two animals associated with the internet early on for their ability to fetch data and weave webs.)</i>
+	  </p>
+    </div>
+    <a href="#top" id="closeSettings" class="settings-btn">
+      Cancel
+    </a>
+    <button id="reload">
+      Undo
+    </button>
+    <button id="clear">
+      Clear all data
+    </button>
+    <button id="save">
+      Save
+    </button>
+  </div>
+  <script>
+    const defaults = {
+      color: "#0083dc",
+      title: "Finder-Spyder",
+      url: "https://www.youtube.com/results?search_query=dog"
+    };
+    const key = "finderSpyder";
 
-    <script>
-        function performSearch() {
-            const searchTerm = document.getElementById('searchInput').value.trim();
-            if (searchTerm) {
-                const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
-                window.open(youtubeUrl, '_blank');
-            }
+    function showStored() {
+      const raw = localStorage.getItem(key);
+      const el = document.getElementById("stored");
+      if (raw === null) {
+        el.textContent = "(If you save custom settings they will appear here.)";
+      } else {
+        try {
+          el.textContent = JSON.stringify(JSON.parse(raw), null, 2);
+        } catch (e) {
+          el.textContent = raw;
         }
+      }
+    }
 
-        document.getElementById('searchButton').addEventListener('click', performSearch);
-    </script>
+    function loadIntoForm() {
+      const stored = JSON.parse(localStorage.getItem(key) || "{}");
+      document.getElementById("color").value = stored.color || defaults.color;
+      document.getElementById("title").value = stored.title || defaults.title;
+      document.getElementById("url").value = stored.url || defaults.url;
+    }
+
+    function applySettings() {
+      const stored = JSON.parse(localStorage.getItem(key) || "{}");
+      const color = stored.color || defaults.color;
+      const title = stored.title || defaults.title;
+      const urlTemplate = stored.url || defaults.url;
+
+const h1 = document.getElementById("pageTitle");
+h1.textContent = ""; // clear existing content
+h1.style.color = ""; // reset any previous color
+
+if (title === defaults.title) {
+  const span = document.createElement("span");
+  span.style.color = color;
+  span.textContent = "Finder";
+  h1.appendChild(span);
+  h1.appendChild(document.createTextNode("-Spyder"));
+} else {
+  h1.textContent = title;
+  h1.style.color = "#333";
+}
+
+      document.getElementById("searchButton").style.backgroundColor = color;
+
+      let style = document.getElementById("dynamic-style");
+      if (!style) {
+        style = document.createElement("style");
+        style.id = "dynamic-style";
+        document.head.appendChild(style);
+      }
+      style.textContent = `
+        #searchInput:focus { border-color: ${color}; }
+        #searchButton:hover { background-color: ${color}; filter: brightness(0.85); }
+        #searchButton:active { background-color: ${color}; filter: brightness(0.7); }
+      `;
+
+      window._urlTemplate = urlTemplate;
+    }
+
+    function performSearch() {
+      const searchTerm = document.getElementById("searchInput").value.trim();
+      if (!searchTerm) return;
+      let template = window._urlTemplate || defaults.url;
+      // Cut everything after "dog"
+      const dogIndex = template.indexOf("dog");
+      if (dogIndex !== -1) {
+        template = template.slice(0, dogIndex + 3); // keep up to and including "dog"
+      }
+      const finalUrl = template.replace("dog", encodeURIComponent(searchTerm));
+      window.open(finalUrl, "_blank");
+    }
+
+    function save() {
+      const data = {
+        color: document.getElementById("color").value,
+        title: document.getElementById("title").value,
+        url: document.getElementById("url").value
+      };
+      localStorage.setItem(key, JSON.stringify(data));
+      showStored();
+      applySettings();
+      alert("Changes saved to this device and browser. Click OK to return to search.");
+	  location.hash = "#top";   // ← moves back to the top
+    }
+
+    function clearStorage() {
+      localStorage.removeItem(key);
+      showStored();
+      loadIntoForm();
+      applySettings();
+      alert("Data cleared and default values restored.");
+    }
+
+    document.getElementById("searchButton").addEventListener("click", performSearch);
+    document.getElementById("searchInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") performSearch();
+    });
+
+    
+
+    
+
+    document.getElementById("save").addEventListener("click", save);
+    document.getElementById("reload").addEventListener("click", () => {
+      showStored();
+      loadIntoForm();
+      applySettings();
+    });
+    document.getElementById("clear").addEventListener("click", clearStorage);
+
+    // Initial load
+    applySettings();
+	showStored();
+	loadIntoForm();
+  </script>
 </body>
 </html>

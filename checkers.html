@@ -4,249 +4,138 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Checkers</title>
+<!-- Fonts: Source Serif 4 for serif, Atkinson Hyperlegible Next for sans serif, from
+     Google Fonts for now (to be hosted locally later). Source Serif 4 is variable: weights
+     400 to 700, plus an optical-size axis the browser sets from the font size by itself. The stacks fall back to Georgia and the
+     system sans if the fonts cannot load, so the page still works offline. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap">
 <style>
   :root{
-    --wood:       #5a3d28;
-    --wood-dark:  #3a2616;
-    --wood-edge:  #74522f;
-    --square-light:#d8c19a;
-    --square-dark: #6b4a30;
-    --brass:      #cda434;
-    --gold:       #ffd75e;
-    --gold-soft:  #ffe79a;
-    --text:       #e9e3d4;
-    --text-dim:   #a59c86;
-    /* Square size: the smaller of the width budget (after reserving room for the
-       trays) and the height budget (incl. the deselect strip) — so it never scrolls. */
-    --cell: clamp(24px, min(calc((100vw - 36px) / 8.9), calc((100vh - 260px) / 8.9)), 60px);
-    --wood-fill:
-      repeating-linear-gradient(64deg, rgba(0,0,0,.10) 0 6px, rgba(255,255,255,.025) 6px 12px),
-      linear-gradient(150deg, var(--wood-edge), var(--wood) 36%, var(--wood-dark));
-    --font-display:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
-    --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+    --gold:#ffd75e; --text:#e9e3d4; --text-dim:#a59c86; --brass:#b9a978;
+    --pad:clamp(14px,3vw,32px);
+    --font-display:'Source Serif 4',Georgia,'Times New Roman',serif;
+    --font-body:'Atkinson Hyperlegible Next',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
   }
-
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
-
   body{
-    min-height:100vh;
-    font-family:var(--font-body);
-    color:var(--text);
+    font-family:var(--font-body); color:var(--text);
     background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
-    background-attachment:fixed;
-    display:flex; flex-direction:column; align-items:center;
-    padding:clamp(18px,4vw,40px) 16px;
-    -webkit-tap-highlight-color:transparent;
+    background-attachment:fixed; -webkit-tap-highlight-color:transparent;
   }
+  /* The game is the first screen of a page that scrolls. The stage is exactly one screen
+     tall and never scrolls inside itself; the info section follows it. */
+  .stage{
+    position:relative; height:100dvh; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:var(--pad) 16px;
+  }
+  /* The cards belong to the stage, not the window, so they scroll away with the board. */
+  .stage > .overlay{ position:absolute; }
+  /* While a round is being played the page holds still, so a stray swipe cannot drag the
+     board off screen. The exception is info the player opened: it stays up for the whole
+     game, and the page scrolls so it can be read mid-round. */
+  html:not(:has(.stage > .overlay:not(.hidden))):not(:has(.info:target, .info :target)){ overflow:hidden; }
+  html{ scroll-behavior:smooth; }
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:6px; }
 
-  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:4px; }
+  .table{ display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; flex:1; min-height:0; }
+  /* CSS owns fitting: .mid takes the leftover height, .boardwrap absorbs it, and the
+     board fills that box squarely. min-height:0 is what lets a flex item shrink at all.
+     No chrome total is hardcoded, so rails/seats can change height freely. */
+  .mid{ display:flex; flex-direction:column; align-items:center; gap:12px;
+        flex:1; min-height:0; width:100%; }
+  .boardwrap{ flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; }
+  /* one rail per player. The top rail is flipped as a whole, which also reverses
+     its children, so status sits nearest the board on both sides. */
+  .rail{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .rail--top{ transform:rotate(180deg); }
 
-  /* ---- Table ---- */
-  .table{ display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; }
-
-  /* ---- Seats (wood tray panels; active one glows) ---- */
+  /* seats (wood tray panels; active one glows) */
   .seat{
-    width:min(100%, calc(var(--cell)*8 + 40px));
+    width:min(100%, var(--seatw, 620px));
     display:flex; align-items:center; justify-content:center;
-    min-height:46px; padding:8px 15px; border-radius:12px;
-    background:var(--wood-fill);
+    min-height:44px; padding:6px; border-radius:12px;
+    background:linear-gradient(150deg,#3a2c1c,#241a10);
     border:1px solid rgba(0,0,0,.34);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.09), 0 2px 6px rgba(0,0,0,.35);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 2px 6px rgba(0,0,0,.35);
     transition:border-color .25s, box-shadow .25s;
   }
   .seat.is-active{
     border-color:rgba(255,215,94,.55);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.1),
-               0 0 0 1px rgba(255,215,94,.4), 0 0 22px rgba(205,164,52,.3),
-               0 2px 6px rgba(0,0,0,.35);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.09), 0 0 0 1px rgba(255,215,94,.4), 0 0 20px rgba(205,164,52,.28), 0 2px 6px rgba(0,0,0,.35);
   }
-  .tray{ display:flex; align-items:center; gap:10px; max-width:100%; }
-  .chips{ display:flex; flex-wrap:wrap; gap:3px; justify-content:center; max-width:calc(var(--cell)*7); }
-  .chip{
-    width:14px; height:14px; border-radius:50%;
-    box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.5);
-  }
-  .chip--red{   background:radial-gradient(circle at 36% 30%, #ef6a5f, #b8332a); }
-  .chip--black{ background:radial-gradient(circle at 36% 30%, #4a4a53, #16161c); }
-  .tray-count{
-    font-variant-numeric:tabular-nums; font-weight:700; font-size:15px;
-    color:#f3ead8; text-shadow:0 1px 1px rgba(0,0,0,.55);
-    min-width:16px; text-align:center;
-  }
+  /* recessed channel: chips sit on lit wood inside the dark tray frame */
+  .well{ flex:1; min-width:0; min-height:32px; padding:4px 10px; border-radius:8px;
+    display:flex; flex-wrap:wrap; gap:3px; align-items:center; justify-content:center;
+    background:linear-gradient(150deg,#9a7449,#6d4e2e);
+    box-shadow:inset 0 2px 4px rgba(0,0,0,.5), inset 0 -1px 0 rgba(255,255,255,.10); }
+  .chip{ width:14px; height:14px; border-radius:50%; box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.5); }
+  .chip--red{ background:linear-gradient(145deg,#d9695a,#c64a3b 52%,#8e2e22); }
+  .chip--black{ background:linear-gradient(145deg,#63636e,#3b3b45 52%,#1f1f26); }
 
-  /* ---- Board ---- */
-  .boardwrap{ position:relative; display:flex; flex-direction:column; align-items:center; }
-  .frame{
-    padding:calc(var(--cell)*0.36); border-radius:14px;
-    background:var(--wood-fill);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.10) inset,
-      0 calc(var(--cell)*0.22) calc(var(--cell)*0.5) rgba(0,0,0,.55),
-      0 2px 3px rgba(0,0,0,.5);
+  /* board */
+  #board{
+    width:auto; height:auto; aspect-ratio:1/1;
+    max-width:min(100%,620px); max-height:min(100%,620px); display:block;
+    /* The board's shadow is a box-shadow round its own outline, not a drop-shadow filter: a filter
+       is drawn again, blurring the whole board, whenever anything on it changes (the pulsing rings
+       and glows, a held piece dragged, a piece sliding). The board fills its box, so the box's
+       corners are the wood's own (rx 22 of 664), and a box-shadow needs twice a filter's blur for the
+       same shadow. isolation keeps the drawing order the filter gave: the board, shadow and all, is
+       drawn after the turn lines beside it, so the shadow still lies over a line it reaches. */
+    border-radius:3.3133%; box-shadow:0 12px 68px rgba(0,0,0,.55); isolation:isolate;
+    touch-action:none;                 /* we own the gesture; 'manipulation' lets the browser
+                                          claim a pan mid-drag and fire pointercancel */
+    -webkit-touch-callout:none;        /* iOS long-press callout would interrupt a held drag */
+    -webkit-user-select:none; user-select:none;
   }
-  .board{
-    position:relative; width:calc(var(--cell)*8); height:calc(var(--cell)*8);
-    border-radius:5px; overflow:hidden;
-    box-shadow:0 0 0 2px rgba(0,0,0,.4), inset 0 0 calc(var(--cell)*0.5) rgba(0,0,0,.45);
-  }
-  .squares{
-    display:grid;
-    grid-template-columns:repeat(8, var(--cell));
-    grid-template-rows:repeat(8, var(--cell));
-    width:100%; height:100%;
-  }
-  .square{ position:relative; width:var(--cell); height:var(--cell); }
-  .square--light{ background:radial-gradient(120% 120% at 30% 25%, #e2cda7, var(--square-light)); }
-  .square--dark{  background:radial-gradient(120% 120% at 30% 25%, #79553a, var(--square-dark)); }
+  /* Start and Play Again give the board focus, so the arrow keys work at once. The browser then
+     drew its own focus outline round the board for the whole game, after a mouse or touch start as
+     well. The gold ring above is for the keyboard; any other focus shows nothing. */
+  #board:focus:not(:focus-visible){ outline:none; }
+  svg text{ -webkit-user-select:none; user-select:none; }
 
-  /* destination dot — the SAME marker for a plain move or a jump landing */
-  .square::after{
-    content:''; position:absolute; left:50%; top:50%;
-    transform:translate(-50%,-50%); border-radius:50%;
-    opacity:0; pointer-events:none; transition:opacity .14s;
-  }
-  .square.is-move::after{
-    width:calc(var(--cell)*0.44); height:calc(var(--cell)*0.44);
-    background:radial-gradient(circle, var(--gold-soft), #f3bb33 72%);
-    box-shadow:0 0 calc(var(--cell)*0.32) rgba(255,205,80,.8);
-    opacity:1; animation:hint-pulse 1.4s ease-in-out infinite;
-  }
-  @keyframes hint-pulse{
-    0%,100%{ transform:translate(-50%,-50%) scale(1); }
-    50%    { transform:translate(-50%,-50%) scale(1.1); }
-  }
-  /* keyboard-navigation cursor (only visible while using the keyboard) */
-  .square.is-cursor{ outline:3px solid var(--gold); outline-offset:-3px; z-index:3; }
+  .status{ font-family:var(--font-display); font-size:15px; color:#d9cfb6; text-align:center; min-height:20px; }
+  .status b{ color:#ffe9a8; font-weight:700; }
 
-  /* ---- Pieces ----
-     Outer .piece carries POSITION via transform:translate (GPU-composited slide).
-     Inner .piece__body carries EFFECTS (lift / capture) so the two transforms
-     never collide — this is what fixes the vanishing-after-move bug. */
-  .pieces{ position:absolute; inset:0; pointer-events:none; }
-  .piece{
-    position:absolute; top:0; left:0;
-    width:calc(var(--cell)*0.78); height:calc(var(--cell)*0.78);
-    cursor:pointer; pointer-events:auto;
-    transition:transform .28s cubic-bezier(.22,.68,.2,1);
-  }
-  .piece.is-moving{ z-index:7; }
-  .piece.is-selected{ z-index:6; }
-  .piece.is-captured{ z-index:1; }
-
-  .piece__body{
-    position:absolute; inset:0; border-radius:50%;
-    transition:transform .16s ease, opacity .24s ease;
-  }
-  .piece__body--red{
-    background:radial-gradient(circle at 35% 28%, #ef6a5f, #cf3b30 46%, #8f1f17 100%);
-    box-shadow:
-      inset 0 0 0 calc(var(--cell)*0.055) rgba(80,8,4,.4),
-      inset 0 calc(var(--cell)*-0.05) calc(var(--cell)*0.06) rgba(70,8,4,.45),
-      inset 0 calc(var(--cell)*0.05) calc(var(--cell)*0.06) rgba(255,255,255,.35),
-      0 calc(var(--cell)*0.06) calc(var(--cell)*0.09) rgba(0,0,0,.45);
-  }
-  .piece__body--black{
-    background:radial-gradient(circle at 35% 28%, #4c4c55, #232329 46%, #0c0c11 100%);
-    box-shadow:
-      inset 0 0 0 calc(var(--cell)*0.055) rgba(0,0,0,.42),
-      inset 0 calc(var(--cell)*-0.05) calc(var(--cell)*0.06) rgba(0,0,0,.5),
-      inset 0 calc(var(--cell)*0.05) calc(var(--cell)*0.06) rgba(255,255,255,.15),
-      0 calc(var(--cell)*0.06) calc(var(--cell)*0.09) rgba(0,0,0,.5);
-  }
-  /* glow ring — bolder so selectable / selected checkers clearly stand out */
-  .piece__body::after{
-    content:''; position:absolute; inset:calc(var(--cell)*-0.05);
-    border-radius:50%; pointer-events:none; transition:box-shadow .2s;
-    box-shadow:0 0 0 0 transparent;
-  }
-  .piece.is-movable .piece__body::after{
-    box-shadow:0 0 0 3px rgba(255,214,92,.92), 0 0 calc(var(--cell)*0.3) rgba(255,200,70,.6);
-  }
-  .piece.is-selected .piece__body{ transform:translateY(-10%) scale(1.06); }
-  .piece.is-selected .piece__body::after{
-    box-shadow:0 0 0 4px var(--gold), 0 0 calc(var(--cell)*0.42) rgba(255,200,70,.78);
-  }
-  .piece.is-captured .piece__body{ transform:scale(0); opacity:0; }
-
-  /* X over an enemy piece that the selected checker can jump */
-  .piece.is-target .piece__body::before{
-    content:''; position:absolute; inset:13%; z-index:3; pointer-events:none;
-    background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 7 17 17 M17 7 7 17' fill='none' stroke='black' stroke-opacity='0.55' stroke-width='5.5' stroke-linecap='round'/><path d='M7 7 17 17 M17 7 7 17' fill='none' stroke='%23fff4e0' stroke-width='3' stroke-linecap='round'/></svg>") center/contain no-repeat;
-    animation:x-pulse 1.4s ease-in-out infinite;
-  }
-  @keyframes x-pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
-
-  /* king crown (gold, reads on both colors) */
-  .crown{
-    position:absolute; left:21%; top:27%; width:58%; height:auto;
-    fill:#ebc650; stroke:rgba(0,0,0,.3); stroke-width:.4; stroke-linejoin:round;
-    filter:drop-shadow(0 1px 1px rgba(0,0,0,.45));
-    pointer-events:none; animation:king-mark .35s ease;
-  }
-  @keyframes king-mark{ from{ transform:scale(.35); opacity:0; } to{ transform:scale(1); opacity:1; } }
-
-  /* ---- Win overlay (result only) ---- */
-  .banner{
-    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-    background:rgba(15,17,22,.74); backdrop-filter:blur(3px); border-radius:14px; padding:18px;
-  }
-  .banner.show{ display:flex; animation:fade .25s ease; }
-  @keyframes fade{ from{ opacity:0; } to{ opacity:1; } }
-  .result{
-    font-family:var(--font-display); font-size:clamp(28px,7vw,42px);
-    color:#f6efe0; margin:0; text-align:center;
-  }
-
-  /* ---- Subtle deselect button (its strip is always reserved below the board,
-          so showing it never shifts the layout or causes a scroll) ---- */
-  .deselect{
-    margin-top:12px;
-    display:inline-flex; align-items:center; gap:7px;
-    padding:7px 15px; border-radius:999px;
-    font-family:var(--font-body); font-size:12.5px; font-weight:600; letter-spacing:.03em;
-    color:var(--text-dim);
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.12);
-    cursor:pointer; -webkit-appearance:none; appearance:none;
-    opacity:0; pointer-events:none;
-    transition:opacity .2s ease, color .2s, border-color .2s, background .2s;
-  }
+  .deselect{ margin-top:2px; display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border-radius:999px;
+    font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.03em; color:#a59c86;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); cursor:pointer;
+    -webkit-appearance:none; appearance:none; opacity:0; pointer-events:none;
+    transition:opacity .2s ease, color .2s, border-color .2s, background .2s; }
   .deselect.show{ opacity:1; pointer-events:auto; }
-  .deselect.show:hover{ opacity:1; color:var(--text); border-color:rgba(255,215,94,.5); background:rgba(255,255,255,.07); }
+  .deselect:hover{ color:#d9cfb6; border-color:rgba(255,215,94,0.5); }
   .deselect svg{ width:12px; height:12px; }
+  @media (prefers-reduced-motion:reduce){ .deselect{ transition:none; } }
 
-  /* ---- small portrait screens ---- */
-  @media (max-width:560px){ .chips{ max-width:calc(var(--cell)*6); } .seat{ padding:8px 11px; } }
+  @keyframes pulseGlow{ 0%,100%{opacity:.22} 50%{opacity:.68} }
+  @keyframes pulseRing{ 0%,100%{opacity:.45} 50%{opacity:1.0} }
+  .pulseGlow{ animation:pulseGlow 1.5s ease-in-out infinite; }
+  .pulseRing{ animation:pulseRing 1.5s ease-in-out infinite; }
+  @media (prefers-reduced-motion:reduce){ .pulseGlow, .pulseRing{ animation:none !important; } }
 
-  /* ---- LANDSCAPE: trays become wood rails hugging the left & right screen edges ---- */
+  /* landscape: trays become rails at the screen edges */
+  /* landscape: only .mid turns into a row, so the rails stay above and below */
   @media (orientation: landscape){
-    :root{
-      --cell: clamp(24px, min(calc((100vw - 330px) / 8.9), calc((100vh - 96px) / 8.9)), 60px);
-    }
-    body{ padding:clamp(10px,2vh,24px) 0; justify-content:center; }
-    .table{ flex-direction:row; align-items:stretch; justify-content:space-between; gap:0; width:100%; }
-    .seat{ width:clamp(80px,13vw,150px); flex-direction:column; }
-    #seat-red{ border-radius:0 14px 14px 0; }    /* flush to the left edge */
-    #seat-black{ border-radius:14px 0 0 14px; }   /* flush to the right edge */
-    .tray{ flex-direction:column; gap:8px; }
-    .chips{ max-width:100%; }
+    .mid{ flex-direction:row; align-items:center; justify-content:center; gap:14px; width:100%; min-width:0; }
+    .seat{ width:clamp(80px,13vw,150px); flex:0 0 auto; align-self:center; }
+    .boardwrap{ height:100%; min-width:0; }
+    .well{ min-height:34px; }
   }
 
-  @media (prefers-reduced-motion:reduce){
-    .piece, .piece__body, .square::after, .seat, .piece__body::after, .deselect{ transition:none !important; }
-    .crown, .banner.show,
-    .square.is-move::after,
-    .piece.is-target .piece__body::before{ animation:none !important; }
-  }
-  .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.82); display:flex; align-items:center; justify-content:center; z-index:50; -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+  .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.41); display:flex; align-items:center; justify-content:center; z-index:50; -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
   .overlay.hidden{ display:none; }
   .card{ background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:30px 34px; max-width:400px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.6); }
-  .card h1{ font-family:var(--font-display, "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif); font-size:28px; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
-  .card .sub{ color:#b9a978; font-size:14px; margin-bottom:12px; }
+  .card h1{ font-family:var(--font-display); font-size:28px; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
+  .card .sub{ color:var(--brass); font-size:14px; margin-bottom:12px; }
   .card p{ color:var(--text); font-size:13.5px; line-height:1.5; margin:0 0 6px; }
-  .start{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); margin-top:8px; -webkit-appearance:none; appearance:none; }
-  .start:hover{ border-color:rgba(255,215,94,0.85); }
+  button{ font-family:inherit; font-size:13.5px; font-weight:700; letter-spacing:0.02em; padding:9px 22px; border-radius:9px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
+  button:hover{ border-color:rgba(255,215,94,0.85); }
+  .start{ margin-top:8px; }
   .fsbtn{ position:absolute; bottom:16px; right:16px; z-index:5; width:44px; height:44px; border-radius:11px; border:1.5px solid rgba(255,215,94,0.45); background:linear-gradient(145deg,#3a4150,#272c36); color:#ffe9a8; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4); -webkit-appearance:none; appearance:none; }
   .fsbtn:hover{ border-color:rgba(255,215,94,0.85); }
   .fsbtn svg{ position:absolute; top:50%; left:50%; -webkit-transform:translate(-50%,-50%); transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
@@ -255,572 +144,1177 @@
   .fsbtn.fs-on .fs-exit{ display:block; }
   .gicon-hero{display:flex;justify-content:center;margin:6px 0 16px;}
   .gicon-hero svg{width:88px;height:88px;}
+
+  /* ================= site menu (from site-nav.html) ================= */
+/* the menu sizes and sets its own type, so it looks the same on any page */
+.site-fab, .site-scrim, .site-drawer, .site-drawer * { box-sizing: border-box; }
+
+/* Stacking: the menu sits above everything a page puts on screen, including the games'
+   start and end cards (.overlay, z-index 50), since those cards are where it is used.
+   Scrim, then drawer, then the button on top so it can close what it opened. */
+
+/* the button ------------------------------------------------------
+   Same chrome as the games' fullscreen button (.fsbtn): slate gradient,
+   brass-gold border that brightens on hover, cream-gold icon strokes.
+   It keeps 16px from the corner, or the safe-area inset if a notch needs more. */
+.site-fab {
+  position: fixed;
+  z-index: 70;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4.4px;
+  padding: 0;
+  border: 1.5px solid rgba(255, 215, 94, 0.45);
+  border-radius: 11px;
+  background: linear-gradient(145deg, #3a4150, #272c36);
+  color: #ffe9a8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 180ms ease, visibility 180ms ease, border-color 160ms ease;
+}
+.site-fab:hover { border-color: rgba(255, 215, 94, 0.85); }
+.site-fab:focus-visible { outline: 2px solid #ffd75e; outline-offset: 3px; }
+.site-burger {
+  top: max(16px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+}
+
+/* bars match the fullscreen icon: 18px wide, 2.6px strokes, round ends */
+.site-burger > span {
+  display: block;
+  width: 18px;
+  height: 2.6px;
+  border-radius: 1.3px;
+  background: #ffe9a8;
+  transform-origin: center;
+  transition: transform 220ms ease, opacity 150ms ease;
+}
+/* the three bars fold into a cross while the panel is open
+   (bar height + gap = 7px between centres) */
+.site-burger.is-open > span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.site-burger.is-open > span:nth-child(2) { opacity: 0; }
+.site-burger.is-open > span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* the panel ------------------------------------------------------- */
+.site-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(8, 8, 10, 0.46);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+.site-scrim.is-open { opacity: 1; pointer-events: auto; }
+
+.site-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 65;
+  width: min(280px, 86vw);
+  height: 100dvh;
+  padding: 22px;
+  background: #2c2620;
+  color: #efe4cb;
+  font-family: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  border-right: 1px solid color-mix(in oklab, #efe4cb 14%, transparent);
+  box-shadow: 16px 0 40px rgba(0, 0, 0, 0.38);
+  transform: translateX(-104%);
+  transition: transform 250ms ease;
+  pointer-events: none;
+  overflow: auto;
+}
+.site-drawer.is-open { transform: translateX(0); pointer-events: auto; }
+/* a closed drawer sits just off screen; its shadow would show as a band */
+.site-drawer:not(.is-open) { box-shadow: none; }
+
+/* the title sits beside the button, so it steps right to clear it */
+.site-brand {
+  margin: 0 0 28px 48px;
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #efe4cb;
+}
+
+/* the list — reusable on its own, without the drawer around it ----- */
+.site-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.site-nav a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;            /* comfortable tap target */
+  padding: 0 12px;
+  border-radius: 10px;
+  color: color-mix(in oklab, #efe4cb 82%, transparent);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+}
+.site-nav a:hover,
+.site-nav a:focus-visible {
+  background: color-mix(in oklab, #efe4cb 8%, transparent);
+  color: #efe4cb;
+}
+.site-nav a.is-current {
+  background: color-mix(in oklab, #efe4cb 10%, transparent);
+  color: #ffd75e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-fab, .site-burger > span, .site-scrim, .site-drawer { transition: none; }
+}
+
+  /* Corner buttons (.site-fab: the site menu, the info toggle, any added later) belong to
+     the time between rounds, the way the fullscreen button does: they show while a start
+     or end card is up and get out of the way while the board is in play. The menu's own
+     transition on opacity and visibility does the fade. (GAME RULE, from site-nav.html) */
+  body:not(:has(.overlay:not(.hidden))) .site-fab{ opacity:0; visibility:hidden; }
+
+  /* ================= info pane (from info-pane.html) ================= */
+  /* ================= info toggle =================
+     The section is part of the page only while it, or something inside it, is the URL's
+     target: "#info" (or any chapter or the contents) shows it, "#top" puts it away. Two
+     links share the bottom-left corner and the state decides which one is there, the way
+     the menu's bars become a cross and fullscreen's corners turn inward. No script. */
+  .info{ display:none; }
+  .info:target, .info:has(:target){ display:block; }
+  .site-info{ z-index:55; text-decoration:none;        /* above the cards (50), under the open menu (60) */
+    left:max(16px, env(safe-area-inset-left)); bottom:max(16px, env(safe-area-inset-bottom)); }
+  .site-info svg{ width:24px; height:24px; display:block; }
+  .site-info.info-hide, .peek-tab{ display:none; }
+  :root:has(.info:target, .info :target) .site-info.info-show{ display:none; }
+  :root:has(.info:target, .info :target) .site-info.info-hide,
+  :root:has(.info:target, .info :target) .peek-tab{ display:flex; }
+
+  /* ================= the Info tab =================
+     While the info is open, a tab at the foot of the game screen links down to it,
+     during play too. (No scroll snapping: "proximity" snapping pulled small wheel steps
+     back to the nearest resting point, so a mouse wheel could get stuck on the board or
+     part way down the info. The links all land exactly without it.) */
+  .toc, .info-text :is(h2,h3,h4,h5){ scroll-margin-top:76px; }   /* lands below the menu button's corner */
+  .stage{ --edge-reserve:38px; }
+  /* While the info is open the tab stays up, through play too, so the game screen keeps a
+     strip clear for it under the turn line and the Deselect pill. The board gives up that
+     height only while the info is open. */
+  :root:has(.info:target, .info :target) .stage{ padding-bottom:calc(var(--pad) + var(--edge-reserve)); }
+  .peek-tab{
+    position:absolute; z-index:55; left:50%; bottom:0; transform:translateX(-50%);
+    text-decoration:none; padding:9px 22px 10px; border-radius:14px 14px 0 0;
+    transition:opacity .2s ease, visibility .2s ease; }
+  .peek-tab .pt{ display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:600; letter-spacing:.05em; white-space:nowrap; }
+  .peek-tab svg{ width:15px; height:15px; }
+
+  /* ================= the page-top button =================
+     The fullscreen button scrolls away with the board, and this takes over the right-hand
+     corner while you read. It rides in level with the game's name, climbs with it, and
+     docks at the menu button's height (sticky, no script). It lives in the info, so it is
+     there only while the info is open, and unlike the corner buttons it stays during play.
+     The rail has no height, so it takes no room; its font-size is the title's, so the
+     margins centre the 44px button on the title's line (1.1em) at any width, and the
+     bottom margin gives back what the top one takes. Tapping it scrolls to the very top
+     of the page and leaves the info open (a link to #top would put the info away). */
+  .page-top-rail{ position:sticky; z-index:55; top:max(16px, env(safe-area-inset-top)); height:0;
+    display:flex; justify-content:flex-end; font-size:clamp(32px,6vw,42px);
+    margin-top:calc(.55em - 22px); margin-bottom:calc(22px - .55em);
+    margin-right:calc(max(16px, env(safe-area-inset-right)) - 20px); }   /* .info pads 20px; corners sit at 16px */
+  .page-top{ position:relative; flex:none; width:44px; height:44px; padding:0; border-radius:11px; }
+  .page-top svg{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .page-top:focus-visible{ outline:2px solid #ffd75e; outline-offset:3px; }
+  /* Below 1111px, where the contents sits in the text, the name is centred between the
+     corner buttons, with room for a button on each side so a long name wraps before it
+     runs under either one. (Above 1111px the column ends well short of the corners.) */
+  @media (max-width:1110px){ .info-title{ text-align:center; padding-inline:52px; } }
+
+  /* ================= info: shared type ================= */
+  .info{ position:relative; padding:76px 20px 96px; }   /* the top clears the menu button */
+  .info-inner{ max-width:680px; margin:0 auto; font-size:16px; line-height:1.65; color:#d9cfb6; }
+  .info-head{ margin:0 0 30px; }
+  .toc summary{ font-size:11.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; margin:0 0 8px; color:var(--brass); }
+  .info-title{ font-family:var(--font-display); font-size:clamp(32px,6vw,42px); line-height:1.1; margin:0 0 12px; letter-spacing:.3px; color:var(--gold); }
+  /* the introduction: whatever you write before your first h2 is moved up here */
+  .info-head > p { font-size:18px; line-height:1.6; color:var(--text); margin:0 0 12px; }
+  .info-head > p:last-child{ margin-bottom:0; }
+  /* Your headings. CSS counters number them in the order they appear, so nothing ever
+     needs renumbering: h2 is 1, h3 is 1.1, h4 is 1.1.1, h5 is 1.1.1.1. */
+  /* Note marks, after rjjiii.com: * † ‡ § ¶, then doubled, then tripled, and so on, so they
+     never run out (rjjiii.com lists ten and then falls back to numbers; "symbolic" repeats
+     the five instead). Numbers would be confused with the section numbers. For letters
+     instead, set --note-marks to lower-alpha. */
+  @counter-style asterisk{ system:symbolic; symbols:"*" "\2020" "\2021" "\a7" "\b6"; suffix:" "; }
+  :root{ --note-marks:asterisk; }
+  .info-text{ counter-reset:h2 fn; }
+  .info-text h2{ counter-increment:h2; counter-reset:h3; }
+  .info-text h3{ counter-increment:h3; counter-reset:h4; }
+  .info-text h4{ counter-increment:h4; counter-reset:h5; }
+  .info-text h5{ counter-increment:h5; }
+  .info-text h2::before{ content:counter(h2); }
+  .info-text h3::before{ content:counter(h2) "." counter(h3); }
+  .info-text h4::before{ content:counter(h2) "." counter(h3) "." counter(h4); }
+  .info-text h5::before{ content:counter(h2) "." counter(h3) "." counter(h4) "." counter(h5); }
+  .info-text :is(h2,h3,h4,h5)::before{ color:var(--gold); margin-right:.5em; }
+  .info-text :is(h2,h3,h4,h5){ font-family:var(--font-display); line-height:1.25; color:#ffe9a8; }
+  .info-text h2{ font-size:23px; margin:0 0 12px; }
+  .info-text h3{ font-size:19px; margin:32px 0 10px; }
+  .info-text h4{ font-size:16.5px; margin:26px 0 8px; }
+  .info-text h5{ font-size:15px; margin:22px 0 6px; }
+  /* each h2 after the first starts a new section: space and a hairline above it */
+  /* plain tags inside the article, styled without classes */
+  .info-text :is(ul,ol){ margin:0 0 14px; padding-left:1.4em; }
+  /* endnotes: the number in the text, the list under Notes, and where a jump lands */
+  .info-text sup.fn{ line-height:0; font-size:.9em; font-weight:700; counter-increment:fn; }
+  .info-text sup.fn a::before{ content:counter(fn, var(--note-marks)); }
+  .info-text sup.fn a{ position:relative; padding:0 .08em; text-decoration:none; border-radius:3px; }
+  .info-text sup.fn a::after{ content:""; position:absolute; inset:-12px -8px; }   /* a fingertip-sized target */
+  .info-text sup.fn a:target{ background:rgba(128,162,219,.22); }
+  .info-text sup.fn a{ scroll-margin-top:35vh; }                                   /* back in context, mid-screen */
+  .info-text ol.notes{ font-size:14.5px; line-height:1.55; color:var(--text-dim); list-style-type:var(--note-marks); padding-left:2.4em; }
+  .info-text ol.notes li{ scroll-margin-top:76px; padding:2px 6px; margin-left:-6px; border-radius:6px; }
+  .info-text ol.notes li:target{ background:rgba(128,162,219,.12); color:var(--text); }
+  .info-text ol.notes li::marker{ color:var(--brass); font-weight:700; }
+  .info-text ol.notes .back{ text-decoration:none; font-weight:700; padding:0 4px; }
+  .info-text li{ margin:0 0 6px; }
+  .info-text li::marker{ color:var(--brass); }
+  .info-text blockquote{ margin:18px 0; padding:2px 0 2px 18px; border-left:2px solid rgba(255,225,170,.25); color:var(--text-dim); }
+  .info-text img{ max-width:100%; height:auto; border-radius:8px; }
+  .info-text table{ border-collapse:collapse; margin:18px 0; font-size:15px; }
+  .info-text :is(th,td){ padding:6px 12px; border-bottom:1px solid rgba(255,225,170,.14); text-align:left; vertical-align:top; }
+  .info-text th{ color:#ffe9a8; font-weight:600; }
+  .info-text h2:not(:first-of-type){ margin-top:52px; padding-top:46px; border-top:1px solid rgba(255,225,170,.10); }
+  .info p{ margin:0 0 14px; }
+  /* Links are blue: the hue of the game's blue pen (#24467e), lightened until it reads on
+     the dark panel. The pen itself measures 1.8:1 here; this measures 9.2:1. */
+  :root{ --link:#a9c2ea}
+  .info a{ text-underline-offset:3px; text-decoration-thickness:1px; color:var(--link); }
+  .info figure{ margin:24px 0 10px; }
+  .info figure svg{ display:block; width:min(100%,250px); height:auto; margin:0 auto; filter:drop-shadow(0 6px 16px rgba(0,0,0,.35)); }
+  .info figcaption{ font-size:13.5px; line-height:1.5; text-align:center; margin:12px auto 0; max-width:34em; color:var(--text-dim); }
+  .toc{ margin:0 0 52px; }
+  .toc ol{ list-style:none; margin:0; padding:0; }
+  .toc a{ display:flex; align-items:baseline; gap:12px; text-decoration:none; }
+  /* After rjjiii.com: the contents is a native <details> that starts open, so it folds
+     away with no script. The browser's triangle is removed and the ☛ in the label stands
+     in for it. */
+  .toc summary{ list-style:none; cursor:pointer; width:max-content; }
+  .toc summary::-webkit-details-marker{ display:none; }
+  /* Wide screens, also after rjjiii.com: the contents moves into the left gutter and
+     stays beside the text while you read. It is sticky
+     rather than fixed, so it only travels with the info and never sits over the board. */
+  @media (min-width:1111px){
+    .info-inner{ max-width:928px; display:grid; grid-template-columns:200px minmax(0,680px); column-gap:48px; }
+    .info-inner > *{ grid-column:2; }
+    .info-inner > .toc{ grid-column:1; grid-row:1 / span 12; margin:0; }
+    .toc details{ position:sticky; top:96px; }
+    /* Floating, the contents is a fixture, not a control: the label stops taking clicks,
+       and the list shows even if it was folded on a narrower screen before a resize.
+       (::details-content is recent; older browsers still get the blocked click.) */
+    .toc summary{ pointer-events:none; cursor:default; }
+    .toc details::details-content{ content-visibility:visible; }
+    /* the contents is always beside the text here, so the links back up to it are not needed */
+    .to-toc{ display:none; }
+  }
+  .to-toc{ margin:22px 0 0 !important; text-align:right; }
+  .to-toc a{ display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; letter-spacing:.03em; text-decoration:none; }
+  .to-toc svg{ width:13px; height:13px; }
+  .backlink{ margin:56px 0 0 !important; text-align:center; }
+  .info .btnlink{ display:inline-flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; letter-spacing:.02em;
+    padding:9px 20px; border-radius:9px; border:1.5px solid rgba(255,215,94,.45); color:#ffe9a8; text-decoration:none;
+    background:linear-gradient(145deg,#3a4150,#272c36); box-shadow:0 2px 6px rgba(0,0,0,.4); }
+  .info .btnlink svg{ width:15px; height:15px; }
+
+  /* ================= the info panel =================
+     A dark panel whose top edge is the "Info" tab. The contents is a numbered list;
+     chapters are split by a hairline. */
+  .peek-tab{ color:#ffe9a8; background:linear-gradient(180deg,#2c2620,#221d18);
+    border:1px solid rgba(255,225,170,.20); border-bottom:none; box-shadow:0 -8px 22px rgba(0,0,0,.35); }
+  .info{ background:linear-gradient(180deg,#221d18,#1a1612 340px);
+    border-top:1px solid rgba(255,225,170,.20); border-radius:22px 22px 0 0; box-shadow:0 -12px 30px rgba(0,0,0,.35); }
+  .toc a{ padding:11px 8px; margin:0 -8px; border-bottom:1px dashed rgba(255,225,170,.16); color:var(--link); font-size:16px; }
+  /* pressed: the link inverts, as rjjiii.com does with paper on its purple */
+  .toc a:active{ background:var(--link); color:#1a1612; }
+  @media (min-width:1111px){ .toc a{ font-size:14px; padding:7px 8px; } .toc ol ol a{ font-size:13px; padding:5px 8px; } }
+  /* the list's numbers, from the same order as the headings': 1, 1.1, 1.1.1 ... */
+  .toc ol{ counter-reset:item; }
+  .toc li{ counter-increment:item; }
+  .toc li > a::before{ content:counters(item,"."); min-width:1.6em; font-family:var(--font-display); font-weight:700; }
+  .toc ol ol{ margin-left:1.6em; }
+  .toc ol ol a{ font-size:14.5px; padding-top:8px; padding-bottom:8px; }
+  .toc ol ol li > a::before{ min-width:2.4em; }
+
+
+  /* ================= the contents label: a tab =================
+     Below 1111px the contents sits in the text and folds, so its label is drawn as
+     something to press: an outlined tab. Opened, the tab's outline loses its bottom and
+     its left side runs straight down into an outlined box round the list. No fills or
+     shadows: every join is drawn by the outline itself, so it holds up on the panel's
+     gradient. Floating (wider), it goes back to the plain label. */
+  .toc .hand{ display:inline-block; }
+  /* Solid, not translucent: these are rgba(233,227,212,.45) and rgba(255,215,94,.7) as
+     they land on the panel. Where two outlines overlap (the tab's foot, the arcs), a
+     translucent line would be drawn twice and show as a brighter dot. */
+  :root{ --toc-line:#78736a; }
+  @media (max-width:1110px){
+    .toc summary{ width:auto; margin:0; }
+    .toc .lbl{ display:inline-block; padding:8px 14px; line-height:18px;
+      border:1px solid var(--toc-line); border-radius:6px; }
+
+    /* Open: the summary's ::after draws the box's top edge from the tab's right corner
+       to the far side and turns the rounded corner there; the list (pulled up 1px to sit
+       on that line) draws the other three sides, and its own top-right radius lies
+       under the ::after's arc. */
+    .toc details[open] > summary{ display:flex; align-items:stretch; }
+    .toc details[open] .lbl{ border-bottom-color:transparent; border-radius:6px 6px 0 0; }
+    .toc details[open] > summary::after{ content:""; flex:1; align-self:flex-end; height:8px; margin-bottom:-8px;
+      border-top:1px solid var(--toc-line); border-right:1px solid var(--toc-line); border-top-right-radius:8px; }
+    .toc details[open] > ol{ margin-top:-1px; padding:6px 18px; border:1px solid var(--toc-line); border-top:none; border-radius:0 8px 8px 8px; }
+  }
+  /* ================= no animation =================
+     Last in the sheet so it wins: with Reduce Motion on, nothing in CSS moves. */
+  @media (prefers-reduced-motion:reduce){
+    *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+  }
 </style>
 </head>
 <body>
+<!-- site menu (from site-nav.html) -->
+<button type="button" class="site-fab site-burger" id="site-burger">
+  <span></span><span></span><span></span>
+</button>
+
+<div class="site-scrim" id="site-scrim" hidden></div>
+
+<nav class="site-drawer" id="site-drawer" inert>
+  <p class="site-brand">Game Lantern</p>
+  <ul class="site-nav">
+    <li><a href="/index.html">Home</a></li>
+    <li><a href="/explore.html">Explore</a></li>
+    <li><a href="/list.html">List</a></li>
+    <li><a href="/about.html">About</a></li>
+    <li><a href="/dashboard.html">Dashboard</a></li>
+    <li><a href="/contact.html">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- info toggle: two plain links, one per state. The section below exists only while it
+     (or something in it) is the page's target, so "#info" opens it and "#top" closes it. -->
+<a class="site-fab site-info info-show" href="#info"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.6" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12.2" cy="7.5" r="1.7" fill="currentColor"/><path d="M10 10.7 H12.5 V16.6 M9.9 16.9 H14.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+<a class="site-fab site-info info-hide" href="#top"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.6" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12.2" cy="7.5" r="1.7" fill="currentColor"/><path d="M10 10.7 H12.5 V16.6 M9.9 16.9 H14.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.3 5.3 L18.7 18.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></a>
+
+<section class="stage" id="top">
 <div class="overlay" id="setup">
-  <button class="fsbtn" id="fsbtn" type="button" aria-label="Toggle fullscreen">
-    <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <button class="fsbtn" id="fsbtn" type="button">
+    <svg class="fs-enter" viewBox="0 0 24 24"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
   <div class="card">
     <h1>Checkers</h1>
     <p class="sub">Capture to win</p>
     <p>Move diagonally and jump your opponent’s pieces to capture them. Take all their pieces, or leave them with no move, to win.</p>
-    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="4" fill="#d8a24e"/><rect x="13.25" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="4" fill="none" stroke="#d8a24e" stroke-width="1.7"/></svg></div>
+    <div class="gicon-hero"><svg id="gameicon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="4" fill="#d8a24e"/><rect x="13.25" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="7.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="13.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="19.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="25.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="32.00" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="38.25" width="6.25" height="6.25" fill="#4a3016"/><rect x="13.25" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="25.75" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="38.25" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="50.75" y="44.50" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="19.50" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="32.00" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="44.50" y="50.75" width="6.25" height="6.25" fill="#4a3016"/><rect x="7.00" y="7.00" width="50.00" height="50.00" rx="4" fill="none" stroke="#d8a24e" stroke-width="1.7"/></svg></div>
     <button class="start" id="startbtn" type="button">Start Game</button>
   </div>
 </div>
 
-  <main class="table">
-    <!-- Red's captured pieces (top in portrait, left rail in landscape) -->
-    <div class="seat" id="seat-red" aria-label="Red's captured pieces">
-      <div class="tray">
-        <div class="chips" id="chips-red"></div>
-        <span class="tray-count" id="count-red">0</span>
-      </div>
-    </div>
+<main class="table">
+  <div class="rail rail--top">
+    <div class="status" id="status-red"></div>
+    <button class="deselect" id="deselect-red" data-side="red" type="button" disabled>
+      <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+      Deselect
+    </button>
+  </div>
 
-    <div class="boardwrap">
-      <div class="frame">
-        <div class="board" id="board" tabindex="0"
-             role="application"
-             aria-label="Checkers board. Use arrow keys to move the cursor, Enter or Space to select and move, Escape to deselect.">
-          <div class="squares" id="squares"></div>
-          <div class="pieces" id="pieces"></div>
-          <div class="banner" id="banner"><p class="result" id="result"></p></div>
-        </div>
-      </div>
-    </div>
+  <div class="mid">
+  <div class="seat" id="seat-red">
+    <div class="well" id="chips-red"></div>
+  </div>
 
-    <!-- Black's captured pieces (bottom in portrait, right rail in landscape) -->
-    <div class="seat" id="seat-black" aria-label="Black's captured pieces">
-      <div class="tray">
-        <div class="chips" id="chips-black"></div>
-        <span class="tray-count" id="count-black">0</span>
-      </div>
-    </div>
-  </main>
+  <div class="boardwrap">
+  <svg id="board" viewBox="0 0 664 664" xmlns="http://www.w3.org/2000/svg" tabindex="0">
+    <defs>
+      <linearGradient id="wood" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0%" stop-color="#855f3a"/><stop offset="38%" stop-color="#5e4128"/><stop offset="100%" stop-color="#311e0d"/></linearGradient>
+      <pattern id="grain" patternUnits="userSpaceOnUse" width="13" height="13" patternTransform="rotate(63)"><rect width="6.5" height="13" fill="#000000" fill-opacity="0.10"/><rect x="6.5" width="6.5" height="13" fill="#fff0d2" fill-opacity="0.03"/></pattern>
+      <radialGradient id="sqLight" cx="30%" cy="25%" r="120%"><stop offset="0%" stop-color="#e2cda7"/><stop offset="100%" stop-color="#d8c19a"/></radialGradient>
+      <radialGradient id="sqDark" cx="30%" cy="25%" r="120%"><stop offset="0%" stop-color="#79553a"/><stop offset="100%" stop-color="#6b4a30"/></radialGradient>
+      <radialGradient id="glowhalo" cx="50%" cy="50%" r="50%"><stop offset="35%" stop-color="#ffc846" stop-opacity="0.7"/><stop offset="100%" stop-color="#ffc846" stop-opacity="0"/></radialGradient>
+      <radialGradient id="redhalo" cx="50%" cy="50%" r="50%"><stop offset="35%" stop-color="#ef5a36" stop-opacity="0.5"/><stop offset="100%" stop-color="#ef5a36" stop-opacity="0"/></radialGradient>
+      <!-- canon flat piece: rim arcs bend along the circular edge, circular contact shadow -->
+      <linearGradient id="rimLit" x1="0.18" y1="0.04" x2="0.82" y2="0.96">
+        <stop offset="0" stop-color="#ffffff" stop-opacity="0.66"/>
+        <stop offset="0.34" stop-color="#ffffff" stop-opacity="0.16"/>
+        <stop offset="0.7" stop-color="#ffffff" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="rimShade" x1="0.18" y1="0.04" x2="0.82" y2="0.96">
+        <stop offset="0.3" stop-color="#000000" stop-opacity="0"/>
+        <stop offset="0.66" stop-color="#000000" stop-opacity="0.20"/>
+        <stop offset="1" stop-color="#000000" stop-opacity="0.52"/>
+      </linearGradient>
+      <radialGradient id="shd" cx="50%" cy="50%" r="50%">
+        <stop offset="0.52" stop-color="#000000" stop-opacity="0.44"/>
+        <stop offset="0.78" stop-color="#000000" stop-opacity="0.20"/>
+        <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="fRed" x1="0.24" y1="0.02" x2="0.76" y2="0.98">
+        <stop offset="0" stop-color="#d9695a"/><stop offset="0.52" stop-color="#c64a3b"/><stop offset="1" stop-color="#8e2e22"/>
+      </linearGradient>
+      <linearGradient id="gold" x1="0.24" y1="0.02" x2="0.76" y2="0.98">
+        <stop offset="0" stop-color="#f7e29c"/><stop offset="0.52" stop-color="#dcb04a"/><stop offset="1" stop-color="#8f6b1f"/>
+      </linearGradient>
+      <linearGradient id="fBlack" x1="0.24" y1="0.02" x2="0.76" y2="0.98">
+        <stop offset="0" stop-color="#63636e"/><stop offset="0.52" stop-color="#3b3b45"/><stop offset="1" stop-color="#1f1f26"/>
+      </linearGradient>
+    </defs>
+    <g id="staticG"></g>
+    <g id="glowG"></g>
+    <g id="pieceG"></g>
+    <g id="fxG"></g>
+    <g id="cursorG"></g>
+    <g id="ghostG" pointer-events="none"></g>
+    <g id="hitG"></g>
+  </svg>
+  </div>
 
-  <button class="deselect" id="deselect" type="button" disabled aria-label="Deselect the current piece">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
-    Deselect
+  <div class="seat" id="seat-black">
+    <div class="well" id="chips-black"></div>
+  </div>
+  </div>
+
+  <div class="rail rail--bottom">
+    <div class="status" id="status-black"></div>
+    <button class="deselect" id="deselect-black" data-side="black" type="button" disabled>
+      <svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+      Deselect
+    </button>
+  </div>
+</main>
+
+<div class="overlay hidden" id="banner">
+  <button class="fsbtn" id="fsbtn-end" type="button">
+    <svg class="fs-enter" viewBox="0 0 24 24"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="fs-exit" viewBox="0 0 24 24"><path d="M8 3 V8 H3 M16 3 V8 H21 M8 21 V16 H3 M16 21 V16 H21" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
+  <div class="card">
+    <h1 id="bannertitle"></h1>
+    <p id="bannersub"></p>
+    <button class="start" id="againbtn" type="button">Play Again</button>
+  </div>
+</div>
+<!-- the top edge of the info: shows while the info is open, and links down to it -->
+<a class="peek-tab" href="#info"><span class="pt">Info <svg viewBox="0 0 24 24"><path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>
+
+</section>
+
+<section class="info" id="info">
+  <div class="page-top-rail"><button class="page-top" id="page-top" type="button"><svg viewBox="0 0 24 24"><path d="M5 4.5 H19 M12 20 V9 M6.5 14.5 L12 9 L17.5 14.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+  <div class="info-inner">
+    <header class="info-head">
+      <h2 class="info-title">Checkers</h2>
+    </header>
+
+    <nav class="toc" id="info-toc">
+      <details open><summary><span class="lbl"><span class="hand">☛</span> Contents</span></summary></details>
+    </nav>
+
+<!-- ================= the info: write in plain HTML from here =================
+     h2 for sections, h3 (h4, h5) inside them. Numbers, the contents and the "Top" links
+     are made for you; give a heading an id only if you link to it from elsewhere.
+     Paragraphs before the first h2 become the introduction under the title.
+     Endnotes: write the note where it belongs, inside <small>...</small>. It becomes a
+     marked link (* † ‡ § ¶, then doubled), and its text moves to a Notes section at the end (yours, if you wrote
+     an <h2>Notes</h2>, with the notes added after its other content; made for you if not). -->
+<article class="info-text">
+
+
+<p>Checkers is a game for two players on the dark squares of an eight by eight board. Pieces move diagonally and capture by jumping over the other player's pieces. A player who takes all of the other player's pieces, or leaves them without a move, wins.</p>
+
+<h2>Rules</h2>
+<ul>
+<li>Each player has 12 pieces, set out on the dark squares of the three rows nearest them. Black sits at the bottom and Red at the top.</li>
+<li>Black moves first. Players then take turns, each moving one of their own pieces.</li>
+<li>A piece moves one square diagonally forward, onto an empty square.</li>
+<li>A piece captures by jumping diagonally over an opponent's piece beside it, onto the empty square just beyond, and the jumped piece is removed. A piece that is not a king captures only forward.</li>
+<li>Capturing is compulsory. If any of a player's pieces can jump, the player must jump, though they may choose which jump.</li>
+<li>If the piece that jumped can jump again, it must, and it keeps jumping until no jump is left.</li>
+<li>A piece that reaches the far row is crowned a king, and the turn ends there. A king moves and captures one square diagonally in any direction.</li>
+<li>A player with no pieces left, or no legal move, loses.</li>
+<li>If 40 moves in a row, counting both players' moves, bring no capture and no move by an uncrowned piece, the game is a draw.</li>
+</ul>
+
+</article>
+<!-- ================= end of the info ================= -->
+
+    <p class="backlink"><a class="btnlink" href="#top">Play <svg viewBox="0 0 24 24"><path d="M12 19 V5 M6 11 L12 5 L18 11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a></p>
+  </div>
+</section>
+
+
+<script>
+/* Builds the info's contents from its headings, once, as the page loads (about 2 ms for a
+   long draft). It never changes the file, only the page in the browser:
+   - paragraphs before the first h2 move up under the title as the introduction,
+   - a heading without an id gets one from its text ("Player counts" -> player-counts),
+     with -2, -3 added if that id is already taken anywhere on the page,
+   - the contents list, nested as deep as the headings go,
+   - a "Top" link at the end of each h2 section,
+   - endnotes: each <small> becomes a marked link (* † ‡ ...), and its text moves to the Notes list.
+   The numbers on the headings and in the list come from CSS counters. */
+(function(){
+  var text=document.querySelector(".info-text"), head=document.querySelector(".info-head"),
+      nav=document.getElementById("info-toc"), box=nav && nav.querySelector("details");
+  if(!text||!box) return;
+  var isHeading=function(n){ return n.nodeType===1 && /^H[2-6]$/.test(n.tagName); };
+  while(text.firstChild && !isHeading(text.firstChild)) head.appendChild(text.firstChild);
+
+  /* Endnotes. This runs before the contents is built, so a Notes heading it creates is
+     listed there like any other. */
+  var smalls=text.querySelectorAll("small");
+  if(smalls.length){
+    var notesHead=Array.prototype.filter.call(text.querySelectorAll("h2"), function(h){ return h.textContent.trim().toLowerCase()==="notes"; })[0];
+    if(!notesHead){ notesHead=document.createElement("h2"); notesHead.textContent="Notes"; text.appendChild(notesHead); }
+    var end=notesHead.nextElementSibling;                       // the notes go at the end of the Notes section
+    while(end && end.tagName!=="H2") end=end.nextElementSibling;
+    var list=document.createElement("ol"); list.className="notes";
+    text.insertBefore(list, end);
+    Array.prototype.forEach.call(smalls, function(sm,k){
+      var n=k+1, sup=document.createElement("sup"), ref=document.createElement("a"), li=document.createElement("li"), back=document.createElement("a");
+      sup.className="fn"; ref.id="ref-"+n; ref.href="#note-"+n; sup.appendChild(ref);   // the mark itself comes from CSS
+      li.id="note-"+n;
+      while(sm.firstChild) li.appendChild(sm.firstChild);
+      back.href="#ref-"+n; back.className="back"; back.textContent="\u21A9"; li.appendChild(document.createTextNode(" ")); li.appendChild(back);
+      list.appendChild(li);
+      sm.parentNode.replaceChild(sup, sm);
+    });
+  }
+
+  var heads=text.querySelectorAll("h2,h3,h4,h5,h6");
+  if(!heads.length){ nav.hidden=true; return; }
+  var root=document.createElement("ol"), stack=[{level:1, ol:root}];
+  Array.prototype.forEach.call(heads, function(h){
+    var level=+h.tagName.charAt(1);
+    if(!h.id){
+      var base=h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"section", id=base, n=2;
+      while(document.getElementById(id)) id=base+"-"+(n++);
+      h.id=id;
+    }
+    while(stack.length>1 && stack[stack.length-1].level>=level) stack.pop();
+    var parent=stack[stack.length-1];
+    if(!parent.ol){ parent.ol=document.createElement("ol"); parent.li.appendChild(parent.ol); }
+    var li=document.createElement("li"), a=document.createElement("a");
+    a.href="#"+h.id; a.textContent=h.textContent; li.appendChild(a); parent.ol.appendChild(li);
+    stack.push({level:level, li:li});
+  });
+  box.appendChild(root);
+
+  var top=function(){ var p=document.createElement("p"); p.className="to-toc";
+    p.innerHTML='<a href="#info-toc"><svg viewBox="0 0 24 24"><path d="M12 19 V5 M6 11 L12 5 L18 11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Top</a>'; return p; };
+  Array.prototype.forEach.call(text.querySelectorAll("h2"), function(h,i){ if(i) text.insertBefore(top(), h); });
+  text.appendChild(top());
+
+  /* the page-top button: to the very top, info left open. The glide comes from
+     html{scroll-behavior:smooth}, so Reduce Motion makes it a jump. */
+  document.getElementById("page-top").addEventListener("click", function(){ window.scrollTo({top:0}); });
+})();
+</script>
 
 <script>
 "use strict";
-document.addEventListener("DOMContentLoaded", function(){
+(function(){
+/* ================= geometry ================= */
+const SIZE=8, VB=664, M=22, CELL=(VB-M*2)/SIZE;   // 22px frame margin, 77.5px cells
+const SVGNS="http://www.w3.org/2000/svg";
+function E(t,a,p){ const e=document.createElementNS(SVGNS,t); if(a) for(const k in a) e.setAttribute(k,a[k]); if(p)p.appendChild(e); return e; }
+function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+function cx(c){ return M + c*CELL + CELL/2; }
+function cy(r){ return M + r*CELL + CELL/2; }
+const PIECE_R = CELL*0.39;
 
-  /* ---------------- geometry ---------------- */
-  const SIZE = 8;
-  // Red on top (rows 0-2) moves DOWN, promotes on row 7.
-  // Black on the bottom (rows 5-7) moves UP, promotes on row 0, moves first.
-  const DIRS = {
-    redMan:   [[1,-1],[1,1]],
-    blackMan: [[-1,-1],[-1,1]],
-    king:     [[1,-1],[1,1],[-1,-1],[-1,1]]
-  };
-  const PROMO_ROW = { red: 7, black: 0 };
+const DIRS = {
+  redMan:   [[1,-1],[1,1]],
+  blackMan: [[-1,-1],[-1,1]],
+  king:     [[1,-1],[1,1],[-1,-1],[-1,1]]
+};
+const PROMO_ROW = { red:7, black:0 };
+/* Draw rule: plies with no capture and no man advanced. The formal WCDF rule counts
+   40 moves per player (80 plies); 40 total keeps a casual game from dragging. */
+const DRAW_PLIES = 40;
+const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+const MOVE_MS = reduceMotion ? 0 : 290;
 
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const MOVE_MS = reduceMotion ? 0 : 290;
+/* ================= DOM ================= */
+const boardEl=document.getElementById("board");
+const staticG=document.getElementById("staticG");
+const glowG=document.getElementById("glowG");
+const pieceG=document.getElementById("pieceG");
+const fxG=document.getElementById("fxG");
+const cursorG=document.getElementById("cursorG");
+const hitG=document.getElementById("hitG");
+const ghostG=document.getElementById("ghostG");
+const statusEls={ red:document.getElementById("status-red"), black:document.getElementById("status-black") };
+const deselectBtns=[document.getElementById("deselect-red"), document.getElementById("deselect-black")];
+const seatEls={ red:document.getElementById("seat-red"), black:document.getElementById("seat-black") };
+const chipEls={ red:document.getElementById("chips-red"), black:document.getElementById("chips-black") };
 
-  const CROWN_SVG =
-    '<svg class="crown" viewBox="0 0 24 16" aria-hidden="true">' +
-      '<rect x="2.8" y="12.2" width="18.4" height="3" rx="0.9"/>' +
-      '<path d="M3 12.6 L5.8 5.5 L9.5 9.2 L12 4 L14.5 9.2 L18.2 5.5 L21 12.6 Z"/>' +
-      '<circle cx="5.8" cy="5" r="1.05"/>' +
-      '<circle cx="12" cy="3.5" r="1.3"/>' +
-      '<circle cx="18.2" cy="5" r="1.05"/>' +
-    '</svg>';
+/* ================= state ================= */
+let board, turn, selected, chainPiece;
+let currentMoves, currentCaptures, captured;
+let gameOver, locked;
+let idlePlies;                 // reset by any capture or any man move
+let cursor={r:6,c:1}, cursorShown=false;
+let anim=null;                 // {id, hideAt:false} piece currently sliding (drawn in fxG)
+let pieceSeq=0;
 
-  /* ---------------- DOM ---------------- */
-  const squaresEl = document.getElementById("squares");
-  const piecesEl  = document.getElementById("pieces");
-  const boardEl   = document.getElementById("board");
-  const bannerEl  = document.getElementById("banner");
-  const resultEl  = document.getElementById("result");
-  const deselectBtn = document.getElementById("deselect");
+/* ================= sound (synth, no files) ================= */
+let actx=null, master=null;
+function audio(){ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+    actx=new AC(); master=actx.createGain(); master.gain.value=0.45; master.connect(actx.destination); }
+  if(actx.state==="suspended") actx.resume(); return actx; }
+function tone(o){ const ctx=audio(); if(!ctx) return; const t0=ctx.currentTime+(o.delay||0);
+  const osc=ctx.createOscillator(), g=ctx.createGain(); osc.type=o.type||"triangle"; osc.frequency.setValueAtTime(o.freq,t0);
+  if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to,t0+o.dur);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(o.vol,t0+(o.attack||0.005)); g.gain.exponentialRampToValueAtTime(0.0001,t0+o.dur);
+  osc.connect(g).connect(master); osc.start(t0); osc.stop(t0+o.dur+0.03); }
+function noise(o){ const ctx=audio(); if(!ctx) return; const t0=ctx.currentTime+(o.delay||0);
+  const len=Math.floor(ctx.sampleRate*o.dur); const buf=ctx.createBuffer(1,len,ctx.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1; const src=ctx.createBufferSource(); src.buffer=buf;
+  const filt=ctx.createBiquadFilter(); filt.type=o.filter||"bandpass"; filt.frequency.value=o.freq||1400; filt.Q.value=o.q||0.8;
+  const g=ctx.createGain(); g.gain.setValueAtTime(o.vol,t0); g.gain.exponentialRampToValueAtTime(0.0001,t0+o.dur);
+  src.connect(filt).connect(g).connect(master); src.start(t0); src.stop(t0+o.dur+0.02); }
+const Sound={
+  select(){ tone({freq:430,to:520,dur:0.06,vol:0.12,type:"sine"}); },
+  deselect(){ tone({freq:340,to:230,dur:0.09,vol:0.12,type:"sine"}); },
+  move(){ tone({freq:175,to:104,dur:0.13,vol:0.5,type:"triangle"}); noise({freq:2600,dur:0.025,vol:0.16,filter:"highpass"}); },
+  capture(){ tone({freq:128,to:62,dur:0.2,vol:0.6,type:"triangle"}); noise({freq:1500,dur:0.09,vol:0.34,q:0.6}); tone({freq:300,to:120,dur:0.16,vol:0.18,type:"sawtooth",delay:0.02}); },
+  king(){ [523,659,784].forEach((f,i)=>tone({freq:f,dur:0.5,vol:0.3,type:"triangle",delay:i*0.085,attack:0.01})); tone({freq:1568,dur:0.6,vol:0.12,type:"sine",delay:0.17}); },
+  win(){ [523,659,784,1047].forEach((f,i)=>tone({freq:f,dur:0.55,vol:0.32,type:"triangle",delay:i*0.1,attack:0.01})); tone({freq:262,dur:0.8,vol:0.2,type:"sine",delay:0.1}); },
+  nudge(){ tone({freq:96,to:72,dur:0.12,vol:0.22,type:"sine"}); }
+};
 
-  const seatEls  = { red: document.getElementById("seat-red"),  black: document.getElementById("seat-black") };
-  const chipEls  = { red: document.getElementById("chips-red"), black: document.getElementById("chips-black") };
-  const countEls = { red: document.getElementById("count-red"), black: document.getElementById("count-black") };
+/* ================= pure logic (unchanged from original) ================= */
+const inB=(r,c)=>r>=0&&r<SIZE&&c>=0&&c<SIZE;
+const isDark=(r,c)=>(r+c)%2===1;
+/* canon: one predicate per board, consulted by every marker draw site */
+const PALE_BACKING='#c9762a';
+const isPaleSquare=(r,c)=>!isDark(r,c);
+const other=col=>col==="red"?"black":"red";
+const key=(r,c)=>r+","+c;
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function dirsFor(p){ return p.king?DIRS.king:(p.color==="red"?DIRS.redMan:DIRS.blackMan); }
+function capturesFrom(r,c,p){ const out=[];
+  for(const [dr,dc] of dirsFor(p)){ const mr=r+dr,mc=c+dc,lr=r+2*dr,lc=c+2*dc;
+    if(inB(lr,lc)&&board[lr][lc]===null){ const mid=board[mr][mc]; if(mid&&mid.color!==p.color) out.push({r:lr,c:lc,jr:mr,jc:mc}); } }
+  return out; }
+function movesFrom(r,c,p){ const out=[];
+  for(const [dr,dc] of dirsFor(p)){ const nr=r+dr,nc=c+dc; if(inB(nr,nc)&&board[nr][nc]===null) out.push({r:nr,c:nc}); }
+  return out; }
+function colorHasCapture(color){ for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){ const p=board[r][c]; if(p&&p.color===color&&capturesFrom(r,c,p).length) return true; } return false; }
+function colorHasMove(color){ for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){ const p=board[r][c]; if(p&&p.color===color&&(capturesFrom(r,c,p).length||movesFrom(r,c,p).length)) return true; } return false; }
+function legalFor(r,c){ const p=board[r][c]; if(!p) return {moves:[],captures:[]};
+  const caps=capturesFrom(r,c,p);
+  if(chainPiece){ if(chainPiece.r===r&&chainPiece.c===c) return {moves:[],captures:caps}; return {moves:[],captures:[]}; }
+  if(colorHasCapture(turn)) return {moves:[],captures:caps};
+  return {moves:movesFrom(r,c,p),captures:caps}; }
+function findPiece(id){ for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){ const p=board[r][c]; if(p&&p.id===id) return {r,c,p}; } return null; }
 
-  /* ---------------- state ---------------- */
-  let board, turn, selected, chainPiece;
-  let currentMoves, currentCaptures, captured;
-  let gameOver, locked;
-  let cursor = {r:6, c:1}, cursorShown = false, cursorEl = null;
+/* ================= static board (built ONCE) ================= */
+function buildStatic(){
+  clear(staticG);
+  E('rect',{x:0,y:0,width:VB,height:VB,rx:22,fill:'url(#wood)'},staticG);
+  E('rect',{x:0,y:0,width:VB,height:VB,rx:22,fill:'url(#grain)'},staticG);
+  // opaque high-contrast squares (checkers' strong palette kept, per canon note)
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    E('rect',{x:M+c*CELL,y:M+r*CELL,width:CELL,height:CELL,
+      fill:isDark(r,c)?'url(#sqDark)':'url(#sqLight)'},staticG);
+  }
+  // grid lines + board edge
+  for(let i=0;i<=SIZE;i++){
+    E('line',{x1:M+i*CELL,y1:M,x2:M+i*CELL,y2:M+SIZE*CELL,stroke:'#1e1208','stroke-opacity':0.35,'stroke-width':1},staticG);
+    E('line',{x1:M,y1:M+i*CELL,x2:M+SIZE*CELL,y2:M+i*CELL,stroke:'#1e1208','stroke-opacity':0.35,'stroke-width':1},staticG);
+  }
+  E('rect',{x:M,y:M,width:SIZE*CELL,height:SIZE*CELL,fill:'none',stroke:'#000000','stroke-opacity':0.5,'stroke-width':3},staticG);
+  E('rect',{x:14,y:14,width:VB-28,height:VB-28,rx:16,fill:'none',stroke:'#ffe1aa','stroke-opacity':0.10,'stroke-width':1.5},staticG);
+}
 
-  const pieceEls = new Map();   // id -> outer .piece element
-  const squareEls = [];         // squareEls[r][c]
-  let pieceSeq = 0;
+/* ================= piece drawing =================
+   Canon flat piece, variant E (Turned) — same construction as the Amazons arrow, in the
+   checkers palette. One light direction runs through face, rim and shadow. The piece carries
+   its own circular contact shadow, so it must NOT sit inside a drop-shadow filter or the two
+   shadows stack. Every value derives from R, so the piece scales with the board. */
+const FACE={ red:'url(#fRed)', black:'url(#fBlack)' };
+const RIM ={ red:'#160f08',   black:'#14141a'   };
+function drawPieceInto(parent, x, y, p){
+  const g=E('g',{transform:'translate('+x+' '+y+')'},parent);
+  const R=PIECE_R;
+  E('circle',{cx:0,cy:R*0.11,r:R*1.16,fill:'url(#shd)'},g);                                            // cast shadow
+  E('circle',{cx:0,cy:0,r:R,fill:FACE[p.color]},g);                                                    // face
+  E('circle',{cx:0,cy:0,r:R,fill:'none',stroke:RIM[p.color],'stroke-width':R*0.055,opacity:0.85},g);   // rim outline
+  E('circle',{cx:0,cy:0,r:R*0.945,fill:'none',stroke:'url(#rimLit)','stroke-width':R*0.10},g);         // lit arc
+  E('circle',{cx:0,cy:0,r:R*0.945,fill:'none',stroke:'url(#rimShade)','stroke-width':R*0.10},g);       // shade arc
+  // a king is turned with a wider center field: two grooves, not three, and the
+  // crown below is sized to fill that field rather than shrunk to avoid it
+  (p.king?[0.78,0.60]:[0.78,0.60,0.42]).forEach(function(f){
+    E('circle',{cx:0,cy:0,r:R*f,fill:'none',stroke:'#000000','stroke-opacity':0.22,'stroke-width':R*0.038},g);
+    E('circle',{cx:0,cy:0,r:R*(f-0.028),fill:'none',stroke:'#ffffff','stroke-opacity':0.12,'stroke-width':R*0.022},g);
+  });
+  if(p.king) crown(g,R);
+  return g;
+}
+/* Stamped into the face, not resting on it: one silhouette cut into the center field,
+   lit from the same upper-left as the rim arcs. The dark copy is the wall on the lit
+   side, the light copy is the lip catching light on the shaded side, and the gold sits
+   in the recess between them. Scales from R like the rest of the piece. */
+const CROWN='M -10.4 7.1 L 10.4 7.1 L 10.4 2.4 L 9.6 2.4 L 9.6 -2.9 L 4.8 1.6 '+
+            'L 0 -7.1 L -4.8 1.6 L -9.6 -2.9 L -9.6 2.4 L -10.4 2.4 Z';
+function crown(g,R){
+  const cr=E('g',{transform:'scale('+(R*0.038)+')'},g);
+  E('path',{d:CROWN,transform:'translate(0.85 0.85)',fill:'#ffffff','fill-opacity':0.15},cr);
+  E('path',{d:CROWN,transform:'translate(-0.5 -0.5)',fill:'#000000','fill-opacity':0.5},cr);
+  E('path',{d:CROWN,fill:'url(#gold)'},cr);
+}
 
-  /* ---------------- sound (always on; all synthesized, no files) ---------------- */
-  let actx = null, master = null;
-  function audio(){
-    if(!actx){
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if(!AC) return null;
-      actx = new AC();
-      master = actx.createGain();
-      master.gain.value = 0.45;
-      master.connect(actx.destination);
-    }
-    if(actx.state === "suspended") actx.resume();
-    return actx;
+/* full redraw of pieces from board state (state changes only) */
+function renderPieces(){
+  clear(pieceG);
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const p=board[r][c]; if(!p) continue;
+    if(anim && anim.id===p.id) continue;          // the sliding piece is drawn in fxG
+    drawPieceInto(pieceG, cx(c), cy(r), p);
   }
-  function tone(o){
-    const ctx = audio(); if(!ctx) return;
-    const t0 = ctx.currentTime + (o.delay || 0);
-    const osc = ctx.createOscillator(), g = ctx.createGain();
-    osc.type = o.type || "triangle";
-    osc.frequency.setValueAtTime(o.freq, t0);
-    if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t0 + o.dur);
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(o.vol, t0 + (o.attack || 0.005));
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
-    osc.connect(g).connect(master);
-    osc.start(t0); osc.stop(t0 + o.dur + 0.03);
-  }
-  function noise(o){
-    const ctx = audio(); if(!ctx) return;
-    const t0 = ctx.currentTime + (o.delay || 0);
-    const len = Math.floor(ctx.sampleRate * o.dur);
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for(let i=0;i<len;i++) d[i] = Math.random()*2 - 1;
-    const src = ctx.createBufferSource(); src.buffer = buf;
-    const filt = ctx.createBiquadFilter();
-    filt.type = o.filter || "bandpass";
-    filt.frequency.value = o.freq || 1400; filt.Q.value = o.q || 0.8;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(o.vol, t0);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + o.dur);
-    src.connect(filt).connect(g).connect(master);
-    src.start(t0); src.stop(t0 + o.dur + 0.02);
-  }
-  const Sound = {
-    select(){ tone({freq:430, to:520, dur:0.06, vol:0.12, type:"sine"}); },
-    deselect(){ tone({freq:340, to:230, dur:0.09, vol:0.12, type:"sine"}); },
-    move(){
-      tone({freq:175, to:104, dur:0.13, vol:0.5, type:"triangle"});
-      noise({freq:2600, dur:0.025, vol:0.16, filter:"highpass"}); },
-    capture(){
-      tone({freq:128, to:62, dur:0.2, vol:0.6, type:"triangle"});
-      noise({freq:1500, dur:0.09, vol:0.34, q:0.6});
-      tone({freq:300, to:120, dur:0.16, vol:0.18, type:"sawtooth", delay:0.02}); },
-    king(){
-      [523,659,784].forEach((f,i)=> tone({freq:f, dur:0.5, vol:0.3, type:"triangle", delay:i*0.085, attack:0.01}));
-      tone({freq:1568, dur:0.6, vol:0.12, type:"sine", delay:0.17}); },
-    win(){
-      [523,659,784,1047].forEach((f,i)=> tone({freq:f, dur:0.55, vol:0.32, type:"triangle", delay:i*0.1, attack:0.01}));
-      tone({freq:262, dur:0.8, vol:0.2, type:"sine", delay:0.1}); },
-    nudge(){ tone({freq:96, to:72, dur:0.12, vol:0.22, type:"sine"}); }
-  };
+}
 
-  /* ---------------- helpers ---------------- */
-  const inB = (r,c) => r>=0 && r<SIZE && c>=0 && c<SIZE;
-  const isDark = (r,c) => (r + c) % 2 === 1;
-  const other = col => col === "red" ? "black" : "red";
-  const key = (r,c) => r + "," + c;
-  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+/* ================= hit layer =================
+   One transparent rect per dark cell, purely for the cursor:pointer affordance. Pointer
+   handling lives on the board root and hit-tests by coordinate, so rebuilding this layer
+   mid-gesture (endTurn does, between chain legs) cannot strand a drag in progress. */
+function buildHits(){
+  clear(hitG);
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(!isDark(r,c)) continue;                     // only dark squares are ever playable
+    E('rect',{x:M+c*CELL,y:M+r*CELL,width:CELL,height:CELL,fill:'transparent',style:'cursor:pointer'},hitG);
+  }
+}
 
-  function dirsFor(p){ return p.king ? DIRS.king : (p.color === "red" ? DIRS.redMan : DIRS.blackMan); }
-  function capturesFrom(r,c,p){
-    const out = [];
-    for(const [dr,dc] of dirsFor(p)){
-      const mr=r+dr, mc=c+dc, lr=r+2*dr, lc=c+2*dc;
-      if(inB(lr,lc) && board[lr][lc] === null){
-        const mid = board[mr][mc];
-        if(mid && mid.color !== p.color) out.push({r:lr, c:lc, jr:mr, jc:mc});
-      }
-    }
-    return out;
-  }
-  function movesFrom(r,c,p){
-    const out = [];
-    for(const [dr,dc] of dirsFor(p)){
-      const nr=r+dr, nc=c+dc;
-      if(inB(nr,nc) && board[nr][nc] === null) out.push({r:nr, c:nc});
-    }
-    return out;
-  }
-  function colorHasCapture(color){
-    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
-      const p = board[r][c];
-      if(p && p.color === color && capturesFrom(r,c,p).length) return true;
-    }
-    return false;
-  }
-  function colorHasMove(color){
-    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
-      const p = board[r][c];
-      if(p && p.color === color && (capturesFrom(r,c,p).length || movesFrom(r,c,p).length)) return true;
-    }
-    return false;
-  }
-  // Forced jumps always on: if any capture exists, only captures are legal.
-  function legalFor(r,c){
-    const p = board[r][c];
-    if(!p) return {moves:[], captures:[]};
-    const caps = capturesFrom(r,c,p);
-    if(chainPiece){
-      if(chainPiece.r === r && chainPiece.c === c) return {moves:[], captures:caps};
-      return {moves:[], captures:[]};
-    }
-    if(colorHasCapture(turn)) return {moves:[], captures:caps};
-    return {moves:movesFrom(r,c,p), captures:caps};
-  }
-  function findPiece(id){
-    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
-      const p = board[r][c];
-      if(p && p.id === id) return {r,c,p};
-    }
-    return null;
-  }
-  function pieceTransform(r,c){
-    return "translate(calc(var(--cell) * " + c + " + var(--cell) * 0.11), " +
-                      "calc(var(--cell) * " + r + " + var(--cell) * 0.11))";
-  }
-
-  /* ---------------- rendering ---------------- */
-  function buildSquares(){
-    squaresEl.innerHTML = "";
-    for(let r=0;r<SIZE;r++){
-      squareEls[r] = [];
-      for(let c=0;c<SIZE;c++){
-        const sq = document.createElement("div");
-        sq.className = "square " + (isDark(r,c) ? "square--dark" : "square--light");
-        sq.dataset.r = r; sq.dataset.c = c;
-        sq.addEventListener("pointerdown", () => onSquareClick(r,c));
-        squaresEl.appendChild(sq);
-        squareEls[r][c] = sq;
-      }
-    }
-  }
-  function makePiece(color, r, c){
-    const id = "p" + (pieceSeq++);
-    board[r][c] = {id, color, king:false};
-    const el = document.createElement("div");
-    el.className = "piece";
-    el.dataset.id = id;
-    el.style.transform = pieceTransform(r, c);   // set before append: no first-paint slide
-    const body = document.createElement("div");
-    body.className = "piece__body piece__body--" + color;
-    el.appendChild(body);
-    el.addEventListener("pointerdown", e => { e.stopPropagation(); onPieceClick(id); });
-    piecesEl.appendChild(el);
-    pieceEls.set(id, el);
-  }
-  function movePieceEl(id, r, c){
-    const el = pieceEls.get(id);
-    if(el) el.style.transform = pieceTransform(r, c);
-  }
-  function kingify(id){
-    const el = pieceEls.get(id);
-    if(!el || el.classList.contains("is-king")) return;
-    el.classList.add("is-king");
-    const body = el.querySelector(".piece__body");
-    if(body && !body.querySelector(".crown")) body.insertAdjacentHTML("beforeend", CROWN_SVG);
-  }
-  function clearHints(){
-    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++)
-      squareEls[r][c].classList.remove("is-move");
-  }
-  function showHints(){
-    clearHints();
-    pieceEls.forEach(el => el.classList.remove("is-target"));
-    // same dot on every landing square (plain move or jump landing)
-    currentMoves.forEach(k => { const [r,c] = k.split(",").map(Number); squareEls[r][c].classList.add("is-move"); });
-    currentCaptures.forEach(m => {
-      squareEls[m.r][m.c].classList.add("is-move");
-      const victim = board[m.jr][m.jc];                 // X over the piece to be taken
-      if(victim){ const vEl = pieceEls.get(victim.id); if(vEl) vEl.classList.add("is-target"); }
-    });
-  }
-  function clearSelectionVisuals(){
-    pieceEls.forEach(el => el.classList.remove("is-selected","is-target"));
-    clearHints();
-  }
-  function updateMovable(){
-    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
-      const p = board[r][c];
-      if(!p) continue;
-      const el = pieceEls.get(p.id);
-      if(!el) continue;
-      let movable = false;
-      if(!gameOver && !selected && p.color === turn){
-        const lg = legalFor(r,c);
-        movable = lg.moves.length > 0 || lg.captures.length > 0;
-      }
-      el.classList.toggle("is-movable", movable);
-    }
-  }
-  function renderTrays(){
-    [["red","black"],["black","red"]].forEach(([who, chipColor]) => {
-      const n = captured[who];
-      countEls[who].textContent = n;
-      const box = chipEls[who];
-      box.innerHTML = "";
-      for(let i=0;i<n;i++){
-        const chip = document.createElement("span");
-        chip.className = "chip chip--" + chipColor;
-        box.appendChild(chip);
-      }
-    });
-  }
-  function refreshSeats(){
-    seatEls.red.classList.toggle("is-active", !gameOver && turn === "red");
-    seatEls.black.classList.toggle("is-active", !gameOver && turn === "black");
-  }
-  // deselect button: only for a fresh, pre-move selection (not mid-jump / mid-animation)
-  function refreshDeselect(){
-    const show = !!selected && !chainPiece && !gameOver && !locked;
-    deselectBtn.classList.toggle("show", show);
-    deselectBtn.disabled = !show;
-  }
-
-  /* cursor is a KEYBOARD-ONLY affordance: invisible until an arrow key is pressed,
-     and any mouse interaction hides it again. */
-  function paintCursor(){
-    if(cursorEl){ cursorEl.classList.remove("is-cursor"); cursorEl = null; }
-    if(cursorShown){ cursorEl = squareEls[cursor.r][cursor.c]; cursorEl.classList.add("is-cursor"); }
-  }
-  function setCursor(r,c){ cursor = {r,c}; paintCursor(); }
-  function hideCursor(){ if(cursorShown){ cursorShown = false; paintCursor(); } }
-
-  /* ---------------- interaction ----------------
-     Selection is COMMITTED: once a piece is chosen you can only move that piece,
-     unless you explicitly deselect (button or Esc) before it has moved. */
-  function selectPiece(r,c){
-    const p = board[r][c];
-    const lg = legalFor(r,c);
-    if(lg.moves.length === 0 && lg.captures.length === 0){ Sound.nudge(); return; }
-    selected = {r,c};
-    currentMoves = new Set(lg.moves.map(m => key(m.r,m.c)));
-    currentCaptures = lg.captures;
-    clearSelectionVisuals();
-    pieceEls.get(p.id).classList.add("is-selected");
-    showHints();
-    updateMovable();
-    setCursor(r,c);
-    refreshDeselect();
-    Sound.select();
-  }
-  function clearSelection(){   // internal cleanup (end of game / new game)
-    selected = null; currentMoves = new Set(); currentCaptures = [];
-    clearSelectionVisuals();
-  }
-  function userDeselect(){     // explicit cancel via the button or Esc
-    if(!selected || chainPiece || locked || gameOver) return;
-    clearSelection();
-    updateMovable();           // restore the "movable" glow on the player's pieces
-    refreshDeselect();
-    Sound.deselect();
-  }
-
-  function onPieceClick(id){
-    if(gameOver || locked) return;
-    audio(); hideCursor();
-    const found = findPiece(id);
-    if(!found) return;
-    const {r,c,p} = found;
-
-    if(selected){
-      if(selected.r === r && selected.c === c) return;             // the selected piece: ignore
-      const cm = currentCaptures.find(m => m.jr === r && m.jc === c);
-      if(cm){ doCapture(selected, cm); return; }                   // tapped the X'd enemy
-      Sound.nudge();                                               // any other piece: locked out
-      return;
-    }
-    if(p.color === turn){ selectPiece(r,c); return; }
-    Sound.nudge();
-  }
-
-  function onSquareClick(r,c){
-    if(gameOver || locked) return;
-    audio(); hideCursor();
-    if(!selected) return;                                          // no checker chosen yet: do nothing
-    if(currentMoves.has(key(r,c))){ doSimpleMove(selected, {r,c}); return; }
-    const cm = currentCaptures.find(m => m.r === r && m.c === c);
-    if(cm){ doCapture(selected, cm); return; }
-    Sound.nudge();                                                 // not a legal destination
-  }
-
-  function doSimpleMove(from, to){
-    locked = true; refreshDeselect();
-    const p = board[from.r][from.c];
-    board[to.r][to.c] = p;
-    board[from.r][from.c] = null;
-    clearSelectionVisuals();
-    selected = null;
-    const el = pieceEls.get(p.id);
-    if(el) el.classList.add("is-moving");
-    movePieceEl(p.id, to.r, to.c);
-    Sound.move();
-    setCursor(to.r, to.c);
-    window.setTimeout(() => {
-      if(el) el.classList.remove("is-moving");
-      if(to.r === PROMO_ROW[p.color] && !p.king){ p.king = true; kingify(p.id); Sound.king(); }
-      endTurn();
-    }, MOVE_MS);
-  }
-
-  function doCapture(from, move){
-    locked = true; refreshDeselect();
-    const p = board[from.r][from.c];
-    const victim = board[move.jr][move.jc];
-
-    board[move.jr][move.jc] = null;
-    const vEl = pieceEls.get(victim.id);
-    if(vEl){
-      vEl.classList.add("is-captured");
-      pieceEls.delete(victim.id);
-      window.setTimeout(() => { if(vEl.parentNode) vEl.parentNode.removeChild(vEl); }, MOVE_MS + 40);
-    }
-
-    board[move.r][move.c] = p;
-    board[from.r][from.c] = null;
-    clearSelectionVisuals();
-    const el = pieceEls.get(p.id);
-    if(el) el.classList.add("is-moving");
-    movePieceEl(p.id, move.r, move.c);
-    captured[p.color] += 1;
-    renderTrays();
-    Sound.capture();
-    setCursor(move.r, move.c);
-
-    window.setTimeout(() => {
-      if(el) el.classList.remove("is-moving");
-      // crowning ends the turn even if more jumps are available (standard checkers)
-      if(move.r === PROMO_ROW[p.color] && !p.king){
-        p.king = true; kingify(p.id); Sound.king(); endTurn(); return;
-      }
-      const more = capturesFrom(move.r, move.c, p);
-      if(more.length){
-        chainPiece = {r:move.r, c:move.c};
-        selected = {r:move.r, c:move.c};
-        currentMoves = new Set();
-        currentCaptures = more;
-        if(el) el.classList.add("is-selected");
-        showHints();
-        updateMovable();
-        refreshDeselect();      // still hidden (chainPiece is set)
-        locked = false;
-      } else {
-        endTurn();
-      }
-    }, MOVE_MS);
-  }
-
-  function endTurn(){
-    selected = null; chainPiece = null;
-    currentMoves = new Set(); currentCaptures = [];
-    clearSelectionVisuals();
-    turn = other(turn);
-    if(!colorHasMove(turn)){ finish(other(turn)); return; }
-    refreshSeats();
-    updateMovable();
-    refreshDeselect();
-    locked = false;
-  }
-
-  function finish(winner){
-    gameOver = true; locked = false;
-    clearSelection(); refreshSeats(); updateMovable(); refreshDeselect();
-    resultEl.textContent = cap(winner) + " wins";
-    bannerEl.classList.add("show");
-    Sound.win();
-  }
-
-  /* ---------------- keyboard play (cursor becomes visible here) ---------------- */
-  boardEl.addEventListener("keydown", e => {
-    if(gameOver || locked) return;
-    const k = e.key;
-    if(k === "Escape"){ e.preventDefault(); audio(); userDeselect(); return; }
-    if(k!=="ArrowUp"&&k!=="ArrowDown"&&k!=="ArrowLeft"&&k!=="ArrowRight"&&k!=="Enter"&&k!==" ") return;
-    e.preventDefault();
-    audio();
-    cursorShown = true; paintCursor();
-
-    if(k==="Enter"||k===" "){
-      const cur = cursor;
-      if(selected){
-        if(selected.r===cur.r && selected.c===cur.c) return;
-        if(currentMoves.has(key(cur.r,cur.c))) doSimpleMove(selected,{r:cur.r,c:cur.c});
-        else { const cm = currentCaptures.find(m => m.r===cur.r && m.c===cur.c); if(cm) doCapture(selected, cm); else Sound.nudge(); }
-      } else {
-        const p = board[cur.r][cur.c];
-        if(p && p.color===turn) selectPiece(cur.r, cur.c);
-        else Sound.nudge();
-      }
-      return;
-    }
-
-    let r=cursor.r, c=cursor.c;
-    if(k==="ArrowUp")         r=Math.max(0,r-1);
-    else if(k==="ArrowDown")  r=Math.min(SIZE-1,r+1);
-    else if(k==="ArrowLeft")  c=Math.max(0,c-1);
-    else if(k==="ArrowRight") c=Math.min(SIZE-1,c+1);
-    setCursor(r,c);
+/* ================= selection-dependent layers (redrawn on a press) ================= */
+function drawSel(){
+  clear(glowG); clear(fxG);
+  const showDeselect = !!selected && !chainPiece && !gameOver && !locked;
+  deselectBtns.forEach(function(b){
+    const mine = showDeselect && b.dataset.side===turn;   // only the mover gets a button
+    b.classList.toggle("show", mine);
+    b.disabled = !mine;
   });
 
-  /* deselect via the button (works regardless of board focus) */
-  deselectBtn.addEventListener("click", () => {
-    if(deselectBtn.disabled) return;
-    audio();
-    userDeselect();
-  });
+  if(gameOver) { statusEls.red.innerHTML=""; statusEls.black.innerHTML=""; drawCursor(); return; }
 
-  /* ---------------- setup ---------------- */
-  function setupGame(){
-    board = Array.from({length:SIZE}, () => new Array(SIZE).fill(null));
-    pieceEls.forEach(el => { if(el.parentNode) el.parentNode.removeChild(el); });
-    pieceEls.clear();
-    piecesEl.innerHTML = "";
-    pieceSeq = 0;
-
-    captured = {red:0, black:0};
-    turn = "black";                         // Black (bottom / near player) moves first
-    selected = null; chainPiece = null;
-    currentMoves = new Set(); currentCaptures = [];
-    gameOver = false; locked = false;
-    cursor = {r:6, c:1}; cursorShown = false; paintCursor();   // cursor hidden until keyboard use
-
-    for(let r=0;r<3;r++)    for(let c=0;c<SIZE;c++) if(isDark(r,c)) makePiece("red", r, c);
-    for(let r=5;r<SIZE;r++) for(let c=0;c<SIZE;c++) if(isDark(r,c)) makePiece("black", r, c);
-
-    bannerEl.classList.remove("show");
-    clearHints();
-    renderTrays();
-    refreshSeats();
-    updateMovable();
-    refreshDeselect();
+  // movable pieces (only when nothing is selected): halo under + pulsing ring over
+  if(!selected){
+    for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+      const p=board[r][c]; if(!p||p.color!==turn) continue;
+      const lg=legalFor(r,c);
+      if(lg.moves.length||lg.captures.length){
+        E('circle',{cx:cx(c),cy:cy(r),r:PIECE_R+9,fill:'url(#glowhalo)'},glowG);
+        E('circle',{cx:cx(c),cy:cy(r),r:PIECE_R+4,fill:'none',stroke:'#ffd75e','stroke-width':2.6,opacity:0.85,'class':'pulseRing'},fxG);
+      }
+    }
+  } else {
+    // selected piece: halo under + SOLID ring over
+    E('circle',{cx:cx(selected.c),cy:cy(selected.r),r:PIECE_R+9,fill:'url(#glowhalo)'},glowG);
+    E('circle',{cx:cx(selected.c),cy:cy(selected.r),r:PIECE_R+4,fill:'none',stroke:'#ffd75e','stroke-width':4.5,opacity:0.97},fxG);
+    // destinations: gold bullseye (same marker for a plain move and a jump landing)
+    currentMoves.forEach(k=>{ const [r,c]=k.split(",").map(Number); bullseye(cx(c),cy(r)); });
+    currentCaptures.forEach(m=>{
+      bullseye(cx(m.c),cy(m.r));
+      // the enemy to be jumped: red halo under + red ring over
+      E('circle',{cx:cx(m.jc),cy:cy(m.jr),r:PIECE_R+9,fill:'url(#redhalo)'},glowG);
+      E('circle',{cx:cx(m.jc),cy:cy(m.jr),r:PIECE_R+4,fill:'none',stroke:'#ef5a36','stroke-width':3.4,opacity:0.95},fxG);
+    });
   }
+  drawCursor();
+  updateStatus();
+}
+function bullseye(x,y){
+  E('circle',{cx:x,cy:y,r:CELL*0.26,fill:'url(#glowhalo)',opacity:0.5,'class':'pulseGlow'},fxG);
+  E('circle',{cx:x,cy:y,r:CELL*0.17,fill:'none',stroke:'#ffd75e','stroke-width':3,opacity:0.96},fxG);
+  E('circle',{cx:x,cy:y,r:CELL*0.06,fill:'#ffd75e',opacity:0.96},fxG);
+}
+function drawCursor(){
+  clear(cursorG);
+  if(!cursorShown||gameOver) return;
+  // canon: the board says which squares are pale; the marker's backing swaps, the gold does not
+  const box={x:M+cursor.c*CELL+2,y:M+cursor.r*CELL+2,width:CELL-4,height:CELL-4,rx:5,fill:'none'};
+  if(isPaleSquare(cursor.r,cursor.c))
+    E('rect',Object.assign({},box,{stroke:PALE_BACKING,'stroke-width':6.5}),cursorG);
+  E('rect',Object.assign({},box,{stroke:'#ffd75e','stroke-width':3}),cursorG);
+}
 
-  buildSquares();
-  setupGame();
+/* ================= trays / seats / status ================= */
+function renderTrays(){
+  [["red","black"],["black","red"]].forEach(([who,chipColor])=>{
+    const n=captured[who];
+    const box=chipEls[who]; box.innerHTML="";
+    for(let i=0;i<n;i++){ const chip=document.createElement("span"); chip.className="chip chip--"+chipColor; box.appendChild(chip); }
+  });
+}
+function refreshSeats(){
+  seatEls.red.classList.toggle("is-active", !gameOver && turn==="red");
+  seatEls.black.classList.toggle("is-active", !gameOver && turn==="black");
+}
+function updateStatus(){
+  statusEls.red.innerHTML=""; statusEls.black.innerHTML="";
+  if(gameOver) return;
+  const who='<b>'+cap(turn)+'</b>';
+  let msg;
+  if(chainPiece) msg=who+' \u2014 jump again.';
+  else if(selected) msg=who+' \u2014 tap a marked square to move.';
+  else if(colorHasCapture(turn)) msg=who+' \u2014 you must jump. Tap a glowing piece.';
+  else msg=who+' to move \u2014 tap a glowing piece.';
+  statusEls[turn].innerHTML=msg;          // .rail--top is CSS-flipped to face Red
+}
+
+/* ================= interaction ================= */
+function onCellTap(r,c){
+  if(gameOver||locked||anim) return;
+  audio(); hideCursor();
+  const p=board[r][c];
+  if(selected){
+    if(selected.r===r&&selected.c===c) return;                      // keep it selected; a drag may follow
+    if(currentMoves.has(key(r,c))){ doSimpleMove(selected,{r,c}); return; }
+    const cm=currentCaptures.find(m=>m.r===r&&m.c===c);
+    if(cm){ doCapture(selected,cm); return; }
+    // tapping the enemy that would be jumped also commits the capture
+    const cmj=currentCaptures.find(m=>m.jr===r&&m.jc===c);
+    if(cmj){ doCapture(selected,cmj); return; }
+    // a different own piece: switch selection to it if legal (only when not mid-chain)
+    if(p&&p.color===turn&&!chainPiece){ selectPiece(r,c); return; }
+    Sound.nudge(); return;
+  }
+  if(p&&p.color===turn){ selectPiece(r,c); return; }
+  Sound.nudge();
+}
+function selectPiece(r,c){
+  const lg=legalFor(r,c);
+  if(lg.moves.length===0&&lg.captures.length===0){ Sound.nudge(); return; }
+  selected={r,c};
+  currentMoves=new Set(lg.moves.map(m=>key(m.r,m.c)));
+  currentCaptures=lg.captures;
+  cursor={r,c};
+  Sound.select();
+  drawSel();
+}
+function clearSelection(){ selected=null; currentMoves=new Set(); currentCaptures=[]; }
+function userDeselect(){
+  if(!selected||chainPiece||locked||gameOver) return;
+  clearSelection(); Sound.deselect(); drawSel();
+}
+
+/* ================= drag to move =================
+   The gesture lives on the board root, not on the hit rects, and every position is derived
+   from one screen->viewBox transform. That means (a) pointer capture keeps move/up events
+   coming even off-board or outside the window, (b) buildHits() recreating the rects between
+   chain legs cannot strand a drag, and (c) the ghost and the hit-test can never disagree
+   about which square the pointer is over, because they read the same numbers. */
+let dragId=null, dragFrom=null, dragGhost=null;
+
+function toBoard(e){
+  const m=boardEl.getScreenCTM(); if(!m) return null;
+  const inv=m.inverse();
+  if(window.DOMPoint) return new DOMPoint(e.clientX,e.clientY).matrixTransform(inv);
+  const sp=boardEl.createSVGPoint(); sp.x=e.clientX; sp.y=e.clientY;   // older Safari
+  return sp.matrixTransform(inv);
+}
+function cellAt(p){
+  if(!p) return null;
+  const c=Math.floor((p.x-M)/CELL), r=Math.floor((p.y-M)/CELL);
+  if(r<0||r>=SIZE||c<0||c>=SIZE) return null;
+  return {r,c};
+}
+/* Where a release would land. Hovering the piece that would be jumped snaps to the
+   square behind it, matching the tap affordance that already commits that capture. */
+function dropTarget(r,c){
+  if(!selected) return null;
+  if(currentMoves.has(key(r,c))) return {kind:'move', r:r, c:c};
+  const cm=currentCaptures.find(m=>m.r===r&&m.c===c);
+  if(cm) return {kind:'capture', move:cm, r:cm.r, c:cm.c};
+  const cmj=currentCaptures.find(m=>m.jr===r&&m.jc===c);
+  if(cmj) return {kind:'capture', move:cmj, r:cmj.r, c:cmj.c};
+  return null;
+}
+function ghostTo(x,y){
+  if(!dragGhost){
+    const p=board[dragFrom.r][dragFrom.c]; if(!p) return;
+    dragGhost=drawPieceInto(ghostG,x,y,p);          // built once; only the transform changes
+    dragGhost.setAttribute("opacity","0.4");
+    return;
+  }
+  dragGhost.style.display="";
+  dragGhost.setAttribute("transform","translate("+x+" "+y+")");
+}
+function ghostHide(){ if(dragGhost) dragGhost.style.display="none"; }
+function endDrag(){
+  if(dragId!==null){ try{ boardEl.releasePointerCapture(dragId); }catch(err){} }
+  dragId=null; dragFrom=null; dragGhost=null; clear(ghostG);
+}
+
+boardEl.addEventListener("pointerdown", function(e){
+  if(gameOver||locked||anim) return;
+  if(e.pointerType==="mouse" && e.button!==0) return;    // right/middle also opens a context menu
+  if(dragId!==null) return;                             // ignore a second finger mid-drag
+  const cell=cellAt(toBoard(e));
+  if(!cell||!isDark(cell.r,cell.c)) return;
+  e.preventDefault();
+  boardEl.focus({preventScroll:true});
+  onCellTap(cell.r,cell.c);
+  // a drag starts only if that press left this very square selected
+  if(selected&&selected.r===cell.r&&selected.c===cell.c&&!locked&&!anim&&!gameOver){
+    dragId=e.pointerId; dragFrom={r:cell.r,c:cell.c};
+    try{ boardEl.setPointerCapture(e.pointerId); }catch(err){}
+  }
 });
 
-/* ---- fullscreen + intro: setup covers the board until Start; auto-exits on game end ---- */
+boardEl.addEventListener("pointermove", function(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  if(!selected){ endDrag(); return; }
+  const p=toBoard(e); if(!p) return;
+  const cell=cellAt(p);
+  if(cell&&cell.r===dragFrom.r&&cell.c===dragFrom.c){ ghostHide(); return; }  // no ghost at home
+  const t=cell?dropTarget(cell.r,cell.c):null;
+  if(t) ghostTo(M+t.c*CELL+CELL/2, M+t.r*CELL+CELL/2);   // snap onto a legal landing square
+  else  ghostTo(p.x,p.y);                                // otherwise ride the pointer
+});
+
+boardEl.addEventListener("pointerup", function(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  const cell=cellAt(toBoard(e));
+  const t=cell?dropTarget(cell.r,cell.c):null;
+  const from=selected;
+  endDrag();
+  if(!t||!from||locked||anim||gameOver) return;          // released off-target: stays selected
+  if(t.kind==='move') doSimpleMove(from,{r:t.r,c:t.c});
+  else doCapture(from,t.move);
+});
+
+/* palm rejection, an incoming call, or the browser claiming the gesture all land here.
+   Degrading to "still selected" keeps the board usable instead of leaking drag state. */
+boardEl.addEventListener("pointercancel", function(e){
+  if(dragId===null||e.pointerId!==dragId) return;
+  endDrag();
+});
+
+/* ================= slide animation (in fxG, so pieceG/hitG untouched) ================= */
+function slide(id, fromR, fromC, toR, toC, done){
+  anim={id:id};
+  renderPieces();                      // hide the moving piece from pieceG
+  const p=findPieceById(id);
+  const g=drawPieceInto(fxG, cx(fromC), cy(fromR), p);
+  const x0=cx(fromC), y0=cy(fromR), x1=cx(toC), y1=cy(toR);
+  const t0=performance.now(), dur=MOVE_MS||1;
+  function frame(now){ let u=Math.min(1,(now-t0)/dur); const e=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+    g.setAttribute('transform','translate('+(x0+(x1-x0)*e)+' '+(y0+(y1-y0)*e)+')');
+    if(u<1) requestAnimationFrame(frame); else { anim=null; done(); }
+  }
+  if(MOVE_MS) requestAnimationFrame(frame); else { anim=null; done(); }
+}
+function findPieceById(id){ const f=findPiece(id); return f?f.p:{color:'red',king:false}; }
+
+/* ================= moves ================= */
+function doSimpleMove(from,to){
+  locked=true;
+  const p=board[from.r][from.c];
+  const wasMan=!p.king;               // a man advancing counts as progress
+  board[to.r][to.c]=p; board[from.r][from.c]=null;
+  clearSelection();
+  cursor={r:to.r,c:to.c};
+  drawSel();                            // clears markers/rings immediately
+  Sound.move();
+  slide(p.id, from.r, from.c, to.r, to.c, function(){
+    if(to.r===PROMO_ROW[p.color]&&!p.king){ p.king=true; Sound.king(); }
+    idlePlies = wasMan ? 0 : idlePlies+1;
+    renderPieces();
+    endTurn();
+  });
+}
+function doCapture(from,move){
+  locked=true;
+  const p=board[from.r][from.c];
+  const victim=board[move.jr][move.jc];
+  board[move.jr][move.jc]=null;
+  board[move.r][move.c]=p; board[from.r][from.c]=null;
+  captured[p.color]+=1; renderTrays();
+  idlePlies=0;                         // any capture is progress
+  clearSelection();
+  cursor={r:move.r,c:move.c};
+  drawSel();
+  Sound.capture();
+  renderPieces();                       // victim disappears immediately (board already updated)
+  slide(p.id, from.r, from.c, move.r, move.c, function(){
+    if(move.r===PROMO_ROW[p.color]&&!p.king){ p.king=true; Sound.king(); renderPieces(); endTurn(); return; }
+    const more=capturesFrom(move.r,move.c,p);
+    if(more.length){
+      chainPiece={r:move.r,c:move.c};
+      selected={r:move.r,c:move.c};
+      currentMoves=new Set(); currentCaptures=more;
+      locked=false;
+      renderPieces(); drawSel();
+    } else { renderPieces(); endTurn(); }
+  });
+}
+function endTurn(){
+  selected=null; chainPiece=null; currentMoves=new Set(); currentCaptures=[];
+  turn=other(turn);
+  if(!colorHasMove(turn)){ finish(other(turn)); return; }
+  if(idlePlies>=DRAW_PLIES){ finishDraw(); return; }
+  refreshSeats(); buildHits(); drawSel(); locked=false;
+}
+function hasPieces(color){
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){ const p=board[r][c]; if(p&&p.color===color) return true; }
+  return false;
+}
+function showBanner(title,sub){
+  gameOver=true; locked=false;
+  clearSelection(); refreshSeats(); clear(hitG); drawSel();
+  document.getElementById("bannertitle").textContent=title;
+  document.getElementById("bannersub").textContent=sub;
+  document.getElementById("banner").classList.remove("hidden");
+  if(window.fsExit) window.fsExit();     // the end card is where fullscreen stops
+  Sound.win();
+}
+function finish(winner){
+  const loser=other(winner);
+  // finish() fires for two different reasons; say which one it was
+  showBanner(cap(winner)+' wins', hasPieces(loser)
+    ? cap(loser)+' is left with no legal move.'
+    : cap(loser)+' has no pieces left on the board.');
+}
+function finishDraw(){
+  showBanner('A draw', DRAW_PLIES+' moves with no capture and no man advanced.');
+}
+
+/* ================= keyboard (cursor becomes visible here) ================= */
+boardEl.addEventListener("keydown", e=>{
+  if(gameOver||locked||anim) return;
+  const k=e.key;
+  if(k==="Escape"){ e.preventDefault(); audio(); userDeselect(); return; }
+  if(k!=="ArrowUp"&&k!=="ArrowDown"&&k!=="ArrowLeft"&&k!=="ArrowRight"&&k!=="Enter"&&k!==" ") return;
+  e.preventDefault(); audio(); cursorShown=true;
+  if(k==="Enter"||k===" "){ onCellTap(cursor.r,cursor.c); return; }
+  let r=cursor.r,c=cursor.c;
+  if(k==="ArrowUp") r=Math.max(0,r-1);
+  else if(k==="ArrowDown") r=Math.min(SIZE-1,r+1);
+  else if(k==="ArrowLeft") c=Math.max(0,c-1);
+  else if(k==="ArrowRight") c=Math.min(SIZE-1,c+1);
+  cursor={r,c}; drawCursor();
+});
+function hideCursor(){ if(cursorShown){ cursorShown=false; drawCursor(); } }
+
+deselectBtns.forEach(function(b){
+  b.addEventListener("click", ()=>{ if(b.disabled) return; audio(); userDeselect(); });
+});
+
+/* ================= setup ================= */
+function setupGame(){
+  board=Array.from({length:SIZE},()=>new Array(SIZE).fill(null));
+  captured={red:0,black:0};
+  turn="black";                          // Black (bottom) moves first
+  selected=null; chainPiece=null; currentMoves=new Set(); currentCaptures=[];
+  gameOver=false; locked=false; anim=null;
+  cursor={r:6,c:1}; cursorShown=false; pieceSeq=0; idlePlies=0; endDrag();
+  document.getElementById("banner").classList.add("hidden");
+  for(let r=0;r<3;r++)    for(let c=0;c<SIZE;c++) if(isDark(r,c)) board[r][c]={id:"p"+(pieceSeq++),color:"red",king:false};
+  for(let r=5;r<SIZE;r++) for(let c=0;c<SIZE;c++) if(isDark(r,c)) board[r][c]={id:"p"+(pieceSeq++),color:"black",king:false};
+  renderPieces(); buildHits(); renderTrays(); refreshSeats(); drawSel();
+}
+
+/* The board is sized entirely by CSS. This only mirrors its rendered width onto the
+   trays so they stay flush; nothing about fitting the viewport depends on it. */
+(function(){
+  if(!window.ResizeObserver) return;
+  let last=0;
+  new ResizeObserver(function(){
+    const w=Math.round(boardEl.getBoundingClientRect().width);
+    if(w && Math.abs(w-last)>=1){ last=w; document.documentElement.style.setProperty("--seatw", w+"px"); }
+  }).observe(boardEl);
+})();
+
+buildStatic();
+setupGame();
+window.__ck={ get board(){return board;}, get turn(){return turn;}, get selected(){return selected;},
+  get gameOver(){return gameOver;}, onCellTap, setupGame };   // test hook
+
+/* ---- fullscreen: setup screen only; auto-exits when a game ends ---- */
 window.fsElement=function(){ return document.fullscreenElement||document.webkitFullscreenElement||null; };
 window.fsEnter=function(){ var el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen; if(fn){ try{ var p=fn.call(el); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
 window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFullscreen; if(fn&&window.fsElement()){ try{ var p=fn.call(document); if(p&&p.catch) p.catch(function(){}); }catch(e){} } };
 (function(){
-  var g=function(id){ return document.getElementById(id); };
-  var b=g("fsbtn");
-  if(b){
-    var sync=function(){ b.classList.toggle("fs-on", !!window.fsElement()); };
+  var btns=document.querySelectorAll(".fsbtn");          // setup card + end card
+  if(btns.length){
+    var sync=function(){ var on=!!window.fsElement();
+      for(var i=0;i<btns.length;i++) btns[i].classList.toggle("fs-on", on); };
     document.addEventListener("fullscreenchange", sync);
     document.addEventListener("webkitfullscreenchange", sync);
-    b.onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
+    for(var j=0;j<btns.length;j++) btns[j].onclick=function(){ if(window.fsElement()) window.fsExit(); else window.fsEnter(); };
   }
-  var sb=g("startbtn"); if(sb){ sb.onclick=function(){ var s=g("setup"); if(s) s.classList.add("hidden"); }; }
-  var bn=g("banner");
+  var bn=document.getElementById("banner");
   if(bn && window.MutationObserver){
-    new MutationObserver(function(){ if(bn.classList.contains("show")) window.fsExit(); }).observe(bn,{attributes:true,attributeFilter:["class"]});
+    new MutationObserver(function(){ if(!bn.classList.contains("hidden")) window.fsExit(); }).observe(bn,{attributes:true,attributeFilter:["class"]});
   }
+})();
+/* ---- intro: Start and Play Again ---- */
+(function(){
+  var g=function(id){ return document.getElementById(id); };
+  var ab=g("againbtn"); if(ab){ ab.onclick=function(){ audio(); setupGame(); boardEl.focus(); }; }
+  var sb=g("startbtn"); if(sb){ sb.onclick=function(){ audio(); var s=g("setup"); if(s) s.classList.add("hidden"); boardEl.focus(); }; }
+})();
+})();
+/* Start always plays from the top, so the board is whole when the page locks (info-pane.html, block 7). */
+(function(){ const sb=document.getElementById("startbtn");
+  if(sb) sb.addEventListener("click", function(){ window.scrollTo({ top:0, behavior:"instant" }); }); })();
+</script>
+
+<!-- site menu script (from site-nav.html) -->
+<script>
+(function siteNav() {
+  const burger = document.getElementById('site-burger');
+  const scrim = document.getElementById('site-scrim');
+  const drawer = document.getElementById('site-drawer');
+  let open = false;
+
+  // `inert` takes the panel's contents out of the tab order while it is
+  // shut, so there is no need to walk the links setting tabIndex by hand.
+  function setOpen(next, returnFocus) {
+    open = next;
+    burger.classList.toggle('is-open', open);
+    drawer.classList.toggle('is-open', open);
+    scrim.classList.toggle('is-open', open);
+    scrim.hidden = !open;
+    if (open) {
+      drawer.removeAttribute('inert');
+      const links = drawer.querySelectorAll('.site-nav a');
+      (drawer.querySelector('.site-nav a.is-current') || links[0]).focus();
+    } else {
+      drawer.setAttribute('inert', '');
+      if (returnFocus) burger.focus();
+    }
+  }
+
+  burger.addEventListener('click', () => setOpen(!open, true));
+  scrim.addEventListener('click', () => setOpen(false, true));
+  document.addEventListener('keydown', e => {
+    if (open && e.key === 'Escape') { e.preventDefault(); setOpen(false, true); }
+  });
 })();
 </script>
 </body>

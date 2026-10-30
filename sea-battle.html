@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Sea Battle</title>
+<!-- Fonts: Source Serif 4 for serif, Atkinson Hyperlegible Next for sans serif, from
+     Google Fonts for now (to be hosted locally later). Source Serif 4 is variable: weights
+     400 to 700, plus an optical-size axis the browser sets from the font size by itself. The stacks fall back to Georgia and the
+     system sans if the fonts cannot load, so the page still works offline. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400&display=swap">
 <style>
   :root{
     --gold:#ffd75e; --text:#e9e3d4; --text-dim:#a59c86; --brass:#b9a978;
@@ -13,18 +20,34 @@
     --ink-a:#c64a3b;
     --ink-b:#24467e;
     --graphite:#6d6250;
-    --font-display:'Iowan Old Style','Palatino Linotype',Palatino,'Hoefler Text',Georgia,'Times New Roman',serif;
-    --font-body:'Avenir Next','Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+    --font-display:'Source Serif 4',Georgia,'Times New Roman',serif;
+    --font-body:'Atkinson Hyperlegible Next',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
-    height:100dvh; font-family:var(--font-body); color:var(--text);
+    font-family:var(--font-body); color:var(--text);
     background:radial-gradient(130% 95% at 50% 22%, #2b303b 0%, #1b1f28 48%, #13151b 100%);
-    background-attachment:fixed;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:var(--pad) 14px; -webkit-tap-highlight-color:transparent; overflow:hidden;
+    background-attachment:fixed; -webkit-tap-highlight-color:transparent;
   }
+  /* The game is the first screen of a page that scrolls. The stage is exactly one screen
+     tall and never scrolls inside itself; the info section follows it. */
+  .stage{
+    position:relative; height:100dvh; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:var(--pad) 14px;
+  }
+  /* The cards belong to the stage, not the window, so they scroll away with the board. */
+  .stage > .overlay{ position:absolute; }
+  /* While a round is being played the page holds still, so a stray swipe cannot drag the
+     board off screen. The exception is info the player opened: it stays up for the whole
+     game, and the page scrolls so it can be read mid-round. */
+  /* Sea Battle: the shield is the hand-over mid-game, not a card between rounds, so it does
+     not unlock the page (here) or bring back the corner buttons (the between-rounds rule). */
+  html:not(:has(.stage > .overlay:not(.hidden):not(#shield))):not(:has(.info:target, .info :target)){ overflow:hidden; }
+  html{ scroll-behavior:smooth; }
+  @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } }
+
   :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:6px; }
 
   .table{ display:flex; flex-direction:column; align-items:center; gap:9px; width:100%; flex:1; min-height:0; }
@@ -88,7 +111,10 @@
     .status{ font-size:13.5px; line-height:20px; height:20px; }
   }
 
-  .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.93); display:flex; align-items:center; justify-content:center; z-index:50; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+  .overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.41); display:flex; align-items:center; justify-content:center; z-index:50; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+  /* The shield is a privacy screen between seats, not a card over the board, so it keeps
+     the opaque scrim the game had before canon settled on 0.41 for the cards. */
+  #shield{ background:rgba(10,12,16,0.93); }
   .overlay.hidden{ display:none; }
   .card{ background:linear-gradient(160deg,#2c2620,#1c1813); border:1px solid rgba(255,225,170,.18); border-radius:18px; padding:28px 32px; max-width:420px; text-align:center; box-shadow:0 18px 50px rgba(0,0,0,.6); }
   .card h1{ font-family:var(--font-display); font-size:27px; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
@@ -124,10 +150,378 @@
   .fsbtn.fs-on .fs-exit{ display:block; }
   .gicon-hero{display:flex;justify-content:center;margin:4px 0 12px;}
   .gicon-hero svg{width:80px;height:80px;}
+
+  /* ================= site menu (from site-nav.html) ================= */
+/* the menu sizes and sets its own type, so it looks the same on any page */
+.site-fab, .site-scrim, .site-drawer, .site-drawer * { box-sizing: border-box; }
+
+/* Stacking: the menu sits above everything a page puts on screen, including the games'
+   start and end cards (.overlay, z-index 50), since those cards are where it is used.
+   Scrim, then drawer, then the button on top so it can close what it opened. */
+
+/* the button ------------------------------------------------------
+   Same chrome as the games' fullscreen button (.fsbtn): slate gradient,
+   brass-gold border that brightens on hover, cream-gold icon strokes.
+   It keeps 16px from the corner, or the safe-area inset if a notch needs more. */
+.site-fab {
+  position: fixed;
+  z-index: 70;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4.4px;
+  padding: 0;
+  border: 1.5px solid rgba(255, 215, 94, 0.45);
+  border-radius: 11px;
+  background: linear-gradient(145deg, #3a4150, #272c36);
+  color: #ffe9a8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 180ms ease, visibility 180ms ease, border-color 160ms ease;
+}
+.site-fab:hover { border-color: rgba(255, 215, 94, 0.85); }
+.site-fab:focus-visible { outline: 2px solid #ffd75e; outline-offset: 3px; }
+.site-burger {
+  top: max(16px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+}
+
+/* bars match the fullscreen icon: 18px wide, 2.6px strokes, round ends */
+.site-burger > span {
+  display: block;
+  width: 18px;
+  height: 2.6px;
+  border-radius: 1.3px;
+  background: #ffe9a8;
+  transform-origin: center;
+  transition: transform 220ms ease, opacity 150ms ease;
+}
+/* the three bars fold into a cross while the panel is open
+   (bar height + gap = 7px between centres) */
+.site-burger.is-open > span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.site-burger.is-open > span:nth-child(2) { opacity: 0; }
+.site-burger.is-open > span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* the panel ------------------------------------------------------- */
+.site-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(8, 8, 10, 0.46);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+.site-scrim.is-open { opacity: 1; pointer-events: auto; }
+
+.site-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 65;
+  width: min(280px, 86vw);
+  height: 100dvh;
+  padding: 22px;
+  background: #2c2620;
+  color: #efe4cb;
+  font-family: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  border-right: 1px solid color-mix(in oklab, #efe4cb 14%, transparent);
+  box-shadow: 16px 0 40px rgba(0, 0, 0, 0.38);
+  transform: translateX(-104%);
+  transition: transform 250ms ease;
+  pointer-events: none;
+  overflow: auto;
+}
+.site-drawer.is-open { transform: translateX(0); pointer-events: auto; }
+/* a closed drawer sits just off screen; its shadow would show as a band */
+.site-drawer:not(.is-open) { box-shadow: none; }
+
+/* the title sits beside the button, so it steps right to clear it */
+.site-brand {
+  margin: 0 0 28px 48px;
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #efe4cb;
+}
+
+/* the list — reusable on its own, without the drawer around it ----- */
+.site-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.site-nav a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;            /* comfortable tap target */
+  padding: 0 12px;
+  border-radius: 10px;
+  color: color-mix(in oklab, #efe4cb 82%, transparent);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+}
+.site-nav a:hover,
+.site-nav a:focus-visible {
+  background: color-mix(in oklab, #efe4cb 8%, transparent);
+  color: #efe4cb;
+}
+.site-nav a.is-current {
+  background: color-mix(in oklab, #efe4cb 10%, transparent);
+  color: #ffd75e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-fab, .site-burger > span, .site-scrim, .site-drawer { transition: none; }
+}
+
+  /* Corner buttons (.site-fab: the site menu, the info toggle, any added later) belong to
+     the time between rounds, the way the fullscreen button does: they show while a start
+     or end card is up and get out of the way while the board is in play. The menu's own
+     transition on opacity and visibility does the fade. (GAME RULE, from site-nav.html) */
+  body:not(:has(.overlay:not(.hidden):not(#shield))) .site-fab{ opacity:0; visibility:hidden; }
+
+  /* ================= info pane (from info-pane.html) ================= */
+  /* ================= info toggle =================
+     The section is part of the page only while it, or something inside it, is the URL's
+     target: "#info" (or any chapter or the contents) shows it, "#top" puts it away. Two
+     links share the bottom-left corner and the state decides which one is there, the way
+     the menu's bars become a cross and fullscreen's corners turn inward. No script. */
+  .info{ display:none; }
+  .info:target, .info:has(:target){ display:block; }
+  .site-info{ z-index:55; text-decoration:none;        /* above the cards (50), under the open menu (60) */
+    left:max(16px, env(safe-area-inset-left)); bottom:max(16px, env(safe-area-inset-bottom)); }
+  .site-info svg{ width:24px; height:24px; display:block; }
+  .site-info.info-hide, .peek-tab{ display:none; }
+  :root:has(.info:target, .info :target) .site-info.info-show{ display:none; }
+  :root:has(.info:target, .info :target) .site-info.info-hide,
+  :root:has(.info:target, .info :target) .peek-tab{ display:flex; }
+
+  /* ================= the Info tab =================
+     While the info is open, a tab at the foot of the game screen links down to it,
+     during play too. (No scroll snapping: "proximity" snapping pulled small wheel steps
+     back to the nearest resting point, so a mouse wheel could get stuck on the board or
+     part way down the info. The links all land exactly without it.) */
+  .toc, .info-text :is(h2,h3,h4,h5){ scroll-margin-top:76px; }   /* lands below the menu button's corner */
+  .stage{ --edge-reserve:38px; }
+  /* While the info is open the tab stays up, through play too, so the game screen keeps a
+     strip clear for it under the turn line and the Deselect pill. The board gives up that
+     height only while the info is open. */
+  :root:has(.info:target, .info :target) .stage{ padding-bottom:calc(var(--pad) + var(--edge-reserve)); }
+  .peek-tab{
+    position:absolute; z-index:55; left:50%; bottom:0; transform:translateX(-50%);
+    text-decoration:none; padding:9px 22px 10px; border-radius:14px 14px 0 0;
+    transition:opacity .2s ease, visibility .2s ease; }
+  .peek-tab .pt{ display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:600; letter-spacing:.05em; white-space:nowrap; }
+  .peek-tab svg{ width:15px; height:15px; }
+
+  /* ================= the page-top button =================
+     The fullscreen button scrolls away with the board, and this takes over the right-hand
+     corner while you read. It rides in level with the game's name, climbs with it, and
+     docks at the menu button's height (sticky, no script). It lives in the info, so it is
+     there only while the info is open, and unlike the corner buttons it stays during play.
+     The rail has no height, so it takes no room; its font-size is the title's, so the
+     margins centre the 44px button on the title's line (1.1em) at any width, and the
+     bottom margin gives back what the top one takes. Tapping it scrolls to the very top
+     of the page and leaves the info open (a link to #top would put the info away). */
+  .page-top-rail{ position:sticky; z-index:55; top:max(16px, env(safe-area-inset-top)); height:0;
+    display:flex; justify-content:flex-end; font-size:clamp(32px,6vw,42px);
+    margin-top:calc(.55em - 22px); margin-bottom:calc(22px - .55em);
+    margin-right:calc(max(16px, env(safe-area-inset-right)) - 20px); }   /* .info pads 20px; corners sit at 16px */
+  .page-top{ position:relative; flex:none; width:44px; height:44px; padding:0; border-radius:11px; }
+  .page-top svg{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:24px; height:24px; display:block; }
+  .page-top:focus-visible{ outline:2px solid #ffd75e; outline-offset:3px; }
+  /* Below 1111px, where the contents sits in the text, the name is centred between the
+     corner buttons, with room for a button on each side so a long name wraps before it
+     runs under either one. (Above 1111px the column ends well short of the corners.) */
+  @media (max-width:1110px){ .info-title{ text-align:center; padding-inline:52px; } }
+
+  /* ================= info: shared type ================= */
+  .info{ position:relative; padding:76px 20px 96px; }   /* the top clears the menu button */
+  .info-inner{ max-width:680px; margin:0 auto; font-size:16px; line-height:1.65; color:#d9cfb6; }
+  .info-head{ margin:0 0 30px; }
+  .toc summary{ font-size:11.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; margin:0 0 8px; color:var(--brass); }
+  .info-title{ font-family:var(--font-display); font-size:clamp(32px,6vw,42px); line-height:1.1; margin:0 0 12px; letter-spacing:.3px; color:var(--gold); }
+  /* the introduction: whatever you write before your first h2 is moved up here */
+  .info-head > p { font-size:18px; line-height:1.6; color:var(--text); margin:0 0 12px; }
+  .info-head > p:last-child{ margin-bottom:0; }
+  /* Your headings. CSS counters number them in the order they appear, so nothing ever
+     needs renumbering: h2 is 1, h3 is 1.1, h4 is 1.1.1, h5 is 1.1.1.1. */
+  /* Note marks, after rjjiii.com: * † ‡ § ¶, then doubled, then tripled, and so on, so they
+     never run out (rjjiii.com lists ten and then falls back to numbers; "symbolic" repeats
+     the five instead). Numbers would be confused with the section numbers. For letters
+     instead, set --note-marks to lower-alpha. */
+  @counter-style asterisk{ system:symbolic; symbols:"*" "\2020" "\2021" "\a7" "\b6"; suffix:" "; }
+  :root{ --note-marks:asterisk; }
+  .info-text{ counter-reset:h2 fn; }
+  .info-text h2{ counter-increment:h2; counter-reset:h3; }
+  .info-text h3{ counter-increment:h3; counter-reset:h4; }
+  .info-text h4{ counter-increment:h4; counter-reset:h5; }
+  .info-text h5{ counter-increment:h5; }
+  .info-text h2::before{ content:counter(h2); }
+  .info-text h3::before{ content:counter(h2) "." counter(h3); }
+  .info-text h4::before{ content:counter(h2) "." counter(h3) "." counter(h4); }
+  .info-text h5::before{ content:counter(h2) "." counter(h3) "." counter(h4) "." counter(h5); }
+  .info-text :is(h2,h3,h4,h5)::before{ color:var(--gold); margin-right:.5em; }
+  .info-text :is(h2,h3,h4,h5){ font-family:var(--font-display); line-height:1.25; color:#ffe9a8; }
+  .info-text h2{ font-size:23px; margin:0 0 12px; }
+  .info-text h3{ font-size:19px; margin:32px 0 10px; }
+  .info-text h4{ font-size:16.5px; margin:26px 0 8px; }
+  .info-text h5{ font-size:15px; margin:22px 0 6px; }
+  /* each h2 after the first starts a new section: space and a hairline above it */
+  /* plain tags inside the article, styled without classes */
+  .info-text :is(ul,ol){ margin:0 0 14px; padding-left:1.4em; }
+  /* endnotes: the number in the text, the list under Notes, and where a jump lands */
+  .info-text sup.fn{ line-height:0; font-size:.9em; font-weight:700; counter-increment:fn; }
+  .info-text sup.fn a::before{ content:counter(fn, var(--note-marks)); }
+  .info-text sup.fn a{ position:relative; padding:0 .08em; text-decoration:none; border-radius:3px; }
+  .info-text sup.fn a::after{ content:""; position:absolute; inset:-12px -8px; }   /* a fingertip-sized target */
+  .info-text sup.fn a:target{ background:rgba(128,162,219,.22); }
+  .info-text sup.fn a{ scroll-margin-top:35vh; }                                   /* back in context, mid-screen */
+  .info-text ol.notes{ font-size:14.5px; line-height:1.55; color:var(--text-dim); list-style-type:var(--note-marks); padding-left:2.4em; }
+  .info-text ol.notes li{ scroll-margin-top:76px; padding:2px 6px; margin-left:-6px; border-radius:6px; }
+  .info-text ol.notes li:target{ background:rgba(128,162,219,.12); color:var(--text); }
+  .info-text ol.notes li::marker{ color:var(--brass); font-weight:700; }
+  .info-text ol.notes .back{ text-decoration:none; font-weight:700; padding:0 4px; }
+  .info-text li{ margin:0 0 6px; }
+  .info-text li::marker{ color:var(--brass); }
+  .info-text blockquote{ margin:18px 0; padding:2px 0 2px 18px; border-left:2px solid rgba(255,225,170,.25); color:var(--text-dim); }
+  .info-text img{ max-width:100%; height:auto; border-radius:8px; }
+  .info-text table{ border-collapse:collapse; margin:18px 0; font-size:15px; }
+  .info-text :is(th,td){ padding:6px 12px; border-bottom:1px solid rgba(255,225,170,.14); text-align:left; vertical-align:top; }
+  .info-text th{ color:#ffe9a8; font-weight:600; }
+  .info-text h2:not(:first-of-type){ margin-top:52px; padding-top:46px; border-top:1px solid rgba(255,225,170,.10); }
+  .info p{ margin:0 0 14px; }
+  /* Links are blue: the hue of the game's blue pen (#24467e), lightened until it reads on
+     the dark panel. The pen itself measures 1.8:1 here; this measures 9.2:1. */
+  :root{ --link:#a9c2ea}
+  .info a{ text-underline-offset:3px; text-decoration-thickness:1px; color:var(--link); }
+  .info figure{ margin:24px 0 10px; }
+  .info figure svg{ display:block; width:min(100%,250px); height:auto; margin:0 auto; filter:drop-shadow(0 6px 16px rgba(0,0,0,.35)); }
+  .info figcaption{ font-size:13.5px; line-height:1.5; text-align:center; margin:12px auto 0; max-width:34em; color:var(--text-dim); }
+  .toc{ margin:0 0 52px; }
+  .toc ol{ list-style:none; margin:0; padding:0; }
+  .toc a{ display:flex; align-items:baseline; gap:12px; text-decoration:none; }
+  /* After rjjiii.com: the contents is a native <details> that starts open, so it folds
+     away with no script. The browser's triangle is removed and the ☛ in the label stands
+     in for it. */
+  .toc summary{ list-style:none; cursor:pointer; width:max-content; }
+  .toc summary::-webkit-details-marker{ display:none; }
+  /* Wide screens, also after rjjiii.com: the contents moves into the left gutter and
+     stays beside the text while you read. It is sticky
+     rather than fixed, so it only travels with the info and never sits over the board. */
+  @media (min-width:1111px){
+    .info-inner{ max-width:928px; display:grid; grid-template-columns:200px minmax(0,680px); column-gap:48px; }
+    .info-inner > *{ grid-column:2; }
+    .info-inner > .toc{ grid-column:1; grid-row:1 / span 12; margin:0; }
+    .toc details{ position:sticky; top:96px; }
+    /* Floating, the contents is a fixture, not a control: the label stops taking clicks,
+       and the list shows even if it was folded on a narrower screen before a resize.
+       (::details-content is recent; older browsers still get the blocked click.) */
+    .toc summary{ pointer-events:none; cursor:default; }
+    .toc details::details-content{ content-visibility:visible; }
+    /* the contents is always beside the text here, so the links back up to it are not needed */
+    .to-toc{ display:none; }
+  }
+  .to-toc{ margin:22px 0 0 !important; text-align:right; }
+  .to-toc a{ display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; letter-spacing:.03em; text-decoration:none; }
+  .to-toc svg{ width:13px; height:13px; }
+  .backlink{ margin:56px 0 0 !important; text-align:center; }
+  .info .btnlink{ display:inline-flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; letter-spacing:.02em;
+    padding:9px 20px; border-radius:9px; border:1.5px solid rgba(255,215,94,.45); color:#ffe9a8; text-decoration:none;
+    background:linear-gradient(145deg,#3a4150,#272c36); box-shadow:0 2px 6px rgba(0,0,0,.4); }
+  .info .btnlink svg{ width:15px; height:15px; }
+
+  /* ================= the info panel =================
+     A dark panel whose top edge is the "Info" tab. The contents is a numbered list;
+     chapters are split by a hairline. */
+  .peek-tab{ color:#ffe9a8; background:linear-gradient(180deg,#2c2620,#221d18);
+    border:1px solid rgba(255,225,170,.20); border-bottom:none; box-shadow:0 -8px 22px rgba(0,0,0,.35); }
+  .info{ background:linear-gradient(180deg,#221d18,#1a1612 340px);
+    border-top:1px solid rgba(255,225,170,.20); border-radius:22px 22px 0 0; box-shadow:0 -12px 30px rgba(0,0,0,.35); }
+  .toc a{ padding:11px 8px; margin:0 -8px; border-bottom:1px dashed rgba(255,225,170,.16); color:var(--link); font-size:16px; }
+  /* pressed: the link inverts, as rjjiii.com does with paper on its purple */
+  .toc a:active{ background:var(--link); color:#1a1612; }
+  @media (min-width:1111px){ .toc a{ font-size:14px; padding:7px 8px; } .toc ol ol a{ font-size:13px; padding:5px 8px; } }
+  /* the list's numbers, from the same order as the headings': 1, 1.1, 1.1.1 ... */
+  .toc ol{ counter-reset:item; }
+  .toc li{ counter-increment:item; }
+  .toc li > a::before{ content:counters(item,"."); min-width:1.6em; font-family:var(--font-display); font-weight:700; }
+  .toc ol ol{ margin-left:1.6em; }
+  .toc ol ol a{ font-size:14.5px; padding-top:8px; padding-bottom:8px; }
+  .toc ol ol li > a::before{ min-width:2.4em; }
+
+
+  /* ================= the contents label: a tab =================
+     Below 1111px the contents sits in the text and folds, so its label is drawn as
+     something to press: an outlined tab. Opened, the tab's outline loses its bottom and
+     its left side runs straight down into an outlined box round the list. No fills or
+     shadows: every join is drawn by the outline itself, so it holds up on the panel's
+     gradient. Floating (wider), it goes back to the plain label. */
+  .toc .hand{ display:inline-block; }
+  /* Solid, not translucent: these are rgba(233,227,212,.45) and rgba(255,215,94,.7) as
+     they land on the panel. Where two outlines overlap (the tab's foot, the arcs), a
+     translucent line would be drawn twice and show as a brighter dot. */
+  :root{ --toc-line:#78736a; }
+  @media (max-width:1110px){
+    .toc summary{ width:auto; margin:0; }
+    .toc .lbl{ display:inline-block; padding:8px 14px; line-height:18px;
+      border:1px solid var(--toc-line); border-radius:6px; }
+
+    /* Open: the summary's ::after draws the box's top edge from the tab's right corner
+       to the far side and turns the rounded corner there; the list (pulled up 1px to sit
+       on that line) draws the other three sides, and its own top-right radius lies
+       under the ::after's arc. */
+    .toc details[open] > summary{ display:flex; align-items:stretch; }
+    .toc details[open] .lbl{ border-bottom-color:transparent; border-radius:6px 6px 0 0; }
+    .toc details[open] > summary::after{ content:""; flex:1; align-self:flex-end; height:8px; margin-bottom:-8px;
+      border-top:1px solid var(--toc-line); border-right:1px solid var(--toc-line); border-top-right-radius:8px; }
+    .toc details[open] > ol{ margin-top:-1px; padding:6px 18px; border:1px solid var(--toc-line); border-top:none; border-radius:0 8px 8px 8px; }
+  }
+  /* ================= no animation =================
+     Last in the sheet so it wins: with Reduce Motion on, nothing in CSS moves. */
+  @media (prefers-reduced-motion:reduce){
+    *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+  }
 </style>
 </head>
 <body>
+<!-- site menu (from site-nav.html) -->
+<button type="button" class="site-fab site-burger" id="site-burger">
+  <span></span><span></span><span></span>
+</button>
 
+<div class="site-scrim" id="site-scrim" hidden></div>
+
+<nav class="site-drawer" id="site-drawer" inert>
+  <p class="site-brand">Game Lantern</p>
+  <ul class="site-nav">
+    <li><a href="/index.html">Home</a></li>
+    <li><a href="/explore.html">Explore</a></li>
+    <li><a href="/list.html">List</a></li>
+    <li><a href="/about.html">About</a></li>
+    <li><a href="/dashboard.html">Dashboard</a></li>
+    <li><a href="/contact.html">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- info toggle: two plain links, one per state. The section below exists only while it
+     (or something in it) is the page's target, so "#info" opens it and "#top" closes it. -->
+<a class="site-fab site-info info-show" href="#info"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.6" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12.2" cy="7.5" r="1.7" fill="currentColor"/><path d="M10 10.7 H12.5 V16.6 M9.9 16.9 H14.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+<a class="site-fab site-info info-hide" href="#top"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.6" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12.2" cy="7.5" r="1.7" fill="currentColor"/><path d="M10 10.7 H12.5 V16.6 M9.9 16.9 H14.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.3 5.3 L18.7 18.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></a>
+
+<section class="stage" id="top">
 <div class="overlay" id="setup">
   <button class="fsbtn" id="fsbtn" type="button">
     <svg class="fs-enter" viewBox="0 0 24 24"><path d="M3 8 V3 H8 M21 8 V3 H16 M3 16 V21 H8 M21 16 V21 H16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -219,6 +613,122 @@
     <button class="start" id="againbtn" type="button">Play Again</button>
   </div>
 </div>
+<!-- the top edge of the info: shows while the info is open, and links down to it -->
+<a class="peek-tab" href="#info"><span class="pt">Info <svg viewBox="0 0 24 24"><path d="M6 9.5 L12 15.5 L18 9.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>
+
+</section>
+
+<section class="info" id="info">
+  <div class="page-top-rail"><button class="page-top" id="page-top" type="button"><svg viewBox="0 0 24 24"><path d="M5 4.5 H19 M12 20 V9 M6.5 14.5 L12 9 L17.5 14.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+  <div class="info-inner">
+    <header class="info-head">
+      <h2 class="info-title">Sea Battle</h2>
+    </header>
+
+    <nav class="toc" id="info-toc">
+      <details open><summary><span class="lbl"><span class="hand">☛</span> Contents</span></summary></details>
+    </nav>
+
+<!-- ================= the info: write in plain HTML from here =================
+     h2 for sections, h3 (h4, h5) inside them. Numbers, the contents and the "Top" links
+     are made for you; give a heading an id only if you link to it from elsewhere.
+     Paragraphs before the first h2 become the introduction under the title.
+     Endnotes: write the note where it belongs, inside <small>...</small>. It becomes a
+     marked link (* † ‡ § ¶, then doubled), and its text moves to a Notes section at the end (yours, if you wrote
+     an <h2>Notes</h2>, with the notes added after its other content; made for you if not). -->
+<article class="info-text">
+
+
+<p>Sea Battle is a game of hidden fleets for two players. Each player sets out a fleet of five ships on a grid the other cannot see, then the two take turns firing shots into each other's waters. The first player to sink every ship in the enemy fleet wins.</p>
+<p>Two ways to play are included: Sea Battle, the classic, with one shot per turn, and Salvo, where each player fires one shot for every ship they still have afloat.</p>
+
+<h2>Rules</h2>
+<ul>
+<li>Each player has a grid of 10 by 10 squares, with columns lettered A to J and rows numbered 1 to 10.</li>
+<li>Each fleet has five ships: a Carrier of 5 squares, a Battleship of 4, a Cruiser of 3, a Submarine of 3 and a Destroyer of 2.</li>
+<li>Each player places their fleet in secret. A ship fills a straight line of squares, across or down, and ships may touch but never overlap.</li>
+<li>Players take turns firing at the other player's grid by naming a square. The other player says whether the shot is a hit or a miss, and both players mark it.</li>
+<li>A square can be fired at only once.</li>
+<li>When every square of a ship has been hit, the ship is sunk and its owner says which ship it was.</li>
+<li>In Sea Battle, each turn is one shot. In Salvo, each turn is one shot for every ship the firing player still has afloat, so a player fires less as they lose ships.</li>
+<li>The first player to sink every ship in the other player's fleet wins. A turn only fires at one fleet, so the game cannot end in a draw.</li>
+</ul>
+
+</article>
+<!-- ================= end of the info ================= -->
+
+    <p class="backlink"><a class="btnlink" href="#top">Play <svg viewBox="0 0 24 24"><path d="M12 19 V5 M6 11 L12 5 L18 11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a></p>
+  </div>
+</section>
+
+
+<script>
+/* Builds the info's contents from its headings, once, as the page loads (about 2 ms for a
+   long draft). It never changes the file, only the page in the browser:
+   - paragraphs before the first h2 move up under the title as the introduction,
+   - a heading without an id gets one from its text ("Player counts" -> player-counts),
+     with -2, -3 added if that id is already taken anywhere on the page,
+   - the contents list, nested as deep as the headings go,
+   - a "Top" link at the end of each h2 section,
+   - endnotes: each <small> becomes a marked link (* † ‡ ...), and its text moves to the Notes list.
+   The numbers on the headings and in the list come from CSS counters. */
+(function(){
+  var text=document.querySelector(".info-text"), head=document.querySelector(".info-head"),
+      nav=document.getElementById("info-toc"), box=nav && nav.querySelector("details");
+  if(!text||!box) return;
+  var isHeading=function(n){ return n.nodeType===1 && /^H[2-6]$/.test(n.tagName); };
+  while(text.firstChild && !isHeading(text.firstChild)) head.appendChild(text.firstChild);
+
+  /* Endnotes. This runs before the contents is built, so a Notes heading it creates is
+     listed there like any other. */
+  var smalls=text.querySelectorAll("small");
+  if(smalls.length){
+    var notesHead=Array.prototype.filter.call(text.querySelectorAll("h2"), function(h){ return h.textContent.trim().toLowerCase()==="notes"; })[0];
+    if(!notesHead){ notesHead=document.createElement("h2"); notesHead.textContent="Notes"; text.appendChild(notesHead); }
+    var end=notesHead.nextElementSibling;                       // the notes go at the end of the Notes section
+    while(end && end.tagName!=="H2") end=end.nextElementSibling;
+    var list=document.createElement("ol"); list.className="notes";
+    text.insertBefore(list, end);
+    Array.prototype.forEach.call(smalls, function(sm,k){
+      var n=k+1, sup=document.createElement("sup"), ref=document.createElement("a"), li=document.createElement("li"), back=document.createElement("a");
+      sup.className="fn"; ref.id="ref-"+n; ref.href="#note-"+n; sup.appendChild(ref);   // the mark itself comes from CSS
+      li.id="note-"+n;
+      while(sm.firstChild) li.appendChild(sm.firstChild);
+      back.href="#ref-"+n; back.className="back"; back.textContent="\u21A9"; li.appendChild(document.createTextNode(" ")); li.appendChild(back);
+      list.appendChild(li);
+      sm.parentNode.replaceChild(sup, sm);
+    });
+  }
+
+  var heads=text.querySelectorAll("h2,h3,h4,h5,h6");
+  if(!heads.length){ nav.hidden=true; return; }
+  var root=document.createElement("ol"), stack=[{level:1, ol:root}];
+  Array.prototype.forEach.call(heads, function(h){
+    var level=+h.tagName.charAt(1);
+    if(!h.id){
+      var base=h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"section", id=base, n=2;
+      while(document.getElementById(id)) id=base+"-"+(n++);
+      h.id=id;
+    }
+    while(stack.length>1 && stack[stack.length-1].level>=level) stack.pop();
+    var parent=stack[stack.length-1];
+    if(!parent.ol){ parent.ol=document.createElement("ol"); parent.li.appendChild(parent.ol); }
+    var li=document.createElement("li"), a=document.createElement("a");
+    a.href="#"+h.id; a.textContent=h.textContent; li.appendChild(a); parent.ol.appendChild(li);
+    stack.push({level:level, li:li});
+  });
+  box.appendChild(root);
+
+  var top=function(){ var p=document.createElement("p"); p.className="to-toc";
+    p.innerHTML='<a href="#info-toc"><svg viewBox="0 0 24 24"><path d="M12 19 V5 M6 11 L12 5 L18 11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Top</a>'; return p; };
+  Array.prototype.forEach.call(text.querySelectorAll("h2"), function(h,i){ if(i) text.insertBefore(top(), h); });
+  text.appendChild(top());
+
+  /* the page-top button: to the very top, info left open. The glide comes from
+     html{scroll-behavior:smooth}, so Reduce Motion makes it a jump. */
+  document.getElementById("page-top").addEventListener("click", function(){ window.scrollTo({top:0}); });
+})();
+</script>
 
 <script>
 "use strict";
@@ -479,9 +989,9 @@ function drawGrid(g,parent){
   }
   const fs=Math.max(9,Math.round(g.cell*0.42));
   for(let k=0;k<N;k++){
-    const a=E("text",{x:gx(g,k)+g.cell/2,y:gy(g,N)+fs+5,"text-anchor":"middle","font-size":fs,"font-family":"Georgia,serif",fill:"#6d6250","fill-opacity":0.8},parent);
+    const a=E("text",{x:gx(g,k)+g.cell/2,y:gy(g,N)+fs+5,"text-anchor":"middle","font-size":fs,"font-family":"'Source Serif 4',Georgia,'Times New Roman',serif",fill:"#6d6250","fill-opacity":0.8},parent);
     a.textContent=COLS[k];
-    const b=E("text",{x:gx(g,0)-7,y:gy(g,k)+g.cell/2+fs*0.36,"text-anchor":"end","font-size":fs,"font-family":"Georgia,serif",fill:"#6d6250","fill-opacity":0.8},parent);
+    const b=E("text",{x:gx(g,0)-7,y:gy(g,k)+g.cell/2+fs*0.36,"text-anchor":"end","font-size":fs,"font-family":"'Source Serif 4',Georgia,'Times New Roman',serif",fill:"#6d6250","fill-opacity":0.8},parent);
     b.textContent=String(k+1);
   }
 }
@@ -494,7 +1004,7 @@ function drawDivider(){
   const midY=y+DIVH/2, r=6;
   const lab=(side,slotY,flip)=>{
     const t=E("text",{x:x+w/2,y:slotY+TH*0.72,"text-anchor":"middle","font-size":13,
-      "font-family":"Georgia,serif",fill:"#6d6250","fill-opacity":0.95,"letter-spacing":"1.2"},staticG);
+      "font-family":"'Source Serif 4',Georgia,'Times New Roman',serif",fill:"#6d6250","fill-opacity":0.95,"letter-spacing":"1.2"},staticG);
     t.textContent=(names[side]||"").toUpperCase()+"  \u2014  WATERS";
     if(flip) t.setAttribute("transform","rotate(180 "+(x+w/2)+" "+(slotY+TH/2)+")");
   };
@@ -546,7 +1056,7 @@ function drawPlaceTray(side){
       E("rect",{x:bx,y:cy,width:barW,height:ht,rx:barW/2,"class":"trayship "+side},staticG);
     }
     const t=E("text",{x:PTRAY_W/2,y:cy+ht/2+6,"text-anchor":"middle","font-size":17,
-      "font-family":"Georgia,serif",fill:placed?"#6d6250":"#f2e9d4",
+      "font-family":"'Source Serif 4',Georgia,'Times New Roman',serif",fill:placed?"#6d6250":"#f2e9d4",
       "fill-opacity":placed?0.75:0.95,"class":"traynum"},staticG);
     t.textContent=String(sh.len);
     cy+=ht+10;
@@ -1016,7 +1526,44 @@ window.fsExit=function(){ var fn=document.exitFullscreen||document.webkitExitFul
     g("setup").classList.add("hidden");
     raiseShield("Pass to "+names.a, "Set out your fleet where "+names.b+" cannot see.", "");
   }; }
+  /* Start always plays from the top, so the board is whole when the page locks (info-pane.html, block 7). */
+  (function(){ const sb=document.getElementById("startbtn");
+    if(sb) sb.addEventListener("click", function(){ window.scrollTo({ top:0, behavior:"instant" }); }); })();
 })();
+})();
+</script>
+
+<!-- site menu script (from site-nav.html) -->
+<script>
+(function siteNav() {
+  const burger = document.getElementById('site-burger');
+  const scrim = document.getElementById('site-scrim');
+  const drawer = document.getElementById('site-drawer');
+  let open = false;
+
+  // `inert` takes the panel's contents out of the tab order while it is
+  // shut, so there is no need to walk the links setting tabIndex by hand.
+  function setOpen(next, returnFocus) {
+    open = next;
+    burger.classList.toggle('is-open', open);
+    drawer.classList.toggle('is-open', open);
+    scrim.classList.toggle('is-open', open);
+    scrim.hidden = !open;
+    if (open) {
+      drawer.removeAttribute('inert');
+      const links = drawer.querySelectorAll('.site-nav a');
+      (drawer.querySelector('.site-nav a.is-current') || links[0]).focus();
+    } else {
+      drawer.setAttribute('inert', '');
+      if (returnFocus) burger.focus();
+    }
+  }
+
+  burger.addEventListener('click', () => setOpen(!open, true));
+  scrim.addEventListener('click', () => setOpen(false, true));
+  document.addEventListener('keydown', e => {
+    if (open && e.key === 'Escape') { e.preventDefault(); setOpen(false, true); }
+  });
 })();
 </script>
 </body>
